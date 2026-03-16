@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Club Greed \u2014 CRM</title>
+<title>Club Greed — CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
@@ -546,22 +546,22 @@ tbody td {
   <div class="dashboard-grid" id="statsGrid">
     <div class="stat-card">
       <div class="stat-label">Clienti Totali</div>
-      <div class="stat-value" id="statTotali">\u2014</div>
+      <div class="stat-value" id="statTotali">—</div>
       <div class="stat-sub">iscritti al Club Greed</div>
     </div>
     <div class="stat-card green">
       <div class="stat-label">Custodi del Gusto</div>
-      <div class="stat-value" id="statCustodi">\u2014</div>
+      <div class="stat-value" id="statCustodi">—</div>
       <div class="stat-sub">500+ punti</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Ambasciatori</div>
-      <div class="stat-value" id="statAmbasciatori">\u2014</div>
-      <div class="stat-sub">200\u2013499 punti</div>
+      <div class="stat-value" id="statAmbasciatori">—</div>
+      <div class="stat-sub">200–499 punti</div>
     </div>
     <div class="stat-card red">
       <div class="stat-label">Punti Distribuiti</div>
-      <div class="stat-value" id="statPunti">\u2014</div>
+      <div class="stat-value" id="statPunti">—</div>
       <div class="stat-sub">totale programma</div>
     </div>
   </div>
@@ -569,7 +569,7 @@ tbody td {
   <div class="table-section">
     <div class="section-header">
       <div class="section-title">Ultimi iscritti</div>
-      <button class="btn btn-primary" onclick="showView('clienti')">Vedi tutti \u2192</button>
+      <button class="btn btn-primary" onclick="showView('clienti')">Vedi tutti →</button>
     </div>
     <div class="table-wrap">
       <table>
@@ -626,7 +626,7 @@ tbody td {
 \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 -->
 <div class="view" id="view-cassa">
   <div class="cassa-wrap">
-    <div class="cassa-title">Cassa \u2014 Carica Punti</div>
+    <div class="cassa-title">Cassa — Carica Punti</div>
     <div class="cassa-sub">Cerca il cliente per nome, email o codice QR</div>
 
     <div class="scan-area">
@@ -655,7 +655,7 @@ tbody td {
         </div>
         <div style="background:var(--cream);border-radius:10px;padding:16px;text-align:center">
           <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Livello</div>
-          <div style="font-size:18px;font-weight:600;color:var(--green);margin-top:8px" id="foundLevel">\u2014</div>
+          <div style="font-size:18px;font-weight:600;color:var(--green);margin-top:8px" id="foundLevel">—</div>
         </div>
       </div>
 
@@ -722,7 +722,7 @@ tbody td {
   <div class="iscrizione-wrap">
     <div class="iscrizione-card">
       <div class="iscrizione-logo">GREED</div>
-      <div class="iscrizione-sub">Unisciti al Club \u2014 Non un semplice gelato. Un'esperienza riservata.</div>
+      <div class="iscrizione-sub">Unisciti al Club — Non un semplice gelato. Un'esperienza riservata.</div>
 
       <div id="iscrizioneForm">
         <div class="form-row">
@@ -766,11 +766,11 @@ tbody td {
           </div>
         </div>
         <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px;border-radius:10px" onclick="registraCliente()">
-          Iscriviti al Club Greed \u2192
+          Iscriviti al Club Greed →
         </button>
         <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5">
           I tuoi dati sono al sicuro e non vengono ceduti a terzi.<br>
-          Piazza Roma 16, Frascati \u2014 gelateriagreed.it
+          Piazza Roma 16, Frascati — gelateriagreed.it
         </div>
       </div>
 
@@ -926,7 +926,7 @@ function getLivello(punti) {
 window.getLivello = getLivello;
 
 function formatDate(ts) {
-  if (!ts) return '\u2014';
+  if (!ts) return '—';
   const d = ts.toDate ? ts.toDate() : new Date(ts);
   return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' });
 }
@@ -1125,7 +1125,7 @@ window.openQrCliente = async function(id) {
   document.getElementById('qrName').textContent = `${c.nome} ${c.cognome}`;
   document.getElementById('qrLevel').textContent = lv.nome;
   document.getElementById('qrPoints').textContent = c.punti||0;
-  const qrData = 'https://gelateriagreed.it/checkin/?qr=' + (c.qrCode || id);
+  const qrData = JSON.stringify({ id: id, qr: c.qrCode || id, nome: c.nome });
   const qrEl = document.getElementById('qrCanvas');
   qrEl.innerHTML = '';
   new QRCode(qrEl, { text: qrData, width: 200, height: 200, colorDark: '#1a2e1c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
@@ -1263,7 +1263,7 @@ async function loadCheckin() {
   const dateStr = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('checkinDate').textContent = dateStr;
   const dayCode = oggi.toISOString().slice(0,10).replace(/-/g,'');
-  const qrData = 'https://gelateriagreed.it/checkin/?code=GREED-CHECKIN-' + dayCode;
+  const qrData = 'GREED-CHECKIN-' + dayCode;
   const container = document.getElementById('checkinQrCanvas');
   container.innerHTML = ''; // svuota se già generato
   try {
@@ -1316,13 +1316,13 @@ window.registraCliente = async function() {
   } catch(e) {
     showToast('Errore nella registrazione', 'error');
     const btn = document.querySelector('#iscrizioneForm button');
-    btn.textContent = 'Iscriviti al Club Greed \u2192'; btn.disabled = false;
+    btn.textContent = 'Iscriviti al Club Greed →'; btn.disabled = false;
   }
 }
 
 window.resetForm = function() {
   document.getElementById('iscrizioneForm').style.display = 'block';
-  document.getElementById('iscrizioneForm').querySelector('button').textContent = 'Iscriviti al Club Greed \u2192';
+  document.getElementById('iscrizioneForm').querySelector('button').textContent = 'Iscriviti al Club Greed →';
   document.getElementById('iscrizioneForm').querySelector('button').disabled = false;
   document.getElementById('iscrizioneSuccess').classList.remove('visible');
   ['regNome','regCognome','regEmail','regTel','regNascita'].forEach(id => document.getElementById(id).value = '');
