@@ -549,15 +549,20 @@ tbody td {
       <div class="stat-value" id="statTotali">—</div>
       <div class="stat-sub">iscritti al Club Greed</div>
     </div>
-    <div class="stat-card green">
-      <div class="stat-label">Custodi del Gusto</div>
-      <div class="stat-value" id="statCustodi">—</div>
-      <div class="stat-sub">500+ punti</div>
+    <div class="stat-card">
+      <div class="stat-label">Esploratori</div>
+      <div class="stat-value" id="statEsploratori">—</div>
+      <div class="stat-sub">0–199 punti</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Ambasciatori</div>
       <div class="stat-value" id="statAmbasciatori">—</div>
       <div class="stat-sub">200–499 punti</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Custodi del Gusto</div>
+      <div class="stat-value" id="statCustodi">—</div>
+      <div class="stat-sub">500+ punti</div>
     </div>
     <div class="stat-card red">
       <div class="stat-label">Punti Distribuiti</div>
@@ -663,7 +668,7 @@ tbody td {
         <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px">Aggiungi punti acquisto</div>
         <div class="punti-add-form">
           <div class="form-group">
-            <label class="form-label">Importo \u20ac</label>
+            <label class="form-label">Importo €</label>
             <input type="number" class="form-input" id="cassaImporto" placeholder="Es: 12.50" min="0" step="0.5" oninput="calcolaPunti()">
           </div>
           <div class="form-group">
@@ -864,7 +869,7 @@ tbody td {
       <div id="modalLivelloAttuale"></div>
     </div>
     <div class="form-group">
-      <label class="form-label">Importo acquisto (\u20ac)</label>
+      <label class="form-label">Importo acquisto (€)</label>
       <input type="number" class="form-input" id="importoAcquisto" placeholder="Es: 15.00" min="0" step="0.5" oninput="aggiornaCalcoloPunti()">
     </div>
     <div class="form-group">
@@ -872,7 +877,7 @@ tbody td {
       <input type="number" class="form-input" id="puntiDaAggiungere" placeholder="Automatico" oninput="syncPuntiManuali()">
     </div>
     <div style="background:var(--cream);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);margin-bottom:16px">
-      \ud83d\udca1 Esploratore: 2 pt/\u20ac \u00b7 Ambasciatore: 3 pt/\u20ac \u00b7 Custode: 4 pt/\u20ac
+      \ud83d\udca1 Esploratore: 2 pt/€ · Ambasciatore: 3 pt/€ · Custode: 4 pt/€
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modalPunti')">Annulla</button>
@@ -932,7 +937,7 @@ function formatDate(ts) {
 }
 
 function puntiBar(punti) {
-  const max = punti >= 500 ? 650 : punti >= 200 ? 499 : 199;
+  const max = punti >= 500 ? 650 : punti >= 200–499 : 199;
   const pct = Math.min(100, Math.round((punti / max) * 100));
   return `<div class="punti-bar-wrap"><div class="punti-bar"><div class="punti-bar-fill" style="width:${pct}%"></div></div><span class="punti-num">${punti}</span></div>`;
 }
@@ -966,13 +971,15 @@ async function loadDashboard() {
     window.allClienti = clienti;
 
     const totali = clienti.length;
-    const custodi = clienti.filter(c => c.punti >= 500).length;
-    const ambas = clienti.filter(c => c.punti >= 200 && c.punti < 500).length;
+    const esploratori = clienti.filter(c => (c.punti||0) >= 0 && (c.punti||0) < 200).length;
+    const ambas = clienti.filter(c => (c.punti||0) >= 200 && (c.punti||0) < 500).length;
+    const custodi = clienti.filter(c => (c.punti||0) >= 500).length;
     const puntiTot = clienti.reduce((s, c) => s + (c.punti || 0), 0);
 
     document.getElementById('statTotali').textContent = totali;
-    document.getElementById('statCustodi').textContent = custodi;
+    document.getElementById('statEsploratori').textContent = esploratori;
     document.getElementById('statAmbasciatori').textContent = ambas;
+    document.getElementById('statCustodi').textContent = custodi;
     document.getElementById('statPunti').textContent = puntiTot;
 
     const recenti = clienti.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)).slice(0,5);
@@ -1189,7 +1196,7 @@ window.cercaClienteCassa = function() {
       <div style="width:36px;height:36px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
       <div>
         <div style="font-weight:600;font-size:14px">${c.nome} ${c.cognome}</div>
-        <div style="font-size:12px;color:var(--text-muted)">${c.email} \u00b7 ${c.punti||0} punti</div>
+        <div style="font-size:12px;color:var(--text-muted)">${c.email} · ${c.punti||0} punti</div>
       </div>
     </div>
   `).join('');
@@ -1202,7 +1209,7 @@ window.selezionaClienteCassa = function(id) {
   const lv = getLivello(c.punti||0);
   document.getElementById('foundAvatar').textContent = (c.nome||'?')[0].toUpperCase();
   document.getElementById('foundName').textContent = `${c.nome} ${c.cognome}`;
-  document.getElementById('foundMeta').textContent = `${c.email} \u00b7 ${c.telefono||''}`;
+  document.getElementById('foundMeta').textContent = `${c.email} · ${c.telefono||''}`;
   document.getElementById('foundPunti').textContent = c.punti||0;
   document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
   document.getElementById('cassaResults').innerHTML = '';
