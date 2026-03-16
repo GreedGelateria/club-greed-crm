@@ -1125,7 +1125,7 @@ window.openQrCliente = async function(id) {
   document.getElementById('qrName').textContent = `${c.nome} ${c.cognome}`;
   document.getElementById('qrLevel').textContent = lv.nome;
   document.getElementById('qrPoints').textContent = c.punti||0;
-  const qrData = JSON.stringify({ id: id, qr: c.qrCode || id, nome: c.nome });
+  const qrData = 'https://gelateriagreed.it/checkin/?qr=' + (c.qrCode || id);
   const qrEl = document.getElementById('qrCanvas');
   qrEl.innerHTML = '';
   new QRCode(qrEl, { text: qrData, width: 200, height: 200, colorDark: '#1a2e1c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
@@ -1263,7 +1263,7 @@ async function loadCheckin() {
   const dateStr = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   document.getElementById('checkinDate').textContent = dateStr;
   const dayCode = oggi.toISOString().slice(0,10).replace(/-/g,'');
-  const qrData = 'GREED-CHECKIN-' + dayCode;
+  const qrData = 'https://gelateriagreed.it/checkin/?code=GREED-CHECKIN-' + dayCode;
   const container = document.getElementById('checkinQrCanvas');
   container.innerHTML = ''; // svuota se già generato
   try {
