@@ -3,251 +3,431 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Check-in GREED</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<title>Club Greed — CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#1a2e1c;--bg2:#213524;--gold:#F7CF45;--gold-l:#FFE070;--cream:#f5f0e8;--cream2:rgba(245,240,232,.88);--red:#d94f38;--green:#4caf7d;}
-body{background:var(--bg);color:var(--cream);font-family:'Outfit',sans-serif;font-weight:300;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.card{background:var(--bg2);border:1px solid rgba(247,207,69,.28);border-radius:4px;padding:48px 40px;max-width:440px;width:100%;text-align:center}
-.logo{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;letter-spacing:.16em;margin-bottom:32px;color:var(--cream)}
-.logo small{display:block;font-size:10px;font-family:'Outfit',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-top:4px}
-.stato{font-size:64px;display:block;margin-bottom:20px}
-.titolo{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;margin-bottom:10px}
-.titolo em{font-style:italic;color:var(--gold-l)}
-.msg{font-size:14px;color:var(--cream2);line-height:1.7;margin-bottom:24px}
-.punti-badge{background:var(--gold);color:var(--bg);padding:14px 28px;border-radius:3px;font-size:18px;font-weight:700;letter-spacing:.06em;display:inline-block;margin-bottom:20px}
-.punti-totali{font-size:13px;color:var(--cream2);margin-bottom:28px}
-.punti-totali b{color:var(--gold)}
-.btn{background:var(--gold);color:var(--bg);border:none;padding:14px 32px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;font-family:'Outfit',sans-serif;transition:all .25s;text-decoration:none;display:inline-block}
-.btn:hover{background:var(--gold-l)}
-.btn-ghost{background:transparent;border:1px solid rgba(247,207,69,.3);color:var(--cream2);margin-top:10px;display:block}
-.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
-.loading{display:flex;flex-direction:column;align-items:center;gap:16px}
-.spinner{width:40px;height:40px;border:3px solid rgba(247,207,69,.2);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.err{background:rgba(217,79,56,.12);border:1px solid rgba(217,79,56,.35);color:#f09080;padding:14px 18px;border-radius:3px;font-size:13px;line-height:1.6;margin-bottom:20px}
-/* Form login se non identificato */
-.form-login{text-align:left;margin-top:24px}
-.form-login label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--cream2);display:block;margin-bottom:5px}
-.form-login input{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(247,207,69,.25);color:var(--cream);padding:12px 14px;font-family:'Outfit',sans-serif;font-size:14px;outline:none;border-radius:2px;margin-bottom:14px;-webkit-appearance:none}
-.form-login input:focus{border-color:rgba(247,207,69,.5)}
-.form-login input::placeholder{color:rgba(245,240,232,.4)}
-</style>
-</head>
-<body>
-<script>
-firebase.initializeApp({
-  apiKey:"AIzaSyBwAZb_A3IjPv7iL0cLhVnWO-Cuw_DD5g4",
-  authDomain:"club-greed.firebaseapp.com",
-  projectId:"club-greed",
-  storageBucket:"club-greed.firebasestorage.app",
-  messagingSenderId:"704669833762",
-  appId:"1:704669833762:web:917f4c7b104bc8ad39087b"
-});
-var db = firebase.firestore();
-</script>
-
-<div class="card" id="card">
-  <!-- Stato iniziale: caricamento -->
-  <div class="loading" id="stLoading">
-    <div class="spinner"></div>
-    <p style="font-size:13px;color:var(--cream2)">Verifico il check-in...</p>
-  </div>
-</div>
-
-<script>
-/* ════════════════════════════════════════
-   LOGICA CHECK-IN
-   
-   Il QR giornaliero contiene:
-   GREED-CHECKIN-YYYYMMDD
-   
-   Il QR personale cliente contiene:
-   GRD-1234567890
-   
-   Quando il cliente scansiona il QR GIORNALIERO
-   dalla pagina /checkin/?code=GREED-CHECKIN-20260316
-   deve inserire il suo telefono/email per identificarsi
-   e ricevere i 5 punti.
-   
-   Quando il cliente scansiona il suo QR PERSONALE
-   dalla pagina /checkin/?qr=GRD-1234567890
-   viene identificato automaticamente.
-════════════════════════════════════════ */
-
-var params = new URLSearchParams(window.location.search);
-var codeParam = params.get('code');  // QR giornaliero
-var qrParam   = params.get('qr');    // QR personale cliente
-
-// Genera il codice giornaliero atteso
-function codiceOggi(){
-  var d = new Date();
-  var y = d.getFullYear();
-  var m = String(d.getMonth()+1).padStart(2,'0');
-  var g = String(d.getDate()).padStart(2,'0');
-  return 'GREED-CHECKIN-'+y+m+g;
+:root {
+  --green: #1a2e1c;
+  --green-mid: #2a4a2d;
+  --green-light: #3d6b42;
+  --yellow: #F7CF45;
+  --yellow-dark: #d4a800;
+  --cream: #faf7f0;
+  --cream-dark: #f0ebe0;
+  --text: #1a1a1a;
+  --text-muted: #5a5a5a;
+  --border: #d4cfc4;
+  --white: #ffffff;
+  --red: #c0392b;
+  --success: #2d6a4f;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(26,46,28,0.10);
+  --shadow-lg: 0 8px 40px rgba(26,46,28,0.16);
 }
 
-// Mostra stato nella card
-function mostra(html){ document.getElementById('card').innerHTML = '<div class="logo">GREED <small>Gelateria Naturale · Frascati</small></div>' + html; }
+* { margin:0; padding:0; box-sizing:border-box; }
 
-// ── VERIFICA QR GIORNALIERO ──
-function verificaCodice(code){
-  var atteso = codiceOggi();
-  if(code !== atteso){
-    mostra('<span class="stato">⚠️</span><h2 class="titolo">QR non <em>valido</em></h2>'
-      +'<p class="msg">Questo QR è scaduto o non è corretto.<br>Chiedi al personale il QR del giorno.</p>'
-      +'<a href="https://gelateriagreed.it" class="btn">Torna al sito</a>');
-    return;
-  }
-  // Codice valido: chiedi identificazione cliente
-  mostra('<span class="stato">✅</span>'
-    +'<h2 class="titolo">QR <em>valido!</em></h2>'
-    +'<p class="msg">Inserisci il tuo numero di telefono o email per ricevere i <strong style="color:var(--gold)">+5 punti</strong> presenze.</p>'
-    +'<div class="form-login">'
-    +'<label>Cellulare o Email</label>'
-    +'<input type="text" id="credInput" placeholder="+39 333 000 0000 oppure mario@email.it">'
-    +'<button class="btn" style="width:100%" onclick="cercaClienteECheckin()">Conferma check-in →</button>'
-    +'</div>'
-    +'<div id="errCheckin" style="display:none;margin-top:14px" class="err"></div>');
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
 }
 
-// ── CERCA CLIENTE E AGGIUNGI PUNTI ──
-function cercaClienteECheckin(){
-  var cred = document.getElementById('credInput').value.trim();
-  if(!cred){ mostraErrCheckin('Inserisci il tuo numero o email.'); return; }
-  var isEmail = cred.includes('@');
-  var campo = isEmail ? 'email' : 'telefono';
-  
-  document.querySelector('#card .btn').textContent = 'Verifica...';
-  document.querySelector('#card .btn').disabled = true;
-
-  db.collection('clienti').where(campo,'==',cred).limit(1).get()
-    .then(function(snap){
-      if(snap.empty){
-        // Prova campo inverso
-        var campo2 = isEmail ? 'telefono' : 'email';
-        return db.collection('clienti').where(campo2,'==',cred).limit(1).get();
-      }
-      return snap;
-    })
-    .then(function(snap){
-      if(snap.empty){
-        mostraErrCheckin('Account non trovato. Sei iscritto al Club Greed?');
-        document.querySelector('#card .btn').textContent = 'Conferma check-in →';
-        document.querySelector('#card .btn').disabled = false;
-        return;
-      }
-      var docRef = snap.docs[0];
-      var dati = docRef.data();
-      verificaCheckinGiornaliero(docRef.id, dati);
-    }).catch(function(e){
-      mostraErrCheckin('Errore di rete. Riprova.');
-      console.error(e);
-    });
+/* ── HEADER ── */
+.header {
+  background: var(--green);
+  color: var(--yellow);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+}
+.header-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+.header-logo span { color: var(--white); font-weight: 400; font-size: 14px; letter-spacing: 1px; margin-left: 8px; }
+.header-nav { display: flex; gap: 4px; }
+.nav-btn {
+  background: none;
+  border: none;
+  color: rgba(247,207,69,0.6);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+}
+.nav-btn:hover, .nav-btn.active {
+  background: rgba(247,207,69,0.15);
+  color: var(--yellow);
 }
 
-// ── VERIFICA CHE NON ABBIA GIÀ FATTO CHECK-IN OGGI ──
-function verificaCheckinGiornaliero(clienteId, dati){
-  var oggi = codiceOggi();
-  db.collection('checkins')
-    .where('clienteId','==',clienteId)
-    .where('codice','==',oggi)
-    .limit(1).get()
-    .then(function(snap){
-      if(!snap.empty){
-        // Ha già fatto check-in oggi
-        mostra('<span class="stato">ℹ️</span>'
-          +'<h2 class="titolo">Già <em>presente!</em></h2>'
-          +'<p class="msg">Hai già fatto il check-in oggi, '+dati.nome+'.<br>Ci vediamo domani per altri punti! 😊</p>'
-          +'<p class="punti-totali">I tuoi punti: <b>'+(dati.punti||0)+'</b></p>'
-          +'<a href="https://gelateriagreed.it/i-gusti/" class="btn">Ordina online →</a>');
-        return;
-      }
-      // Non ha ancora fatto check-in oggi: aggiungi punti
-      aggiungiPuntiCheckin(clienteId, dati, oggi);
-    });
+/* ── VIEWS ── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── DASHBOARD ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 32px;
+}
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--yellow);
+}
+.stat-card.green { border-left-color: var(--green); }
+.stat-card.red { border-left-color: var(--red); }
+.stat-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.stat-value { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 600; color: var(--green); line-height: 1; }
+.stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* ── TABLE ── */
+.table-section { padding: 0 32px 32px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--green);
+}
+.search-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.search-input {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  background: var(--white);
+  width: 260px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--green); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.btn-primary { background: var(--green); color: var(--yellow); }
+.btn-primary:hover { background: var(--green-mid); }
+.btn-secondary { background: var(--yellow); color: var(--green); }
+.btn-secondary:hover { background: var(--yellow-dark); color: var(--white); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--green); color: var(--green); }
+.btn-danger { background: #fdf0ef; color: var(--red); border: 1.5px solid #f5c6c2; }
+.btn-danger:hover { background: var(--red); color: white; }
+
+.table-wrap {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--green);
+  color: var(--yellow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 14px 20px;
+  text-align: left;
+}
+tbody tr {
+  border-bottom: 1px solid var(--cream-dark);
+  transition: background 0.15s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--cream); }
+tbody td {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--text);
 }
 
-// ── AGGIUNGI 5 PUNTI E REGISTRA CHECK-IN ──
-function aggiungiPuntiCheckin(clienteId, dati, codice){
-  var nuoviPunti = (dati.punti||0) + 5;
-  var batch = db.batch();
-  
-  // Aggiorna punti cliente
-  batch.update(db.collection('clienti').doc(clienteId), {punti: nuoviPunti});
-  
-  // Registra check-in
-  batch.set(db.collection('checkins').doc(), {
-    clienteId: clienteId,
-    nome: dati.nome + ' ' + (dati.cognome||''),
-    codice: codice,
-    puntiAssegnati: 5,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  
-  batch.commit().then(function(){
-    mostra('<span class="stato">🎉</span>'
-      +'<h2 class="titolo">Bentornato <em>'+dati.nome+'!</em></h2>'
-      +'<div class="punti-badge">+5 punti presenza</div>'
-      +'<p class="punti-totali">Punti totali: <b>'+nuoviPunti+'</b> · '
-      +livello(nuoviPunti)+'</p>'
-      +'<p class="msg">Check-in registrato con successo.<br>Grazie per essere qui da GREED! 🍦</p>'
-      +'<a href="https://gelateriagreed.it/i-gusti/" class="btn">Ordina online →</a>'
-      +'<a href="https://gelateriagreed.it/" class="btn btn-ghost">Torna al sito</a>');
-  }).catch(function(e){
-    mostra('<span class="stato">❌</span><h2 class="titolo">Errore</h2>'
-      +'<p class="msg">Non è stato possibile registrare il check-in.<br>Mostra questa schermata al personale.</p>');
-    console.error(e);
-  });
+/* ── BADGES ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.badge-esploratore { background: #e8f4fd; color: #2980b9; }
+.badge-ambasciatore { background: #fef9e7; color: #d4a800; }
+.badge-custode { background: #eafaf1; color: #1a7a4a; }
+
+/* ── PUNTI BAR ── */
+.punti-bar-wrap { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+.punti-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--cream-dark);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.punti-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--green-light));
+  transition: width 0.4s ease;
+}
+.punti-num { font-size: 13px; font-weight: 600; color: var(--green); min-width: 32px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,46,28,0.55);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 36px;
+  width: 500px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 24px;
+}
+.modal-close {
+  position: absolute;
+  top: 16px; right: 20px;
+  background: none; border: none;
+  font-size: 22px; cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  background: var(--white);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  appearance: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--green); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.checkbox-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+.checkbox-item input { width: 16px; height: 16px; accent-color: var(--green); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.form-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+/* ── QR MODAL ── */
+.qr-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+}
+.qr-canvas-wrap {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--cream-dark);
+}
+.qr-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--green);
+}
+.qr-level { font-size: 13px; color: var(--text-muted); }
+.qr-points {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green);
+  font-family: 'Cormorant Garamond', serif;
 }
 
-// ── IDENTIFICAZIONE DA QR PERSONALE ──
-function checkinDaQRPersonale(qr){
-  db.collection('clienti').where('qrCode','==',qr).limit(1).get()
-    .then(function(snap){
-      if(snap.empty){
-        mostra('<span class="stato">❌</span><h2 class="titolo">QR non <em>riconosciuto</em></h2>'
-          +'<p class="msg">Questo QR non corrisponde a nessun account.<br>Contatta il personale GREED.</p>');
-        return;
-      }
-      var docRef = snap.docs[0];
-      var dati = docRef.data();
-      verificaCheckinGiornaliero(docRef.id, dati);
-    }).catch(function(e){
-      mostra('<span class="stato">❌</span><h2 class="titolo">Errore</h2><p class="msg">Errore di rete. Riprova.</p>');
-    });
+/* ── PUNTI MODAL ── */
+.punti-current {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.punti-current-label { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.punti-current-val { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 600; color: var(--green); }
+
+/* ── CASSA VIEW ── */
+.cassa-wrap { padding: 32px; max-width: 640px; margin: 0 auto; }
+.cassa-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.cassa-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+
+.scan-area {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.scan-icon { font-size: 48px; margin-bottom: 12px; }
+.scan-label { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+
+.cliente-found {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  display: none;
+}
+.cliente-found.visible { display: block; }
+.cliente-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.cliente-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--yellow);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.cliente-name { font-size: 18px; font-weight: 600; color: var(--green); }
+.cliente-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+.punti-add-form { display: flex; gap: 12px; align-items: flex-end; }
+.punti-add-form .form-group { margin: 0; flex: 1; }
+
+/* ── CHECKIN DISPLAY ── */
+.checkin-wrap { padding: 32px; max-width: 500px; margin: 0 auto; text-align: center; }
+.checkin-qr-day {
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 36px;
+  margin-bottom: 24px;
+}
+.checkin-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  color: var(--green);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.checkin-date { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.checkin-points-badge {
+  display: inline-block;
+  background: var(--yellow);
+  color: var(--green);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  margin-top: 16px;
 }
 
-function livello(p){
-  if(p>=500) return '<span style="color:var(--gold)">Custode del Gusto</span>';
-  if(p>=200) return '<span style="color:var(--gold)">Ambasciatore</span>';
-  return '<span style="color:var(--gold)">Esploratore</span>';
+/* ── ISCRIZIONE VIEW (pubblica) ── */
+.iscrizione-wrap {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 60%, #2d5530 100%);
 }
-
-function mostraErrCheckin(msg){
-  var e = document.getElementById('errCheckin');
-  if(e){e.textContent=msg;e.style.display='block';}
+.iscrizione-card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 48px 44px;
+  width: 560px;
+  max-width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
-
-// ── INIT ──
-if(qrParam){
-  // QR personale cliente: identificazione automatica
-  checkinDaQRPersonale(qrParam);
-} else if(codeParam){
-  // QR giornaliero: verifica codice poi chiedi credenziali
-  verificaCodice(codeParam);
-} else {
-  // Nessun parametro: mostra istruzioni
-  mostra('<span class="stato">📱</span>'
-    +'<h2 class="titolo">Check-in <em>GREED</em></h2>'
-    +'<p class="msg">Scansiona il QR esposto in cassa per accumulare i tuoi punti presenze.<br><br>'
-    +'Oppure fai scansionare il tuo QR personale al personale.</p>'
-    +'<a href="https://gelateriagreed.it/i-gusti/" class="btn">Ordina online →</a>');
-}
-</script>
-</body>
-</html>
+.iscrizione-logo {
+  font-family: 'Cormorant Garamond',
