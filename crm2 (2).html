@@ -1,0 +1,2859 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club Greed — CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root {
+  --green: #1a2e1c;
+  --green-mid: #2a4a2d;
+  --green-light: #3d6b42;
+  --yellow: #F7CF45;
+  --yellow-dark: #d4a800;
+  --cream: #faf7f0;
+  --cream-dark: #f0ebe0;
+  --text: #1a1a1a;
+  --text-muted: #5a5a5a;
+  --border: #d4cfc4;
+  --white: #ffffff;
+  --red: #c0392b;
+  --success: #2d6a4f;
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(26,46,28,0.10);
+  --shadow-lg: 0 8px 40px rgba(26,46,28,0.16);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--green);
+  color: var(--yellow);
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+}
+.header-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+.header-logo span { color: var(--white); font-weight: 400; font-size: 14px; letter-spacing: 1px; margin-left: 8px; }
+.header-nav { display: flex; gap: 4px; }
+.nav-btn {
+  background: none;
+  border: none;
+  color: rgba(247,207,69,0.6);
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+}
+.nav-btn:hover, .nav-btn.active {
+  background: rgba(247,207,69,0.15);
+  color: var(--yellow);
+}
+
+/* ── VIEWS ── */
+.view { display: none; }
+.view.active { display: block; }
+
+/* ── DASHBOARD ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  padding: 32px;
+}
+.stat-card {
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--yellow);
+}
+.stat-card.green { border-left-color: var(--green); }
+.stat-card.red { border-left-color: var(--red); }
+.stat-label { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.stat-value { font-family: 'Cormorant Garamond', serif; font-size: 42px; font-weight: 600; color: var(--green); line-height: 1; }
+.stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+/* ── TABLE ── */
+.table-section { padding: 0 32px 32px; }
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--green);
+}
+.search-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.search-input {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  background: var(--white);
+  width: 260px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input:focus { border-color: var(--green); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+.btn-primary { background: var(--green); color: var(--yellow); }
+.btn-primary:hover { background: var(--green-mid); }
+.btn-secondary { background: var(--yellow); color: var(--green); }
+.btn-secondary:hover { background: var(--yellow-dark); color: var(--white); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--green); color: var(--green); }
+.btn-danger { background: #fdf0ef; color: var(--red); border: 1.5px solid #f5c6c2; }
+.btn-danger:hover { background: var(--red); color: white; }
+
+.table-wrap {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  background: var(--green);
+  color: var(--yellow);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 14px 20px;
+  text-align: left;
+}
+tbody tr {
+  border-bottom: 1px solid var(--cream-dark);
+  transition: background 0.15s;
+}
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--cream); }
+tbody td {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* ── BADGES ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+.badge-esploratore { background: #e8f4fd; color: #2980b9; }
+.badge-ambasciatore { background: #fef9e7; color: #d4a800; }
+.badge-custode { background: #eafaf1; color: #1a7a4a; }
+
+/* ── PUNTI BAR ── */
+.punti-bar-wrap { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+.punti-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--cream-dark);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.punti-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--green), var(--green-light));
+  transition: width 0.4s ease;
+}
+.punti-num { font-size: 13px; font-weight: 600; color: var(--green); min-width: 32px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,46,28,0.55);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 36px;
+  width: 500px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.modal-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 24px;
+}
+.modal-close {
+  position: absolute;
+  top: 16px; right: 20px;
+  background: none; border: none;
+  font-size: 22px; cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  background: var(--white);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+  appearance: none;
+}
+.form-input:focus, .form-select:focus { border-color: var(--green); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.checkbox-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text-muted); cursor: pointer; }
+.checkbox-item input { width: 16px; height: 16px; accent-color: var(--green); margin-top: 2px; flex-shrink: 0; cursor: pointer; }
+.form-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+
+/* ── QR MODAL ── */
+.qr-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 0;
+}
+.qr-canvas-wrap {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--cream-dark);
+}
+.qr-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--green);
+}
+.qr-level { font-size: 13px; color: var(--text-muted); }
+.qr-points {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green);
+  font-family: 'Cormorant Garamond', serif;
+}
+
+/* ── PUNTI MODAL ── */
+.punti-current {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.punti-current-label { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+.punti-current-val { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 600; color: var(--green); }
+
+/* ── CASSA VIEW ── */
+.cassa-wrap { padding: 32px; max-width: 640px; margin: 0 auto; }
+.cassa-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.cassa-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 32px; }
+
+.scan-area {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.scan-icon { font-size: 48px; margin-bottom: 12px; }
+.scan-label { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+
+.cliente-found {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  display: none;
+}
+.cliente-found.visible { display: block; }
+.cliente-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.cliente-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--yellow);
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.cliente-name { font-size: 18px; font-weight: 600; color: var(--green); }
+.cliente-meta { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+.punti-add-form { display: flex; gap: 12px; align-items: flex-end; }
+.punti-add-form .form-group { margin: 0; flex: 1; }
+
+/* ── CHECKIN DISPLAY ── */
+.checkin-wrap { padding: 32px; max-width: 500px; margin: 0 auto; text-align: center; }
+.checkin-qr-day {
+  background: var(--white);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 36px;
+  margin-bottom: 24px;
+}
+.checkin-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  color: var(--green);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.checkin-date { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.checkin-points-badge {
+  display: inline-block;
+  background: var(--yellow);
+  color: var(--green);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  margin-top: 16px;
+}
+
+/* ── ISCRIZIONE VIEW (pubblica) ── */
+.iscrizione-wrap {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-mid) 60%, #2d5530 100%);
+}
+.iscrizione-card {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 48px 44px;
+  width: 560px;
+  max-width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.iscrizione-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--green);
+  letter-spacing: 3px;
+  text-align: center;
+  margin-bottom: 4px;
+}
+.iscrizione-sub {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  font-style: italic;
+}
+.iscrizione-success {
+  display: none;
+  text-align: center;
+  padding: 20px 0;
+}
+.iscrizione-success.visible { display: block; }
+.success-icon { font-size: 56px; margin-bottom: 16px; }
+.success-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+.success-text { font-size: 14px; color: var(--text-muted); line-height: 1.6; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: var(--green);
+  color: var(--yellow);
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  z-index: 999;
+  transform: translateY(80px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--red); color: white; }
+
+/* ── LOADING ── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  color: var(--text-muted);
+  font-size: 14px;
+  gap: 10px;
+}
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-text { font-size: 15px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .dashboard-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .dashboard-grid { grid-template-columns: 1fr; padding: 16px; }
+  .table-section { padding: 0 16px 16px; }
+  .header { padding: 0 16px; }
+  .header-nav { display: none; }
+  .iscrizione-card { padding: 28px 20px; }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">GREED <span>Club CRM</span></div>
+  <nav class="header-nav" id="mainNav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('clienti')">Clienti</button>
+    <button class="nav-btn" onclick="showView('cassa')">Cassa</button>
+    <button class="nav-btn" onclick="showView('checkin')">QR Check-in</button>
+    <button class="nav-btn" onclick="showView('iscrizione')">Form Iscrizione</button>
+    <button class="nav-btn" onclick="showView('campagne')">Campagne</button>
+    <button class="nav-btn" onclick="showView('ordini')">Ordini</button>
+    <button class="nav-btn" onclick="showView('giftcard')">🎁 Gift Card</button>
+  </nav>
+</header>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: DASHBOARD
+═══════════════════════════════════════ -->
+<div class="view active" id="view-dashboard">
+  <div class="dashboard-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-label">Clienti Totali</div>
+      <div class="stat-value" id="statTotali">—</div>
+      <div class="stat-sub">iscritti al Club Greed</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Esploratori</div>
+      <div class="stat-value" id="statEsploratori">—</div>
+      <div class="stat-sub">0–199 punti</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ambasciatori</div>
+      <div class="stat-value" id="statAmbasciatori">—</div>
+      <div class="stat-sub">200–499 punti</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Custodi del Gusto</div>
+      <div class="stat-value" id="statCustodi">—</div>
+      <div class="stat-sub">500+ punti</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Punti Distribuiti</div>
+      <div class="stat-value" id="statPunti">—</div>
+      <div class="stat-sub">totale programma</div>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="section-header">
+      <div class="section-title">Ultimi iscritti</div>
+      <button class="btn btn-primary" onclick="showView('clienti')">Vedi tutti →</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Livello</th>
+            <th>Punti</th>
+            <th>Iscritto il</th>
+          </tr>
+        </thead>
+        <tbody id="dashboardTable">
+          <tr><td colspan="4"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CLIENTI
+═══════════════════════════════════════ -->
+<div class="view" id="view-clienti">
+  <div class="table-section" style="padding-top:32px">
+    <div class="section-header">
+      <div class="section-title">Clienti Club Greed</div>
+      <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Cerca per nome o email..." id="searchInput" oninput="filterClienti()">
+        <button class="btn btn-primary" onclick="openNuovoCliente()">+ Nuovo cliente</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Email / Tel</th>
+            <th>Livello</th>
+            <th>Punti</th>
+            <th>Iscritto</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="clientiTable">
+          <tr><td colspan="6"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CASSA
+═══════════════════════════════════════ -->
+<div class="view" id="view-cassa">
+  <div class="cassa-wrap">
+    <div class="cassa-title">Cassa — Carica Punti</div>
+    <div class="cassa-sub">Cerca il cliente per nome, email o codice QR</div>
+
+    <div class="scan-area">
+      <!-- Pulsante avvia fotocamera -->
+      <div id="qrStartArea" style="text-align:center;padding:12px 0 4px">
+        <button class="btn btn-primary" onclick="avviaScanner()" id="btnAvviaScanner" style="font-size:15px;padding:14px 32px;letter-spacing:.06em">
+          📷 Inquadra QR cliente
+        </button>
+        <div style="margin:14px 0 6px;font-size:12px;color:var(--text-muted)">— oppure cerca manualmente —</div>
+        <div style="display:flex;gap:10px;max-width:400px;margin:0 auto">
+          <input type="text" class="form-input" placeholder="Nome, email o codice GRD-..." id="cassaSearch" oninput="cercaClienteCassa()">
+          <button class="btn btn-primary" onclick="cercaClienteCassa()">Cerca</button>
+        </div>
+        <div id="cassaResults" style="margin-top:16px;text-align:left;max-width:400px;margin:16px auto 0"></div>
+      </div>
+      <!-- Finestra fotocamera -->
+      <div id="qrScanArea" style="display:none;text-align:center">
+        <div style="position:relative;width:280px;margin:0 auto 12px">
+          <video id="qrVideo" style="width:280px;height:280px;object-fit:cover;border-radius:10px;border:3px solid var(--green)" playsinline></video>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Avvicina il QR del cliente alla fotocamera</p>
+        <button class="btn btn-ghost btn-sm" onclick="fermaScanner()">✕ Chiudi fotocamera</button>
+      </div>
+    </div>
+
+    <div class="cliente-found" id="clienteFound">
+      <div class="cliente-info">
+        <div class="cliente-avatar" id="foundAvatar"></div>
+        <div>
+          <div class="cliente-name" id="foundName"></div>
+          <div class="cliente-meta" id="foundMeta"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+        <div style="background:var(--cream);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Punti attuali</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--green)" id="foundPunti">0</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Livello</div>
+          <div style="font-size:18px;font-weight:600;color:var(--green);margin-top:8px" id="foundLevel">—</div>
+        </div>
+      </div>
+
+      <div style="background:var(--cream);border-radius:10px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px">Aggiungi punti acquisto</div>
+        <div class="punti-add-form">
+          <div class="form-group">
+            <label class="form-label">Importo €</label>
+            <input type="number" class="form-input" id="cassaImporto" placeholder="Es: 12.50" min="0" step="0.5" oninput="calcolaPunti()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Punti da aggiungere</label>
+            <input type="number" class="form-input" id="cassaPuntiCalc" placeholder="Automatico" readonly style="background:var(--cream-dark)">
+          </div>
+          <button class="btn btn-secondary" onclick="aggiungiPuntiCassa()" style="margin-bottom:0;flex-shrink:0">Aggiungi</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost btn-sm" onclick="aggiungiCheckinCassa()">✓ Check-in (+5 pt)</button>
+        <button class="btn btn-ghost btn-sm" onclick="openQrCliente(currentCassaCliente)">QR cliente</button>
+        <button class="btn btn-danger btn-sm" onclick="resetCassa()" style="margin-left:auto">✕ Chiudi</button>
+      </div>
+
+      <!-- Premi Social -->
+      <div style="background:var(--cream);border-radius:10px;padding:16px 20px;margin-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px">🌟 Premi Social</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('google',15)">⭐ Google +15</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tripadvisor',15)">🦉 TripAdvisor +15</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('instagram',10)">📸 Story IG +10</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('facebook',10)">📘 Story FB +10</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tiktok',10)">🎵 Story TikTok +10</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CHECK-IN QR
+═══════════════════════════════════════ -->
+<div class="view" id="view-checkin">
+  <div class="checkin-wrap">
+    <div class="checkin-qr-day">
+      <div class="checkin-title">QR Check-in Giornaliero</div>
+      <div class="checkin-date" id="checkinDate"></div>
+      <div style="display:flex;justify-content:center;margin:20px 0">
+        <div class="qr-canvas-wrap">
+          <div id="checkinQrCanvas" style="width:200px;height:200px;margin:0 auto"></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);max-width:300px;margin:0 auto;line-height:1.5">
+        Esponi questo QR in cassa. Cambia ogni giorno automaticamente.
+      </div>
+      <div class="checkin-points-badge">+5 punti presenza</div>
+    </div>
+    <button class="btn btn-primary" onclick="window.print()" style="width:100%"> Stampa QR del giorno</button>
+
+    <div style="margin-top:32px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--green);margin-bottom:16px">Check-in di oggi</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Orario</th><th>Punti</th></tr></thead>
+          <tbody id="checkinTable"><tr><td colspan="3"><div class="empty"><div class="empty-icon">☕</div><div class="empty-text">Nessun check-in oggi</div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: FORM ISCRIZIONE
+═══════════════════════════════════════ -->
+<div class="view" id="view-iscrizione">
+  <div class="iscrizione-wrap">
+    <div class="iscrizione-card">
+      <div class="iscrizione-logo">GREED</div>
+      <div class="iscrizione-sub">Unisciti al Club — Non un semplice gelato. Un'esperienza riservata.</div>
+
+      <div id="iscrizioneForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-input" id="regNome" placeholder="Mario">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cognome *</label>
+            <input type="text" class="form-input" id="regCognome" placeholder="Rossi">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="regEmail" placeholder="mario.rossi@email.it">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefono *</label>
+          <input type="tel" class="form-input" id="regTel" placeholder="+39 333 123 4567">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data di nascita</label>
+          <input type="date" class="form-input" id="regNascita">
+        </div>
+        <hr class="form-divider">
+        <div class="form-group">
+          <label class="form-label">Consensi</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="regPrivacy" required>
+              <span>* Acconsento al trattamento dei dati personali ai sensi del GDPR (obbligatorio)</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="regMarketing">
+              <span>Acconsento a ricevere comunicazioni marketing via email</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="regSms">
+              <span>Acconsento a ricevere comunicazioni via SMS/WhatsApp</span>
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px;border-radius:10px" onclick="registraCliente()">
+          Iscriviti al Club Greed →
+        </button>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5">
+          I tuoi dati sono al sicuro e non vengono ceduti a terzi.<br>
+          Piazza Roma 16, Frascati — gelateriagreed.it
+        </div>
+      </div>
+
+      <div class="iscrizione-success" id="iscrizioneSuccess">
+        <div class="success-icon"></div>
+        <div class="success-title">Benvenuto nel Club!</div>
+        <div class="success-text" id="successText"></div>
+        <button class="btn btn-primary" style="margin-top:24px" onclick="resetForm()">Nuova iscrizione</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODALS
+═══════════════════════════════════════ -->
+
+<!-- Modal: Nuovo/Modifica Cliente -->
+<div class="modal-overlay" id="modalCliente">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalCliente')">×</button>
+    <div class="modal-title" id="modalClienteTitle">Nuovo Cliente</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome *</label>
+        <input type="text" class="form-input" id="mNome" placeholder="Mario">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cognome *</label>
+        <input type="text" class="form-input" id="mCognome" placeholder="Rossi">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input type="email" class="form-input" id="mEmail" placeholder="mario@email.it">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Telefono</label>
+      <input type="tel" class="form-input" id="mTel" placeholder="+39 333 123 4567">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data di nascita</label>
+      <input type="date" class="form-input" id="mNascita">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Punti iniziali</label>
+      <input type="number" class="form-input" id="mPunti" value="0" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Consensi</label>
+      <div class="checkbox-group">
+        <label class="checkbox-item"><input type="checkbox" id="mPrivacy"> Privacy accettata</label>
+        <label class="checkbox-item"><input type="checkbox" id="mMarketing"> Marketing email</label>
+        <label class="checkbox-item"><input type="checkbox" id="mSms"> SMS/WhatsApp</label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalCliente')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaCliente()" id="btnSalvaCliente">Salva cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: QR Cliente -->
+<div class="modal-overlay" id="modalQr">
+  <div class="modal" style="width:400px;text-align:center">
+    <button class="modal-close" onclick="closeModal('modalQr')">×</button>
+    <div class="modal-title" style="text-align:center">QR Cliente</div>
+    <div class="qr-display">
+      <div class="qr-canvas-wrap">
+        <canvas id="qrCanvas" width="200" height="200"></canvas>
+      </div>
+      <div class="qr-name" id="qrName"></div>
+      <div class="qr-level" id="qrLevel"></div>
+      <div class="qr-points"><span id="qrPoints">0</span> <span style="font-size:16px;color:var(--text-muted)">punti</span></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="window.print()"> Stampa QR</button>
+  </div>
+</div>
+
+<!-- Modal: Aggiungi Punti -->
+<div class="modal-overlay" id="modalPunti">
+  <div class="modal" style="width:400px">
+    <button class="modal-close" onclick="closeModal('modalPunti')">×</button>
+    <div class="modal-title">Gestisci Punti</div>
+    <div class="punti-current">
+      <div>
+        <div class="punti-current-label">Punti attuali</div>
+        <div class="punti-current-val" id="modalPuntiAttuali">0</div>
+      </div>
+      <div id="modalLivelloAttuale"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Importo acquisto (€)</label>
+      <input type="number" class="form-input" id="importoAcquisto" placeholder="Es: 15.00" min="0" step="0.5" oninput="aggiornaCalcoloPunti()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Punti da aggiungere</label>
+      <input type="number" class="form-input" id="puntiDaAggiungere" placeholder="Automatico" oninput="syncPuntiManuali()">
+    </div>
+    <div style="background:var(--cream);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);margin-bottom:16px">
+       Esploratore: 2 pt/€ · Ambasciatore: 3 pt/€ · Custode: 4 pt/€
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalPunti')">Annulla</button>
+      <button class="btn btn-secondary" onclick="confermaPunti()">Aggiungi punti</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Storico Punti Cliente -->
+<div class="modal-overlay" id="modalStorico">
+  <div class="modal" style="width:560px">
+    <button class="modal-close" onclick="closeModal('modalStorico')">×</button>
+    <div class="modal-title">Storico — <span id="storicoNome" style="color:var(--green-light)"></span></div>
+    <div id="storicoTotale" style="background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Punti totali</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--green)" id="storicoTotPunti">0</div>
+    </div>
+    <div id="storicoList" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;color:var(--text-muted);padding:20px">Caricamento...</div>
+    </div>
+  </div>
+</div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, limit, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwAZb_A3IjPv7iL0cLhVnWO-Cuw_DD5g4",
+  authDomain: "club-greed.firebaseapp.com",
+  projectId: "club-greed",
+  storageBucket: "club-greed.firebasestorage.app",
+  messagingSenderId: "704669833762",
+  appId: "1:704669833762:web:917f4c7b104bc8ad39087b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// -- UTILS --
+window.db = db;
+window.collection = collection;
+window.doc = doc;
+window.addDoc = addDoc;
+window.getDoc = getDoc;
+window.getDocs = getDocs;
+window.updateDoc = updateDoc;
+window.query = query;
+window.orderBy = orderBy;
+window.limit = limit;
+window.where = where;
+window.serverTimestamp = serverTimestamp;
+
+window.deleteDoc = deleteDoc;
+window.allClienti = [];
+window.currentEditId = null;
+window.currentCassaCliente = null;
+
+function getLivello(punti) {
+  if (punti >= 500) return { nome: 'Custode del Gusto', moltiplicatore: 4, badge: 'badge-custode', next: null, nextPunti: null };
+  if (punti >= 200) return { nome: 'Ambasciatore', moltiplicatore: 3, badge: 'badge-ambasciatore', next: 'Custode del Gusto', nextPunti: 500 - punti };
+  return { nome: 'Esploratore', moltiplicatore: 2, badge: 'badge-esploratore', next: 'Ambasciatore', nextPunti: 200 - punti };
+}
+window.getLivello = getLivello;
+
+function formatDate(ts) {
+  if (!ts) return '-';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function puntiBar(punti) {
+  const max = punti >= 500 ? 650 : punti >= 200 ? 500 : 200;
+  const pct = Math.min(100, Math.round((punti / max) * 100));
+  return `<div class="punti-bar-wrap"><div class="punti-bar"><div class="punti-bar-fill" style="width:${pct}%"></div></div><span class="punti-num">${punti}</span></div>`;
+}
+
+// -- TOAST --
+window.showToast = function(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// -- VIEWS --
+window.showView = function(name) {
+  if (name === 'giftcard') { setTimeout(function(){ if(typeof loadGiftCards==='function') loadGiftCards(); }, 200); }
+  if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
+  if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().includes(name === 'checkin' ? 'check' : name === 'iscrizione' ? 'form' : name)) b.classList.add('active');
+  });
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'clienti') loadClienti();
+  if (name === 'checkin') loadCheckin();
+  if (name === 'cassa') loadClienti();
+}
+
+// -- LOAD DASHBOARD --
+async function loadDashboard() {
+  try {
+    const snap = await getDocs(collection(db, 'clienti'));
+    const clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    window.allClienti = clienti;
+
+    const totali = clienti.length;
+    const esploratori = clienti.filter(c => (c.punti||0) >= 0 && (c.punti||0) < 200).length;
+    const ambas = clienti.filter(c => (c.punti||0) >= 200 && (c.punti||0) < 500).length;
+    const custodi = clienti.filter(c => (c.punti||0) >= 500).length;
+    const puntiTot = clienti.reduce((s, c) => s + (c.punti || 0), 0);
+
+    document.getElementById('statTotali').textContent = totali;
+    document.getElementById('statEsploratori').textContent = esploratori;
+    document.getElementById('statAmbasciatori').textContent = ambas;
+    document.getElementById('statCustodi').textContent = custodi;
+    document.getElementById('statPunti').textContent = puntiTot;
+
+    const recenti = clienti.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)).slice(0,5);
+    const tbody = document.getElementById('dashboardTable');
+    if (!recenti.length) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon"></div><div class="empty-text">Nessun cliente ancora</div></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = recenti.map(c => {
+      const lv = getLivello(c.punti||0);
+      return `<tr>
+        <td><strong>${c.nome} ${c.cognome}</strong><br><span style="font-size:12px;color:var(--text-muted)">${c.email}</span></td>
+        <td><span class="badge ${lv.badge}">${lv.nome}</span></td>
+        <td>${puntiBar(c.punti||0)}</td>
+        <td style="font-size:13px;color:var(--text-muted)">${formatDate(c.createdAt)}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    console.error(e);
+    showToast('Errore caricamento dati', 'error');
+  }
+}
+
+// -- LOAD CLIENTI --
+async function loadClienti() {
+  try {
+    const snap = await getDocs(collection(db, 'clienti'));
+    window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderClienti(window.allClienti);
+  } catch(e) {
+    showToast('Errore caricamento clienti', 'error');
+  }
+}
+
+function renderClienti(clienti) {
+  const tbody = document.getElementById('clientiTable');
+  if (!clienti.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon"></div><div class="empty-text">Nessun cliente trovato</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = clienti.map(c => {
+    const lv = getLivello(c.punti||0);
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:15px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+          <div><strong>${c.nome} ${c.cognome}</strong></div>
+        </div>
+      </td>
+      <td><span style="font-size:13px">${c.email}</span><br><span style="font-size:12px;color:var(--text-muted)">${c.telefono||''}</span></td>
+      <td><span class="badge ${lv.badge}">${lv.nome}</span></td>
+      <td>${puntiBar(c.punti||0)}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${formatDate(c.createdAt)}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="openPunti('${c.id}')">+ Punti</button>
+          <button class="btn btn-ghost btn-sm" onclick="openQrCliente('${c.id}')">QR</button>
+          <button class="btn btn-ghost btn-sm" onclick="openStorico('${c.id}')">📋</button>
+          <button class="btn btn-ghost btn-sm" onclick="openModifica('${c.id}')"></button>
+          <button class="btn btn-danger btn-sm" onclick="window.eliminaCliente('${c.id}','${c.nome} ${c.cognome}')" title="Elimina cliente"></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// -- ELIMINA CLIENTE --
+window.eliminaCliente = async function(id, nomeCompleto) {
+  const conferma = confirm(`Eliminare definitivamente "${nomeCompleto}" dal Club Greed?\n\nQuesta operazione non può essere annullata.`);
+  if (!conferma) return;
+  try {
+    await deleteDoc(doc(db, 'clienti', id));
+    window.allClienti = window.allClienti.filter(c => c.id !== id);
+    renderClienti(window.allClienti);
+    // aggiorna stats dashboard se visibile
+    const dash = document.getElementById('view-dashboard');
+    if (dash && dash.classList.contains('active')) loadDashboard();
+    // aggiorna contatori live
+    const totali = window.allClienti.length;
+    const esploratori = window.allClienti.filter(c => (c.punti||0) < 200).length;
+    const ambas = window.allClienti.filter(c => (c.punti||0) >= 200 && (c.punti||0) < 500).length;
+    const custodi = window.allClienti.filter(c => (c.punti||0) >= 500).length;
+    const puntiTot = window.allClienti.reduce((s,c) => s + (c.punti||0), 0);
+    const el = id => document.getElementById(id);
+    if (el('statTotali')) el('statTotali').textContent = totali;
+    if (el('statEsploratori')) el('statEsploratori').textContent = esploratori;
+    if (el('statAmbasciatori')) el('statAmbasciatori').textContent = ambas;
+    if (el('statCustodi')) el('statCustodi').textContent = custodi;
+    if (el('statPunti')) el('statPunti').textContent = puntiTot;
+    showToast(`"${nomeCompleto}" eliminato dal Club v`);
+  } catch(e) {
+    console.error(e);
+    showToast('Errore durante l\'eliminazione', 'error');
+  }
+}
+
+window.filterClienti = function() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = window.allClienti.filter(c =>
+    `${c.nome} ${c.cognome} ${c.email}`.toLowerCase().includes(q)
+  );
+  renderClienti(filtered);
+}
+
+// -- MODALS --
+window.openModal = function(id) { document.getElementById(id).classList.add('open'); }
+window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); }
+
+window.openNuovoCliente = function() {
+  currentEditId = null;
+  document.getElementById('modalClienteTitle').textContent = 'Nuovo Cliente';
+  document.getElementById('btnSalvaCliente').textContent = 'Salva cliente';
+  ['mNome','mCognome','mEmail','mTel','mNascita'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mPunti').value = '0';
+  ['mPrivacy','mMarketing','mSms'].forEach(id => document.getElementById(id).checked = false);
+  openModal('modalCliente');
+}
+
+window.openModifica = function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  currentEditId = id;
+  document.getElementById('modalClienteTitle').textContent = 'Modifica Cliente';
+  document.getElementById('btnSalvaCliente').textContent = 'Aggiorna cliente';
+  document.getElementById('mNome').value = c.nome||'';
+  document.getElementById('mCognome').value = c.cognome||'';
+  document.getElementById('mEmail').value = c.email||'';
+  document.getElementById('mTel').value = c.telefono||'';
+  document.getElementById('mNascita').value = c.dataNascita||'';
+  document.getElementById('mPunti').value = c.punti||0;
+  document.getElementById('mPrivacy').checked = c.privacy||false;
+  document.getElementById('mMarketing').checked = c.marketing||false;
+  document.getElementById('mSms').checked = c.sms||false;
+  openModal('modalCliente');
+}
+
+window.salvaCliente = async function() {
+  const nome = document.getElementById('mNome').value.trim();
+  const cognome = document.getElementById('mCognome').value.trim();
+  const email = document.getElementById('mEmail').value.trim();
+  if (!nome || !cognome || !email) { showToast('Nome, cognome ed email sono obbligatori', 'error'); return; }
+
+  const data = {
+    nome, cognome, email,
+    telefono: document.getElementById('mTel').value.trim(),
+    dataNascita: document.getElementById('mNascita').value,
+    punti: parseInt(document.getElementById('mPunti').value)||0,
+    privacy: document.getElementById('mPrivacy').checked,
+    marketing: document.getElementById('mMarketing').checked,
+    sms: document.getElementById('mSms').checked,
+  };
+
+  try {
+    const btn = document.getElementById('btnSalvaCliente');
+    btn.textContent = 'Salvataggio...'; btn.disabled = true;
+
+    if (currentEditId) {
+      await updateDoc(doc(db, 'clienti', currentEditId), data);
+      showToast('Cliente aggiornato v');
+    } else {
+      data.createdAt = serverTimestamp();
+      data.qrCode = 'GRD-' + Date.now();
+      await addDoc(collection(db, 'clienti'), data);
+      showToast('Cliente aggiunto v');
+    }
+    closeModal('modalCliente');
+    loadClienti();
+    btn.textContent = currentEditId ? 'Aggiorna cliente' : 'Salva cliente';
+    btn.disabled = false;
+  } catch(e) {
+    showToast('Errore nel salvataggio', 'error');
+    document.getElementById('btnSalvaCliente').textContent = 'Salva cliente';
+    document.getElementById('btnSalvaCliente').disabled = false;
+  }
+}
+
+// -- STORICO PUNTI --
+window.openStorico = async function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('storicoNome').textContent = `${c.nome} ${c.cognome||''}`;
+  document.getElementById('storicoTotPunti').textContent = c.punti||0;
+  document.getElementById('storicoList').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px">Caricamento...</div>';
+  openModal('modalStorico');
+
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'clienti', id, 'storico'),
+      orderBy('data', 'desc')
+    ));
+    const movimenti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (!movimenti.length) {
+      document.getElementById('storicoList').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px">Nessun movimento registrato ancora.<br><span style="font-size:12px">I movimenti vengono registrati da ora in avanti.</span></div>';
+      return;
+    }
+
+    const tipoIcon = { acquisto: '🛒', checkin: '✓', social: '📸', ordine: '📦', bonus: '🎁', manuale: '✏️' };
+    const tipoLabel = { acquisto: 'Acquisto', checkin: 'Check-in', social: 'Premio social', ordine: 'Ordine online', bonus: 'Bonus', manuale: 'Manuale' };
+
+    document.getElementById('storicoList').innerHTML = movimenti.map(m => {
+      const data = m.data?.toDate ? m.data.toDate().toLocaleString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      const icon = tipoIcon[m.tipo] || '•';
+      const label = tipoLabel[m.tipo] || m.tipo;
+      const importo = m.totale ? ` · €${m.totale.toFixed(2)}` : '';
+      return `<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--cream);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:20px;flex-shrink:0">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:500;font-size:14px">${label}${importo}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.note||''} · ${data}</div>
+        </div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--green);flex-shrink:0">+${m.punti}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('storicoList').innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Errore caricamento storico</div>';
+    console.error(e);
+  }
+};
+window.openQrCliente = async function(id) {
+  const c = window.allClienti.find(x => x.id === id) || (await getDoc(doc(db, 'clienti', id))).data();
+  if (!c) return;
+  const lv = getLivello(c.punti||0);
+  document.getElementById('qrName').textContent = `${c.nome} ${c.cognome}`;
+  document.getElementById('qrLevel').textContent = lv.nome;
+  document.getElementById('qrPoints').textContent = c.punti||0;
+  const qrData = JSON.stringify({ id: id, qr: c.qrCode || id, nome: c.nome });
+  const qrEl = document.getElementById('qrCanvas');
+  qrEl.innerHTML = '';
+  new QRCode(qrEl, { text: qrData, width: 200, height: 200, colorDark: '#1a2e1c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+  openModal('modalQr');
+}
+
+// -- GESTIONE PUNTI --
+let currentPuntiId = null;
+window.openPunti = function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  currentPuntiId = id;
+  const lv = getLivello(c.punti||0);
+  document.getElementById('modalPuntiAttuali').textContent = c.punti||0;
+  document.getElementById('modalLivelloAttuale').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+  document.getElementById('importoAcquisto').value = '';
+  document.getElementById('puntiDaAggiungere').value = '';
+  openModal('modalPunti');
+}
+
+window.aggiornaCalcoloPunti = function() {
+  const importo = parseFloat(document.getElementById('importoAcquisto').value)||0;
+  const c = window.allClienti.find(x => x.id === currentPuntiId);
+  if (!c) return;
+  const lv = getLivello(c.punti||0);
+  document.getElementById('puntiDaAggiungere').value = Math.round(importo * lv.moltiplicatore);
+}
+
+window.syncPuntiManuali = function() {}
+
+window.confermaPunti = async function() {
+  const puntiAdd = parseInt(document.getElementById('puntiDaAggiungere').value)||0;
+  if (!puntiAdd || puntiAdd <= 0) { showToast('Inserisci un importo valido', 'error'); return; }
+  const c = window.allClienti.find(x => x.id === currentPuntiId);
+  const nuovi = (c.punti||0) + puntiAdd;
+  try {
+    await updateDoc(doc(db, 'clienti', currentPuntiId), { punti: nuovi });
+    // Registra storico
+    await addDoc(collection(db, 'clienti', currentPuntiId, 'storico'), {
+      tipo: 'acquisto',
+      punti: puntiAdd,
+      totale: parseFloat(document.getElementById('importoAcquisto').value)||0,
+      data: serverTimestamp(),
+      note: 'Aggiunto da CRM'
+    });
+    showToast(`+${puntiAdd} punti aggiunti a ${c.nome} v`);
+    closeModal('modalPunti');
+    loadClienti();
+  } catch(e) {
+    showToast('Errore aggiornamento punti', 'error');
+  }
+}
+
+// -- CASSA --
+window.cercaClienteCassa = function() {
+  let q = document.getElementById('cassaSearch').value.trim();
+  if (!q) return;
+  // Se il QR contiene JSON (es: {"id":"...","qr":"...","nome":"..."}) estrai l'id e seleziona direttamente
+  try {
+    const parsed = JSON.parse(q);
+    if (parsed.id) {
+      selezionaClienteCassa(parsed.id);
+      document.getElementById('cassaSearch').value = '';
+      return;
+    }
+  } catch(e) {}
+  // Gestisce QR formato GRD-<ID>
+  let searchId = q;
+  if (q.toLowerCase().startsWith('grd-')) searchId = q.slice(4);
+  q = q.toLowerCase();
+  const risultati = window.allClienti.filter(c =>
+    (c.nome+' '+c.cognome+' '+(c.email||'')+' '+(c.qrCode||'')+' '+c.id+' GRD-'+c.id).toLowerCase().includes(q)
+    || c.id.toLowerCase().includes(searchId.toLowerCase())
+  ).slice(0, 4);
+
+  const div = document.getElementById('cassaResults');
+  if (!risultati.length) {
+    div.innerHTML = `<div style="color:var(--text-muted);font-size:13px">Nessun cliente trovato</div>`;
+    return;
+  }
+  div.innerHTML = risultati.map(c => `
+    <div onclick="selezionaClienteCassa('${c.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+      <div>
+        <div style="font-weight:600;font-size:14px">${c.nome} ${c.cognome}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${c.email} . ${c.punti||0} punti</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.selezionaClienteCassa = function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  window.currentCassaCliente = id;
+  const lv = getLivello(c.punti||0);
+  document.getElementById('foundAvatar').textContent = (c.nome||'?')[0].toUpperCase();
+  document.getElementById('foundName').textContent = `${c.nome} ${c.cognome}`;
+  document.getElementById('foundMeta').textContent = `${c.email} . ${c.telefono||''}`;
+  document.getElementById('foundPunti').textContent = c.punti||0;
+  document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+  document.getElementById('cassaResults').innerHTML = '';
+  document.getElementById('cassaSearch').value = '';
+  document.getElementById('cassaImporto').value = '';
+  document.getElementById('cassaPuntiCalc').value = '';
+  document.getElementById('clienteFound').classList.add('visible');
+}
+
+window.calcolaPunti = function() {
+  const importo = parseFloat(document.getElementById('cassaImporto').value)||0;
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  if (!c) return;
+  const lv = getLivello(c.punti||0);
+  document.getElementById('cassaPuntiCalc').value = Math.round(importo * lv.moltiplicatore);
+}
+
+window.aggiungiPuntiCassa = async function() {
+  const puntiAdd = parseInt(document.getElementById('cassaPuntiCalc').value)||0;
+  if (!puntiAdd) { showToast('Inserisci un importo', 'error'); return; }
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  const nuovi = (c.punti||0) + puntiAdd;
+  try {
+    await updateDoc(doc(db, 'clienti', currentCassaCliente), { punti: nuovi });
+    // Registra storico
+    await addDoc(collection(db, 'clienti', currentCassaCliente, 'storico'), {
+      tipo: 'acquisto',
+      punti: puntiAdd,
+      totale: parseFloat(document.getElementById('cassaImporto').value)||0,
+      data: serverTimestamp(),
+      note: 'Aggiunto da Cassa'
+    });
+    document.getElementById('foundPunti').textContent = nuovi;
+    const lv = getLivello(nuovi);
+    document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+    document.getElementById('cassaImporto').value = '';
+    document.getElementById('cassaPuntiCalc').value = '';
+    const ci = window.allClienti.find(x => x.id === currentCassaCliente);
+    if (ci) ci.punti = nuovi;
+    showToast(`+${puntiAdd} punti aggiunti a ${c.nome} v`);
+  } catch(e) { showToast('Errore', 'error'); }
+}
+
+window.premiaSocial = async function(piattaforma, punti) {
+  if (!currentCassaCliente) return;
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  if (!c) return;
+  const nuovi = (c.punti||0) + punti;
+  const label = { google: 'Google', tripadvisor: 'TripAdvisor', instagram: 'Story Instagram', facebook: 'Story Facebook', tiktok: 'Story TikTok' };
+  try {
+    await updateDoc(doc(db, 'clienti', currentCassaCliente), { punti: nuovi });
+    await addDoc(collection(db, 'clienti', currentCassaCliente, 'storico'), {
+      tipo: 'social',
+      punti: punti,
+      piattaforma: piattaforma,
+      data: serverTimestamp(),
+      note: `Premio ${label[piattaforma]||piattaforma}`
+    });
+    document.getElementById('foundPunti').textContent = nuovi;
+    const lv = getLivello(nuovi);
+    document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+    const ci = window.allClienti.find(x => x.id === currentCassaCliente);
+    if (ci) ci.punti = nuovi;
+    showToast(`+${punti} punti ${label[piattaforma]} a ${c.nome} ✓`);
+  } catch(e) { showToast('Errore assegnazione punti', 'error'); }
+};
+
+window.aggiungiCheckinCassa = async function() {
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  const nuovi = (c.punti||0) + 5;
+  try {
+    await updateDoc(doc(db, 'clienti', currentCassaCliente), { punti: nuovi });
+    await addDoc(collection(db, 'clienti', currentCassaCliente, 'storico'), {
+      tipo: 'checkin',
+      punti: 5,
+      data: serverTimestamp(),
+      note: 'Check-in giornaliero'
+    });
+    document.getElementById('foundPunti').textContent = nuovi;
+    const ci = window.allClienti.find(x => x.id === currentCassaCliente);
+    if (ci) ci.punti = nuovi;
+    showToast(`Check-in: +5 punti a ${c.nome} v`);
+  } catch(e) { showToast('Errore', 'error'); }
+}
+
+window.resetCassa = function() {
+  currentCassaCliente = null;
+  document.getElementById('clienteFound').classList.remove('visible');
+  document.getElementById('cassaSearch').value = '';
+  document.getElementById('cassaResults').innerHTML = '';
+}
+
+// -- CHECKIN QR GIORNALIERO --
+async function loadCheckin() {
+  const oggi = new Date();
+  const dateStr = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('checkinDate').textContent = dateStr;
+  const dayCode = oggi.toISOString().slice(0,10).replace(/-/g,'');
+  const qrData = 'https://greedgelateria.github.io/checkin/?code=GREED-CHECKIN-' + dayCode;
+  const container = document.getElementById('checkinQrCanvas');
+  container.innerHTML = ''; // svuota se già generato
+  try {
+    new QRCode(container, {
+      text: qrData,
+      width: 220,
+      height: 220,
+      colorDark: '#1a2e1c',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } catch(err) {
+    console.error('QR error:', err);
+    container.innerHTML = '<div style="padding:20px;font-size:11px;word-break:break-all;color:#666">' + qrData + '</div>';
+  }
+
+  // mostra checkin di oggi (semplice: chi ha fatto check-in oggi)
+  // In una versione futura si può aggiungere una collection 'checkins'
+}
+
+// -- REGISTRAZIONE PUBBLICA --
+window.registraCliente = async function() {
+  const nome = document.getElementById('regNome').value.trim();
+  const cognome = document.getElementById('regCognome').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const telefono = document.getElementById('regTel').value.trim();
+  const privacy = document.getElementById('regPrivacy').checked;
+
+  if (!nome || !cognome) { showToast('Nome e cognome sono obbligatori', 'error'); return; }
+  if (!telefono) { showToast('Il numero di telefono è obbligatorio', 'error'); return; }
+  if (!privacy) { showToast('Devi accettare la privacy per iscriverti', 'error'); return; }
+
+  const data = {
+    nome, cognome, email, telefono,
+    dataNascita: document.getElementById('regNascita').value,
+    punti: 10,
+    privacy: true,
+    marketing: document.getElementById('regMarketing').checked,
+    sms: document.getElementById('regSms').checked,
+    createdAt: serverTimestamp(),
+    qrCode: 'GRD-' + Date.now(),
+  };
+
+  try {
+    const btn = document.querySelector('#iscrizioneForm button');
+    btn.textContent = 'Iscrizione in corso...'; btn.disabled = true;
+    await addDoc(collection(db, 'clienti'), data);
+    document.getElementById('iscrizioneForm').style.display = 'none';
+    document.getElementById('successText').innerHTML = `Ciao <strong>${nome}</strong>! Sei ufficialmente un <strong>Esploratore</strong> del Club Greed.<br><br>Riceverai a breve un messaggio WhatsApp con il tuo QR personale. Ti aspettiamo in gelateria!<br><br><span style="font-size:12px;color:var(--text-muted)">Hai ricevuto 10 punti di benvenuto!</span>`;
+    document.getElementById('iscrizioneSuccess').classList.add('visible');
+  } catch(e) {
+    showToast('Errore nella registrazione', 'error');
+    const btn = document.querySelector('#iscrizioneForm button');
+    btn.textContent = 'Iscriviti al Club Greed →'; btn.disabled = false;
+  }
+}
+
+window.resetForm = function() {
+  document.getElementById('iscrizioneForm').style.display = 'block';
+  document.getElementById('iscrizioneForm').querySelector('button').textContent = 'Iscriviti al Club Greed ->';
+  document.getElementById('iscrizioneForm').querySelector('button').disabled = false;
+  document.getElementById('iscrizioneSuccess').classList.remove('visible');
+  ['regNome','regCognome','regEmail','regTel','regNascita'].forEach(id => document.getElementById(id).value = '');
+  ['regPrivacy','regMarketing','regSms'].forEach(id => document.getElementById(id).checked = false);
+}
+
+// -- INIT --
+async function init() {
+  await loadDashboard();
+  // Pre-carica clienti per la cassa
+  const snap = await getDocs(collection(db, 'clienti'));
+  window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+init();
+
+/* -- QR SCANNER FOTOCAMERA (Cassa) -- */
+window._scannerStream = null;
+window._scannerRAF = null;
+window._scannerCanvas = document.createElement('canvas');
+
+window.avviaScanner = function() {
+  document.getElementById('qrStartArea').style.display = 'none';
+  document.getElementById('qrScanArea').style.display = 'block';
+  var video = document.getElementById('qrVideo');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(function(stream) {
+      window._scannerStream = stream;
+      video.srcObject = stream;
+      video.play();
+      video.addEventListener('loadedmetadata', function() {
+        window._scannerRAF = requestAnimationFrame(window._scanFrame);
+      });
+    })
+    .catch(function(err) {
+      fermaScanner();
+      alert('Fotocamera non disponibile: ' + err.message);
+    });
+};
+
+window._scanFrame = function() {
+  var video = document.getElementById('qrVideo');
+  if (!video || video.readyState < 2) {
+    window._scannerRAF = requestAnimationFrame(window._scanFrame);
+    return;
+  }
+  var canvas = window._scannerCanvas;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data) {
+    var raw = code.data.trim();
+    fermaScanner();
+
+    // QR ordine: contiene ORD-
+    if (raw.indexOf('ORD-') !== -1) {
+      var ordMatch = raw.match(/(ORD-[0-9]+)/);
+      var ordineId = ordMatch ? ordMatch[1] : raw;
+      mostraDettaglioOrdine(ordineId);
+      return;
+    }
+
+    // QR personale cliente: estrai GRD-xxx da URL se necessario
+    var qr = raw;
+    var urlMatch = raw.match(/[?&]qr=(GRD-[^&]+)/);
+    if (urlMatch) qr = urlMatch[1];
+
+    // Cerca per qrCode, per ID documento, o per GRD-<ID>
+    var idDaQr = qr.startsWith('GRD-') ? qr.slice(4) : qr;
+    var cliente = window.allClienti && window.allClienti.find(function(c) {
+      return c.qrCode === qr || c.id === qr || c.id === idDaQr;
+    });
+    if (cliente) {
+      selezionaClienteCassa(cliente.id);
+    } else {
+      document.getElementById('cassaSearch').value = qr;
+      cercaClienteCassa();
+      document.getElementById('qrStartArea').style.display = 'block';
+    }
+    return;
+  }
+  window._scannerRAF = requestAnimationFrame(window._scanFrame);
+};
+
+window.fermaScanner = function() {
+  if (window._scannerRAF) { cancelAnimationFrame(window._scannerRAF); window._scannerRAF = null; }
+  if (window._scannerStream) { window._scannerStream.getTracks().forEach(function(t){ t.stop(); }); window._scannerStream = null; }
+  var video = document.getElementById('qrVideo');
+  if (video) { video.srcObject = null; }
+  document.getElementById('qrScanArea').style.display = 'none';
+  document.getElementById('qrStartArea').style.display = 'block';
+};
+
+
+/* -- GESTIONE ORDINI QR -- */
+window._ordineCorrente = null;
+
+window.mostraDettaglioOrdine = async function(ordineId) {
+  try {
+    const snap = await getDocs(query(collection(db, 'ordini'), where('ordineId','==',ordineId), limit(1)));
+    if (snap.empty) {
+      showToast('Ordine non trovato: ' + ordineId, 'error');
+      return;
+    }
+    const ordine = snap.docs[0].data();
+    const docId = snap.docs[0].id;
+    window._ordineCorrente = { docId, ordine };
+
+    document.getElementById('modalOrdineId').textContent = ordineId;
+    
+    const stato = ordine.stato === 'consegnato' 
+      ? '<span style="color:var(--green)">v Già consegnato</span>'
+      : '<span style="color:var(--gold)"> In attesa di ritiro</span>';
+    document.getElementById('modalOrdineStato').innerHTML = stato;
+
+    let html = `<div style="background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:600">${ordine.nome} ${ordine.cognome||''}</div>
+      <div style="font-size:13px;color:var(--text-muted)"> ${ordine.telefono||'-'}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">EUR ${ordine.totale?.toFixed(2)||'-'}</div>
+    </div>`;
+
+    if (ordine.carrello && ordine.carrello.length) {
+      ordine.carrello.forEach((item, i) => {
+        html += `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+          <div style="font-weight:600;margin-bottom:6px">${item.vaschetta}</div>
+          <div style="font-size:13px"> ${item.gusti?.join(', ')||'-'}</div>
+          ${item.scorta ? `<div style="font-size:12px;color:#c8860a;margin-top:4px">* Scorta: ${item.scorta}</div>` : ''}
+          ${item.panna ? `<div style="font-size:12px;color:var(--text-muted)">+ Panna EUR${item.pannaCosto?.toFixed(2)||'-'}</div>` : ''}
+          ${item.miniconi ? `<div style="font-size:12px;color:var(--text-muted)">+ Kit 9 miniconi EUR1,50</div>` : ''}
+          ${item.cono ? `<div style="font-size:12px;color:var(--text-muted)">+ ${item.cono}</div>` : ''}
+          ${item.note ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px"> ${item.note}</div>` : ''}
+        </div>`;
+      });
+    }
+
+    document.getElementById('modalOrdineBody').innerHTML = html;
+    document.getElementById('btnConsegna').style.display = ordine.stato === 'consegnato' ? 'none' : 'block';
+    document.getElementById('ordineModal').style.display = 'flex';
+  } catch(e) {
+    showToast('Errore caricamento ordine', 'error');
+    console.error(e);
+  }
+};
+
+window.consegnaOrdine = async function() {
+  if (!window._ordineCorrente) return;
+  try {
+    await updateDoc(doc(db, 'ordini', window._ordineCorrente.docId), { stato: 'consegnato' });
+    showToast('Ordine consegnato v');
+    chiudiOrdineModal();
+  } catch(e) {
+    showToast('Errore', 'error');
+  }
+};
+
+window.chiudiOrdineModal = function() {
+  document.getElementById('ordineModal').style.display = 'none';
+  window._ordineCorrente = null;
+};
+
+
+/* -- VISTA ORDINI -- */
+window._ordiniCache = [];
+
+window.showView = window.showView || function(){};
+const _origShowView = window.showView;
+
+window.loadOrdini = async function() {
+  const filtro = document.getElementById('ordiniFilter')?.value || 'tutti';
+  const tableDiv = document.getElementById('ordiniTable');
+  if(tableDiv) tableDiv.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento...</div>';
+
+  try {
+    let q;
+    if(filtro === 'tutti') {
+      q = query(collection(db, 'ordini'), orderBy('createdAt','desc'), limit(200));
+    } else {
+      q = query(collection(db, 'ordini'), where('stato','==',filtro), orderBy('createdAt','desc'), limit(200));
+    }
+    const snap = await getDocs(q);
+    window._ordiniCache = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    renderOrdiniTable(window._ordiniCache);
+    aggiornaStatOrdini(window._ordiniCache);
+  } catch(e) {
+    if(tableDiv) tableDiv.innerHTML = '<div style="padding:24px;color:var(--red)">Errore caricamento ordini.</div>';
+    console.error(e);
+  }
+};
+
+function aggiornaStatOrdini(ordini) {
+  const oggi = new Date().toLocaleDateString('it-IT');
+  const ordiniOggi = ordini.filter(o => {
+    const d = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString('it-IT') : '';
+    return d === oggi;
+  });
+  const attesa = ordini.filter(o => o.stato === 'pagato');
+  const incasso = ordini.filter(o => o.stato === 'consegnato').reduce((s,o) => s+(o.totale||0), 0);
+  const meseCorrente = new Date().getMonth();
+  const incassoMese = ordini.filter(o => {
+    const d = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+    return d && d.getMonth() === meseCorrente && o.stato === 'consegnato';
+  }).reduce((s,o) => s+(o.totale||0), 0);
+
+  document.getElementById('statOggi').textContent = ordiniOggi.length;
+  document.getElementById('statAttesa').textContent = attesa.length;
+  document.getElementById('statIncasso').textContent = 'EUR ' + incasso.toFixed(2);
+  document.getElementById('statMese').textContent = 'EUR ' + incassoMese.toFixed(2);
+}
+
+function renderOrdiniTable(ordini) {
+  const div = document.getElementById('ordiniTable');
+  if(!ordini.length) {
+    div.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">Nessun ordine trovato.</div>';
+    return;
+  }
+
+  let html = `<table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:var(--cream);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted)">
+        <th style="padding:12px 16px;text-align:left">Ordine</th>
+        <th style="padding:12px 16px;text-align:left">Cliente</th>
+        <th style="padding:12px 16px;text-align:left">Telefono</th>
+        <th style="padding:12px 16px;text-align:left">Data</th>
+        <th style="padding:12px 16px;text-align:right">Totale</th>
+        <th style="padding:12px 16px;text-align:center">Stato</th>
+        <th style="padding:12px 16px;text-align:center">Azioni</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  ordini.forEach(o => {
+    const data = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString('it-IT') : '-';
+    const statoColor = o.stato === 'consegnato' ? 'var(--green)' : 'var(--gold)';
+    const statoLabel = o.stato === 'consegnato' ? 'v Consegnato' : ' Attesa ritiro';
+    const gusti = o.carrello?.map(i => i.gusti?.join(', ')).join(' | ') || '-';
+
+    html += `<tr style="border-top:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+      <td style="padding:12px 16px;font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--green)">${o.ordineId||'-'}</td>
+      <td style="padding:12px 16px"><div style="font-weight:500">${o.nome||''} ${o.cognome||''}</div><div style="font-size:11px;color:var(--text-muted)">${gusti}</div></td>
+      <td style="padding:12px 16px;color:var(--text-muted)">${o.telefono||'-'}</td>
+      <td style="padding:12px 16px;color:var(--text-muted);font-size:12px">${data}</td>
+      <td style="padding:12px 16px;text-align:right;font-weight:600">EUR ${(o.totale||0).toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:center"><span style="font-size:11px;font-weight:600;color:${statoColor}">${statoLabel}</span></td>
+      <td style="padding:12px 16px;text-align:center">
+        <button onclick="apriDettaglioOrdineAdmin('${o.docId}')" style="background:none;border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">Dettaglio</button>
+        <button onclick="eliminaOrdine('${o.docId}','${o.ordineId||o.docId}')" style="background:none;border:1px solid #f5c6c2;color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:4px">🗑</button>
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  div.innerHTML = html;
+}
+
+window.eliminaOrdine = async function(docId, ordineId) {
+  const pin = prompt(`Inserisci il PIN titolare per eliminare l'ordine "${ordineId}":`);
+  if (pin !== '3737') { showToast('PIN errato — eliminazione annullata', 'error'); return; }
+  const conferma = confirm(`Eliminare definitivamente l'ordine "${ordineId}"?\n\nQuesta operazione non può essere annullata.`);
+  if (!conferma) return;
+  try {
+    await deleteDoc(doc(db, 'ordini', docId));
+    window._ordiniCache = window._ordiniCache.filter(o => o.docId !== docId);
+    renderOrdiniTable(window._ordiniCache);
+    aggiornaStatOrdini(window._ordiniCache);
+    showToast(`Ordine ${ordineId} eliminato ✓`);
+  } catch(e) {
+    showToast('Errore eliminazione ordine', 'error');
+  }
+};
+
+window.apriDettaglioOrdineAdmin = function(docId) {
+  const o = window._ordiniCache.find(x => x.docId === docId);
+  if(!o) return;
+  window._ordineCorrente = { docId, ordine: o };
+
+  document.getElementById('modalOrdineId').textContent = o.ordineId || docId;
+  const stato = o.stato === 'consegnato'
+    ? '<span style="color:var(--green)">v Già consegnato</span>'
+    : '<span style="color:var(--gold)"> In attesa di ritiro</span>';
+  document.getElementById('modalOrdineStato').innerHTML = stato;
+
+  let html = `<div style="background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:600">${o.nome} ${o.cognome||''}</div>
+    <div style="font-size:13px;color:var(--text-muted)"> ${o.telefono||'-'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">EUR ${(o.totale||0).toFixed(2)}</div>
+  </div>`;
+
+  if(o.carrello?.length) {
+    o.carrello.forEach(item => {
+      html += `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-weight:600;margin-bottom:6px">${item.vaschetta}</div>
+        <div style="font-size:13px"> ${item.gusti?.join(', ')||'-'}</div>
+        ${item.scorta ? `<div style="font-size:12px;color:#c8860a;margin-top:4px">* Scorta: ${item.scorta}</div>` : ''}
+        ${item.panna ? `<div style="font-size:12px;color:var(--text-muted)">+ Panna EUR${item.pannaCosto?.toFixed(2)||'-'}</div>` : ''}
+        ${item.miniconi ? `<div style="font-size:12px;color:var(--text-muted)">+ Kit 9 miniconi EUR1,50</div>` : ''}
+        ${item.cono ? `<div style="font-size:12px;color:var(--text-muted)">+ ${item.cono}</div>` : ''}
+        ${item.note ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px"> ${item.note}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  document.getElementById('modalOrdineBody').innerHTML = html;
+  document.getElementById('btnConsegna').style.display = o.stato === 'consegnato' ? 'none' : 'block';
+  document.getElementById('ordineModal').style.display = 'flex';
+};
+
+/* ─────────────────────────────────────────
+   ORA FURBA
+───────────────────────────────────────── */
+let ofAttiva = false;
+
+async function loadOraFurba() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'oraFurba'));
+    if (snap.exists()) {
+      const d = snap.data();
+      ofAttiva = d.attiva !== false;
+      document.getElementById('ofMaxOrdini').value = d.maxOrdini || 10;
+      document.getElementById('ofOrdiniOggi').textContent = d.ordiniOggi || 0;
+      aggiornaToggleOF();
+    }
+  } catch(e) { console.error(e); }
+}
+
+function aggiornaToggleOF() {
+  const toggle = document.getElementById('ofToggle');
+  const dot = document.getElementById('ofToggleDot');
+  const label = document.getElementById('ofToggleLabel');
+  if (ofAttiva) {
+    toggle.style.background = 'var(--green)';
+    dot.style.left = '25px';
+    label.textContent = 'Attiva';
+    label.style.color = 'var(--green)';
+  } else {
+    toggle.style.background = 'var(--border)';
+    dot.style.left = '3px';
+    label.textContent = 'Disattiva';
+    label.style.color = 'var(--text-muted)';
+  }
+}
+
+window.toggleOraFurba = function() {
+  ofAttiva = !ofAttiva;
+  aggiornaToggleOF();
+};
+
+window.salvaOraFurba = async function() {
+  const maxOrdini = parseInt(document.getElementById('ofMaxOrdini').value) || 10;
+  try {
+    await updateDoc(doc(db, 'config', 'oraFurba'), { attiva: ofAttiva, maxOrdini });
+    showToast('Ora Furba aggiornata ✓');
+  } catch(e) {
+    showToast('Errore salvataggio', 'error');
+  }
+};
+
+window.resetOrdiniOggi = async function() {
+  const conferma = confirm('Azzerare il contatore ordini oggi?');
+  if (!conferma) return;
+  try {
+    await updateDoc(doc(db, 'config', 'oraFurba'), { ordiniOggi: 0 });
+    document.getElementById('ofOrdiniOggi').textContent = '0';
+    showToast('Contatore azzerato ✓');
+  } catch(e) {
+    showToast('Errore', 'error');
+  }
+};
+
+/* ─────────────────────────────────────────
+   CAMPAGNE WHATSAPP
+───────────────────────────────────────── */
+const N8N_CAMPAGNA_URL = 'https://europe-west3-club-greed.cloudfunctions.net/inviaCampagna';
+let campClientiSelezionati = new Set();
+let campClientiFiltrati = [];
+
+// Configurazione campagne: template Meta, descrizione, campi, testo preview
+const CAMP_CONFIG = {
+  promo_flash: {
+    template: 'greed_promo_flash',
+    desc: 'Offerta flash con sconto o gusto in esclusiva. Invia a tutti o per livello.',
+    bottone: true,
+    campi: [
+      { id: 'c_testo',    label: 'Testo offerta ({{2}})', tipo: 'textarea', placeholder: 'Vaschetta Media con sconto 20% solo oggi!' },
+      { id: 'c_scadenza', label: 'Valida fino a ({{3}})',  tipo: 'text',     placeholder: 'domenica 30 marzo' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 🍦\n\n${v.c_testo||'...'}\n\nOfferta valida fino a ${v.c_scadenza||'...'}.\nNon perdere questa occasione — solo per i membri del Club Greed.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_promo_flash',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_testo, var3: v.c_scadenza
+    })
+  },
+  referral: {
+    template: 'greed_referral',
+    desc: 'Invita i tuoi clienti a portare un amico in cambio di punti.',
+    bottone: true,
+    campi: [
+      { id: 'c_sconto',  label: 'Sconto per l\'amico ({{2}})', tipo: 'text', placeholder: '10%' },
+      { id: 'c_punti',   label: 'Punti guadagnati ({{3}})',    tipo: 'text', placeholder: '50' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 🎁\n\nHai un amico goloso? Presentalo al Club Greed!\n\nLui riceve ${v.c_sconto||'...'} di sconto sul primo ordine.\nTu guadagni ${v.c_punti||'...'} punti extra.\n\nBasta che il tuo amico menzioni il tuo nome all'iscrizione.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_referral',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_sconto, var3: v.c_punti
+    })
+  },
+  recensione_social: {
+    template: 'greed_recensione_social',
+    desc: 'Chiedi una story su Instagram o Facebook in cambio di punti.',
+    bottone: false,
+    campi: [
+      { id: 'c_punti', label: 'Punti in regalo ({{2}})', tipo: 'text', placeholder: '10' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 📸\n\nPubblica una story su Instagram o Facebook taggando @greedavididigelato e guadagni ${v.c_punti||'...'} punti extra!\n\nMostraci il tuo gelato preferito.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_recensione_social',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_punti
+    })
+  },
+  compleanno: {
+    template: 'greed_compleanno',
+    desc: 'Auguri personalizzati con regalo. Filtra automaticamente i compleanni del mese.',
+    bottone: true,
+    campi: [
+      { id: 'c_regalo', label: 'Regalo ({{2}})', tipo: 'text', placeholder: 'una vaschetta piccola in omaggio' },
+    ],
+    preview: (v, nome) => `Tanti auguri ${nome}! 🎂🍦\n\nIl Club Greed ti fa un regalo: ${v.c_regalo||'...'}.\n\nValido tutta la settimana del tuo compleanno — vieni a trovarci a Piazza Roma 16, Frascati.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_compleanno',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_regalo
+    })
+  },
+  upgrade: {
+    template: 'greed_upgrade_livello',
+    desc: 'Celebra il passaggio di livello. Seleziona i clienti appena diventati Ambasciatori o Custodi.',
+    bottone: false,
+    campi: [
+      { id: 'c_livello',   label: 'Nuovo livello ({{2}})',  tipo: 'text',     placeholder: 'Ambasciatore' },
+      { id: 'c_vantaggi',  label: 'Vantaggi sbloccati ({{3}})', tipo: 'textarea', placeholder: 'Accumuli 3 punti per ogni euro speso e accedi alle promozioni riservate' },
+    ],
+    preview: (v, nome) => `Congratulazioni ${nome}! 🏆\n\nSei ufficialmente diventato ${v.c_livello||'...'} del Club Greed.\n\nDa oggi hai accesso a:\n${v.c_vantaggi||'...'}\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_upgrade_livello',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_livello, var3: v.c_vantaggi
+    })
+  },
+  custodi_exclusive: {
+    template: 'greed_custodi_exclusive',
+    desc: 'Anteprima esclusiva per i Custodi del Gusto. I destinatari vengono filtrati automaticamente.',
+    bottone: true,
+    campi: [
+      { id: 'c_novita',  label: 'Novità in anteprima ({{2}})', tipo: 'text', placeholder: 'il nuovo gusto Pistacchio di Bronte' },
+      { id: 'c_data',    label: 'Disponibile dal ({{3}})',      tipo: 'text', placeholder: 'sabato 5 aprile' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}, Custode del Gusto 👑\n\nPrima di tutti gli altri, ti presentiamo in anteprima: ${v.c_novita||'...'}.\n\nDisponibile dal ${v.c_data||'...'} — solo per i Custodi del Gusto.\n\nTi aspettiamo a Frascati.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_custodi_exclusive',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_novita, var3: v.c_data
+    })
+  },
+  riattivazione: {
+    template: 'greed_riattivazione',
+    desc: 'Per clienti inattivi da 1-2 mesi. Offri una gratificazione per farli tornare.',
+    bottone: true,
+    campi: [
+      { id: 'c_regalo', label: 'Gratificazione ({{2}})', tipo: 'text', placeholder: 'una vaschetta di panna gratis con il tuo prossimo ordine' },
+      { id: 'c_scad',   label: 'Valido fino a ({{3}})',  tipo: 'text', placeholder: 'domenica 13 aprile' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}, ci manchi! 🍦\n\nÈ un po' che non ti vediamo da GREED — e vogliamo che tu torni con un sorriso.\n\nPer te: ${v.c_regalo||'...'}\n\nValido fino a ${v.c_scad||'...'}. Ti aspettiamo a Piazza Roma 16, Frascati.\n\n— GREED Gelateria Naturale`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_riattivazione',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_regalo, var3: v.c_scad
+    })
+  },
+  festa_papa: {
+    template: 'greed_festa_papa',
+    desc: 'Campagna Festa del Papà — 19 marzo.',
+    bottone: true,
+    campi: [
+      { id: 'c_offerta', label: 'Offerta speciale ({{2}})', tipo: 'textarea', placeholder: 'Vaschetta Grande per tutta la famiglia a prezzo speciale!' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 👨‍👧\n\nFesta del Papà si festeggia con il gelato migliore di Frascati 🍦\n\n${v.c_offerta||'...'}\n\nValido il 19 marzo — vieni a trovarci con la tua famiglia a Piazza Roma 16.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_festa_papa',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_offerta
+    })
+  },
+  festa_mamma: {
+    template: 'greed_festa_mamma',
+    desc: 'Campagna Festa della Mamma — seconda domenica di maggio.',
+    bottone: true,
+    campi: [
+      { id: 'c_offerta', label: 'Offerta speciale ({{2}})', tipo: 'textarea', placeholder: 'Porta la tua mamma e ricevi una vaschetta di panna in omaggio!' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 💐\n\nLa mamma merita il meglio — e noi abbiamo il gelato perfetto per lei 🍦\n\n${v.c_offerta||'...'}\n\nTi aspettiamo a Piazza Roma 16, Frascati.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_festa_mamma',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_offerta
+    })
+  }
+};
+
+function tel(c) {
+  return (c.telefono||'').startsWith('+') ? c.telefono : `+39${c.telefono}`;
+}
+
+window.aggiornaCampCount = function() {
+  if (!window.allClienti || !window.allClienti.length) {
+    getDocs(collection(db, 'clienti')).then(snap => {
+      window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderCampClienti(window.allClienti);
+    });
+  } else {
+    renderCampClienti(window.allClienti);
+  }
+};
+
+window.campagnaTipoChanged = function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  document.getElementById('campTipoDesc').textContent = cfg ? cfg.desc : '';
+
+  if (!cfg) {
+    document.getElementById('campContenutoWrap').style.display = 'none';
+    document.getElementById('campDestinatariWrap').style.display = 'none';
+    return;
+  }
+
+  // Mostra sezione contenuto
+  document.getElementById('campContenutoWrap').style.display = 'block';
+  document.getElementById('campDestinatariWrap').style.display = 'block';
+
+  // Reset immagine
+  document.getElementById('campImmagineUrl').value = '';
+  document.getElementById('campImgPreviewWrap').style.display = 'none';
+  document.getElementById('campImgPlaceholder').style.display = 'block';
+  document.getElementById('campImgStatus').textContent = '';
+
+  // Genera campi dinamici
+  let html = '';
+  cfg.campi.forEach(f => {
+    html += `<div class="form-group">
+      <label class="form-label">${f.label}</label>`;
+    if (f.tipo === 'textarea') {
+      html += `<textarea class="form-input" id="${f.id}" rows="3" placeholder="${f.placeholder}" oninput="aggiornaAnteprimaCamp()" style="resize:vertical;line-height:1.5"></textarea>`;
+    } else {
+      html += `<input type="text" class="form-input" id="${f.id}" placeholder="${f.placeholder}" oninput="aggiornaAnteprimaCamp()">`;
+    }
+    html += `</div>`;
+  });
+  document.getElementById('campCampiDinamici').innerHTML = html;
+  document.getElementById('campAnteprimaWrap').style.display = 'none';
+  document.getElementById('campAnteprimaTesto').textContent = '';
+
+  // Selezione automatica per custodi_exclusive
+  if (tipo === 'custodi_exclusive') {
+    setTimeout(() => selezionaLivelloCamp('custode'), 300);
+  } else if (tipo === 'compleanno') {
+    setTimeout(() => selezionaCompleannoMese(), 300);
+  } else {
+    renderCampClienti(window.allClienti || []);
+  }
+};
+
+window.aggiornaAnteprimaCamp = function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) return;
+  const v = {};
+  cfg.campi.forEach(f => { v[f.id] = (document.getElementById(f.id)||{}).value || ''; });
+  const testo = cfg.preview(v, 'Mario');
+  document.getElementById('campAnteprimaTesto').textContent = testo;
+  document.getElementById('campAnteprimaWrap').style.display = 'block';
+};
+
+// ── UPLOAD IMMAGINE FIREBASE STORAGE ──
+window.campHandleFile = async function(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('Immagine troppo grande (max 5MB)', 'error'); return; }
+
+  document.getElementById('campImgPlaceholder').style.display = 'none';
+  document.getElementById('campImgPreviewWrap').style.display = 'none';
+  document.getElementById('campImgUploading').style.display = 'block';
+  document.getElementById('campImgStatus').textContent = '';
+  document.getElementById('campImmagineUrl').value = '';
+
+  try {
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js');
+    const storage = getStorage();
+    const fileName = `campagne/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._]/g,'_')}`;
+    const storageRef = ref(storage, fileName);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    document.getElementById('campImmagineUrl').value = url;
+
+    // mostra preview
+    const img = document.getElementById('campImgPreview');
+    img.src = URL.createObjectURL(file);
+    document.getElementById('campImgUploading').style.display = 'none';
+    document.getElementById('campImgPreviewWrap').style.display = 'block';
+    document.getElementById('campImgStatus').innerHTML = '<span style="color:var(--success)">Immagine caricata</span>';
+  } catch(e) {
+    document.getElementById('campImgUploading').style.display = 'none';
+    document.getElementById('campImgPlaceholder').style.display = 'block';
+    console.error(e);
+    if (e.code === 'storage/unauthorized') {
+      document.getElementById('campImgStatus').innerHTML = '<span style="color:var(--red)">Storage non abilitato — vedi istruzioni sotto</span>';
+      showToast('Abilita Firebase Storage prima', 'error');
+    } else {
+      document.getElementById('campImgStatus').innerHTML = `<span style="color:var(--red)">Errore upload: ${e.message}</span>`;
+    }
+  }
+};
+
+window.campHandleDrop = function(e) {
+  e.preventDefault();
+  document.getElementById('campImgUploadArea').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) campHandleFile(file);
+};
+
+// ── CLIENTI ──
+function renderCampClienti(lista) {
+  campClientiFiltrati = lista;
+  const div = document.getElementById('campClientiList');
+  if (!lista.length) {
+    div.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Nessun cliente trovato</div>';
+    aggiornaBadgeCamp(); return;
+  }
+  div.innerHTML = lista.map(c => {
+    const checked = campClientiSelezionati.has(c.id) ? 'checked' : '';
+    const lv = getLivello(c.punti||0);
+    const tel2 = c.telefono
+      ? `<span style="color:var(--text-muted);font-size:11px">${c.telefono}</span>`
+      : '<span style="color:var(--red);font-size:11px">Nessun telefono</span>';
+    return `<label style="display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--cream-dark);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+      <input type="checkbox" ${checked} ${!c.telefono?'disabled title="Telefono mancante"':''} onchange="toggleCampCliente('${c.id}',this.checked)" style="width:16px;height:16px;accent-color:var(--green);flex-shrink:0;cursor:${c.telefono?'pointer':'not-allowed'}">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:14px">${c.nome} ${c.cognome||''}</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:2px">${tel2}</div>
+      </div>
+      <span class="badge ${lv.badge}" style="font-size:10px;flex-shrink:0">${lv.nome}</span>
+    </label>`;
+  }).join('');
+  aggiornaBadgeCamp();
+}
+
+window.toggleCampCliente = function(id, checked) {
+  if (checked) campClientiSelezionati.add(id);
+  else campClientiSelezionati.delete(id);
+  aggiornaBadgeCamp();
+};
+
+window.selezionaTuttiCamp = function() {
+  campClientiFiltrati.filter(c => c.telefono).forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(campClientiFiltrati);
+};
+
+window.deselezionaTuttiCamp = function() {
+  campClientiSelezionati.clear();
+  renderCampClienti(campClientiFiltrati);
+};
+
+window.selezionaLivelloCamp = function(livello) {
+  const tutti = window.allClienti || [];
+  campClientiSelezionati.clear();
+  tutti.filter(c => {
+    const p = c.punti||0;
+    if (livello === 'esploratore') return p < 200 && c.telefono;
+    if (livello === 'ambasciatore') return p >= 200 && p < 500 && c.telefono;
+    if (livello === 'custode') return p >= 500 && c.telefono;
+    return false;
+  }).forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(tutti);
+};
+
+window.selezionaCompleannoMese = function() {
+  const tutti = window.allClienti || [];
+  const meseOggi = new Date().getMonth() + 1;
+  campClientiSelezionati.clear();
+  tutti.filter(c => {
+    if (!c.dataNascita || !c.telefono) return false;
+    const mese = parseInt((c.dataNascita||'').split('-')[1]);
+    return mese === meseOggi;
+  }).forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(tutti);
+  showToast(`Selezionati ${campClientiSelezionati.size} compleanni di questo mese`);
+};
+
+window.filtraCampClienti = function() {
+  const q = document.getElementById('campSearch').value.toLowerCase();
+  renderCampClienti((window.allClienti||[]).filter(c =>
+    `${c.nome} ${c.cognome} ${c.email} ${c.telefono||''}`.toLowerCase().includes(q)
+  ));
+};
+
+function aggiornaBadgeCamp() {
+  const n = campClientiSelezionati.size;
+  document.getElementById('campBadge').textContent = n === 0
+    ? 'Nessun cliente selezionato'
+    : `${n} client${n===1?'e':'i'} selezionat${n===1?'o':'i'}`;
+}
+
+window.resetCampagna = function() {
+  document.getElementById('campTipo').value = '';
+  document.getElementById('campTipoDesc').textContent = '';
+  document.getElementById('campContenutoWrap').style.display = 'none';
+  document.getElementById('campDestinatariWrap').style.display = 'none';
+  document.getElementById('campProgressWrap').style.display = 'none';
+  document.getElementById('campImmagineUrl').value = '';
+  document.getElementById('campImgPreviewWrap').style.display = 'none';
+  document.getElementById('campImgPlaceholder').style.display = 'block';
+  document.getElementById('campImgStatus').textContent = '';
+  document.getElementById('campCampiDinamici').innerHTML = '';
+  document.getElementById('campAnteprimaWrap').style.display = 'none';
+  campClientiSelezionati.clear();
+  campClientiFiltrati = [];
+  document.getElementById('campBadge').textContent = 'Nessun cliente selezionato';
+  document.getElementById('btnInviaCamp').disabled = false;
+  document.getElementById('btnInviaCamp').textContent = '📤 Invia campagna';
+};
+
+window.inviaCampagna = async function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) { showToast('Seleziona un tipo di campagna', 'error'); return; }
+
+  const imgUrl = document.getElementById('campImmagineUrl').value.trim();
+  if (!imgUrl) { showToast('Carica l\'immagine intestazione', 'error'); return; }
+
+  const v = {};
+  let campiOk = true;
+  cfg.campi.forEach(f => {
+    const val = (document.getElementById(f.id)||{}).value?.trim() || '';
+    v[f.id] = val;
+    if (!val) campiOk = false;
+  });
+  if (!campiOk) { showToast('Compila tutti i campi del messaggio', 'error'); return; }
+  if (campClientiSelezionati.size === 0) { showToast('Seleziona almeno un cliente', 'error'); return; }
+
+  const destinatari = (window.allClienti||[]).filter(c => campClientiSelezionati.has(c.id) && c.telefono);
+  if (!destinatari.length) { showToast('Nessun destinatario con telefono', 'error'); return; }
+
+  const ok = confirm(`Inviare "${document.getElementById('campTipo').selectedOptions[0].text}" a ${destinatari.length} client${destinatari.length===1?'e':'i'}?\n\nQuesta operazione non è reversibile.`);
+  if (!ok) return;
+
+  const btn = document.getElementById('btnInviaCamp');
+  btn.disabled = true;
+  btn.textContent = 'Invio in corso...';
+
+  const wrap = document.getElementById('campProgressWrap');
+  const bar = document.getElementById('campProgressBar');
+  const count = document.getElementById('campProgressCount');
+  const label = document.getElementById('campProgressLabel');
+  const log = document.getElementById('campLogList');
+  wrap.style.display = 'block';
+  log.innerHTML = '';
+  bar.style.width = '0%';
+
+  let inviati = 0, errori = 0;
+
+  for (let i = 0; i < destinatari.length; i++) {
+    const c = destinatari[i];
+    count.textContent = `${i+1} / ${destinatari.length}`;
+    label.textContent = `Invio a ${c.nome} ${c.cognome||''}...`;
+
+    try {
+      const payload = cfg.payload(c, v, imgUrl);
+      const res = await fetch(N8N_CAMPAGNA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        inviati++;
+        log.innerHTML += `<div style="color:var(--success)">v ${c.nome} ${c.cognome||''} (${tel(c)})</div>`;
+      } else {
+        errori++;
+        log.innerHTML += `<div style="color:var(--red)">x ${c.nome} ${c.cognome||''} — HTTP ${res.status}</div>`;
+      }
+    } catch(e) {
+      errori++;
+      log.innerHTML += `<div style="color:var(--red)">x ${c.nome} ${c.cognome||''} — errore di rete</div>`;
+    }
+
+    bar.style.width = `${Math.round(((i+1)/destinatari.length)*100)}%`;
+    log.scrollTop = log.scrollHeight;
+    if (i < destinatari.length - 1) await new Promise(r => setTimeout(r, 800));
+  }
+
+  label.textContent = `Completato: ${inviati} inviati${errori ? `, ${errori} errori` : ''}`;
+  count.textContent = `${destinatari.length} / ${destinatari.length}`;
+  btn.textContent = 'v Campagna inviata';
+  showToast(`Campagna completata: ${inviati} messaggi inviati`, errori ? 'error' : '');
+};
+
+/* ─────────────────────────────────────────
+   GIFT CARD
+───────────────────────────────────────── */
+const N8N_GIFT_URL = 'https://europe-west3-club-greed.cloudfunctions.net/inviaCampagna';
+let gcCorrenteId = null;
+
+function generaCodiceGC() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'GREED-GIFT-';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+window.selezionaValore = function(val) {
+  document.getElementById('gcValore').value = val;
+  ['15','25','50'].forEach(v => {
+    const btn = document.getElementById('gcBtn'+v);
+    btn.className = 'btn ' + (String(val) === v ? 'btn-secondary' : 'btn-ghost');
+  });
+};
+
+window.deselezionaBottoni = function() {
+  ['15','25','50'].forEach(v => document.getElementById('gcBtn'+v).className = 'btn btn-ghost');
+};
+
+window.generaGiftCard = async function() {
+  const valore = parseFloat(document.getElementById('gcValore').value);
+  const nome = document.getElementById('gcNome').value.trim();
+  const telefono = document.getElementById('gcTelefono').value.trim();
+  const note = document.getElementById('gcNote').value.trim();
+
+  if (!valore || valore < 5) { showToast('Inserisci un valore valido', 'error'); return; }
+  if (!nome) { showToast('Inserisci il nome del destinatario', 'error'); return; }
+  if (!telefono) { showToast('Inserisci il telefono del destinatario', 'error'); return; }
+
+  const btn = document.getElementById('btnGeneraGC');
+  btn.disabled = true; btn.textContent = 'Generazione...';
+
+  // Aggiorna label scadenza
+  const annoLabel = document.getElementById('gcScadenzaLabel');
+  if (annoLabel) annoLabel.textContent = `31 dicembre ${new Date().getFullYear()}`;
+
+  const codice = generaCodiceGC();
+  const annoCorrente = new Date().getFullYear();
+  const scadenza = `31 dicembre ${annoCorrente}`;
+  const tel = telefono.startsWith('+') ? telefono : `+39${telefono}`;
+
+  try {
+    // Salva su Firestore
+    await addDoc(collection(db, 'giftcard'), {
+      codice, valore, nome, telefono: tel, note,
+      scadenza, annoScadenza: annoCorrente,
+      stato: 'attiva',
+      createdAt: serverTimestamp()
+    });
+
+    // Invia WhatsApp via Firebase Function
+    await fetch(N8N_GIFT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'greed_gift_card',
+        telefono: tel,
+        nome: nome.split(' ')[0],
+        immagineUrl: 'https://firebasestorage.googleapis.com/v0/b/club-greed.firebasestorage.app/o/campagne%2Fgift_card_default.jpg?alt=media',
+        var2: `€${valore}`,
+        var3: codice,
+        var4: scadenza
+      })
+    });
+
+    showToast(`Gift Card ${codice} generata e inviata ✓`);
+    document.getElementById('gcNome').value = '';
+    document.getElementById('gcTelefono').value = '';
+    document.getElementById('gcNote').value = '';
+    document.getElementById('gcValore').value = '';
+    deselezionaBottoni();
+    loadGiftCards();
+  } catch(e) {
+    console.error(e);
+    showToast('Errore generazione gift card', 'error');
+  }
+
+  btn.disabled = false; btn.textContent = '🎁 Genera e invia Gift Card';
+};
+
+window.verificaGiftCard = async function() {
+  const codice = document.getElementById('gcCodiceRiscatto').value.trim().toUpperCase();
+  if (!codice) { showToast('Inserisci un codice', 'error'); return; }
+
+  try {
+    const snap = await getDocs(query(collection(db, 'giftcard'), where('codice', '==', codice)));
+    if (snap.empty) { showToast('Codice non trovato', 'error'); return; }
+
+    const gc = snap.docs[0];
+    const data = gc.data();
+    gcCorrenteId = gc.id;
+
+    const annoOggi = new Date().getFullYear();
+    const scaduta = data.annoScadenza < annoOggi;
+    const usata = data.stato === 'utilizzata';
+
+    let info = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:600;font-size:16px">${data.nome}</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--green)">€${data.valore}</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted)">Codice: <strong>${data.codice}</strong></div>
+    <div style="font-size:12px;color:var(--text-muted)">Scadenza: ${data.scadenza}</div>`;
+
+    if (usata) {
+      info += `<div style="margin-top:8px;color:var(--red);font-weight:600;font-size:13px">✗ Già utilizzata</div>`;
+      document.getElementById('btnRiscatta').style.display = 'none';
+    } else if (scaduta) {
+      info += `<div style="margin-top:8px;color:var(--red);font-weight:600;font-size:13px">✗ Scaduta</div>`;
+      document.getElementById('btnRiscatta').style.display = 'none';
+    } else {
+      info += `<div style="margin-top:8px;color:var(--success);font-weight:600;font-size:13px">✓ Valida</div>`;
+      document.getElementById('btnRiscatta').style.display = 'block';
+    }
+
+    document.getElementById('gcVerificaInfo').innerHTML = info;
+    document.getElementById('gcVerificaResult').style.display = 'block';
+  } catch(e) {
+    showToast('Errore verifica', 'error');
+  }
+};
+
+window.riscattaGiftCard = async function() {
+  if (!gcCorrenteId) return;
+  try {
+    await updateDoc(doc(db, 'giftcard', gcCorrenteId), {
+      stato: 'utilizzata',
+      utilizzataAt: serverTimestamp()
+    });
+    showToast('Gift Card riscattata ✓');
+    document.getElementById('gcCodiceRiscatto').value = '';
+    document.getElementById('gcVerificaResult').style.display = 'none';
+    gcCorrenteId = null;
+    loadGiftCards();
+  } catch(e) {
+    showToast('Errore riscatto', 'error');
+  }
+};
+
+window.loadGiftCards = async function() {
+  const div = document.getElementById('gcList');
+  div.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Caricamento...</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'giftcard'), orderBy('createdAt', 'desc'), limit(100)));
+    const cards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!cards.length) {
+      div.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">Nessuna gift card emessa</div>';
+      return;
+    }
+    div.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--cream);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted)">
+        <th style="padding:10px 16px;text-align:left">Codice</th>
+        <th style="padding:10px 16px;text-align:left">Destinatario</th>
+        <th style="padding:10px 16px;text-align:left">Telefono</th>
+        <th style="padding:10px 16px;text-align:right">Valore</th>
+        <th style="padding:10px 16px;text-align:center">Scadenza</th>
+        <th style="padding:10px 16px;text-align:center">Stato</th>
+      </tr></thead>
+      <tbody>${cards.map(gc => {
+        const statoColor = gc.stato === 'utilizzata' ? 'var(--text-muted)' : 'var(--success)';
+        const statoLabel = gc.stato === 'utilizzata' ? '✗ Usata' : '✓ Attiva';
+        return `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:10px 16px;font-family:monospace;font-size:13px;font-weight:600;color:var(--green)">${gc.codice}</td>
+          <td style="padding:10px 16px;font-size:13px">${gc.nome}</td>
+          <td style="padding:10px 16px;font-size:12px;color:var(--text-muted)">${gc.telefono||'-'}</td>
+          <td style="padding:10px 16px;text-align:right;font-weight:700;font-family:'Cormorant Garamond',serif;font-size:18px">€${gc.valore}</td>
+          <td style="padding:10px 16px;text-align:center;font-size:12px;color:var(--text-muted)">${gc.scadenza}</td>
+          <td style="padding:10px 16px;text-align:center;font-size:12px;font-weight:600;color:${statoColor}">${statoLabel}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    div.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red)">Errore caricamento</div>';
+  }
+};
+
+/* -- EXPORT EXCEL 3 FOGLI -- */
+window.exportOrdiniExcel = async function() {
+  const ordini = window._ordiniCache;
+  if (!ordini.length) { showToast('Nessun ordine da esportare', 'error'); return; }
+
+  // Carica SheetJS
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const XLSX = window.XLSX;
+
+  function rigaOrdine(o, metodo) {
+    const data = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+    const dataStr = data ? data.toLocaleDateString('it-IT') : '-';
+    const oraStr = data ? data.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) : '-';
+    const gusti = o.carrello?.map(i => i.gusti?.join('+') + (i.scorta?' [scorta:'+i.scorta+']':'')).join(' | ') || '-';
+    return {
+      'ID Ordine': o.ordineId || '-',
+      'Data': dataStr,
+      'Ora': oraStr,
+      'Nome': (o.nome||'') + ' ' + (o.cognome||''),
+      'Telefono': o.telefono || '-',
+      'Email': o.email || '-',
+      'Gusti': gusti,
+      'Totale (€)': parseFloat((o.totale||0).toFixed(2)),
+      'Promo': o.promo ? 'Sì' : 'No',
+      'Metodo': metodo,
+      'Stato': o.stato || '-'
+    };
+  }
+
+  const tuttiStripe = ordini.filter(o => !o.metodoPagamento || o.metodoPagamento === 'stripe' || o.stripeSessionId);
+  const tuttiPaypal = ordini.filter(o => o.metodoPagamento === 'paypal');
+
+  const foglio1 = ordini.map(o => rigaOrdine(o, o.metodoPagamento === 'paypal' ? 'PayPal' : 'Stripe'));
+  const foglio2 = tuttiStripe.map(o => rigaOrdine(o, 'Stripe'));
+  const foglio3 = tuttiPaypal.map(o => rigaOrdine(o, 'PayPal'));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(foglio1.length ? foglio1 : [{'Info':'Nessuna transazione'}]), 'Tutte le transazioni');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(foglio2.length ? foglio2 : [{'Info':'Nessuna transazione Stripe'}]), 'Stripe');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(foglio3.length ? foglio3 : [{'Info':'Nessuna transazione PayPal'}]), 'PayPal');
+
+  // Larghezze colonne
+  [foglio1, foglio2, foglio3].forEach((_, i) => {
+    const ws = wb.Sheets[wb.SheetNames[i]];
+    ws['!cols'] = [
+      {wch:18},{wch:12},{wch:8},{wch:22},{wch:16},{wch:28},{wch:40},{wch:10},{wch:8},{wch:10},{wch:14}
+    ];
+  });
+
+  const filename = `GREED_Transazioni_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast('Excel scaricato ✓');
+};
+
+</script>
+
+
+<!-- MODAL DETTAGLIO ORDINE -->
+<div id="ordineModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:16px;padding:28px;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;position:relative">
+    <button onclick="chiudiOrdineModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:4px">Ordine <span id="modalOrdineId" style="color:var(--green)"></span></div>
+    <div id="modalOrdineStato" style="font-size:12px;margin-bottom:16px"></div>
+    <div id="modalOrdineBody"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-primary" onclick="consegnaOrdine()" id="btnConsegna" style="flex:1">✓ Consegnato</button>
+      <button class="btn btn-ghost btn-sm" onclick="chiudiOrdineModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW: CAMPAGNE
+═══════════════════════════════════════ -->
+<div class="view" id="view-campagne">
+  <div style="padding:32px;max-width:980px;margin:0 auto">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green)">Campagne WhatsApp</div>
+      <div id="campBadge" style="font-size:13px;color:var(--text-muted)">Nessun cliente selezionato</div>
+    </div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Seleziona il tipo di campagna, compila i campi e scegli i destinatari</div>
+
+    <!-- ORA FURBA -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">⚡ Ora Furba — Sconto automatico 10:00-11:00</div>
+          <div style="font-size:12px;color:var(--text-muted)">Quando attiva, gli ordini in fascia oraria ricevono uno sconto automatico del 20%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Max ordini:</span>
+            <input type="number" id="ofMaxOrdini" min="1" max="999" style="width:70px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif" value="10">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Oggi:</span>
+            <span id="ofOrdiniOggi" style="font-weight:700;font-size:16px;color:var(--green)">—</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <div id="ofToggle" onclick="toggleOraFurba()" style="width:48px;height:26px;border-radius:13px;background:var(--border);position:relative;cursor:pointer;transition:background 0.2s">
+              <div id="ofToggleDot" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;transition:left 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
+            </div>
+            <span id="ofToggleLabel" style="font-size:13px;font-weight:600;color:var(--text-muted)">Disattiva</span>
+          </label>
+          <button class="btn btn-ghost btn-sm" onclick="salvaOraFurba()">Salva</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetOrdiniOggi()">Reset contatore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Tipo campagna -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">1 — Tipo di campagna</div>
+      <select class="form-input" id="campTipo" onchange="campagnaTipoChanged()" style="font-size:15px;font-weight:500">
+        <option value="">— Scegli campagna —</option>
+        <option value="promo_flash">🍦 Promo Flash</option>
+        <option value="referral">🎁 Referral — Porta un amico</option>
+        <option value="recensione_social">📸 Recensione &amp; Social</option>
+        <option value="compleanno">🎂 Auguri Compleanno</option>
+        <option value="upgrade">🏆 Upgrade di livello</option>
+        <option value="custodi_exclusive">👑 Anteprima Custodi del Gusto</option>
+        <option value="riattivazione">💤 Riattivazione cliente inattivo</option>
+        <option value="festa_papa">👨‍👧 Festa del Papà</option>
+        <option value="festa_mamma">💐 Festa della Mamma</option>
+      </select>
+      <div id="campTipoDesc" style="font-size:12px;color:var(--text-muted);margin-top:10px;font-style:italic;min-height:18px"></div>
+    </div>
+
+    <!-- STEP 2: Contenuto (dinamico per tipo) -->
+    <div id="campContenutoWrap" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">2 — Contenuto campagna</div>
+
+      <!-- Upload immagine -->
+      <div class="form-group">
+        <label class="form-label">Immagine intestazione * <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(1080×1080px · JPG/PNG)</span></label>
+        <div id="campImgUploadArea" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;position:relative" onclick="document.getElementById('campImgFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="campHandleDrop(event)">
+          <input type="file" id="campImgFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="campHandleFile(this.files[0])">
+          <div id="campImgPreviewWrap" style="display:none;margin-bottom:12px">
+            <img id="campImgPreview" style="max-height:140px;max-width:100%;border-radius:8px;object-fit:cover">
+          </div>
+          <div id="campImgPlaceholder">
+            <div style="font-size:32px;margin-bottom:8px">🖼️</div>
+            <div style="font-size:14px;font-weight:500;color:var(--green)">Clicca o trascina un'immagine</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">JPG · PNG · WebP · max 5MB</div>
+          </div>
+          <div id="campImgUploading" style="display:none">
+            <div class="spinner" style="margin:0 auto 8px"></div>
+            <div style="font-size:13px;color:var(--text-muted)">Upload in corso...</div>
+          </div>
+        </div>
+        <div id="campImgStatus" style="font-size:11px;margin-top:6px"></div>
+        <input type="hidden" id="campImmagineUrl">
+      </div>
+
+      <!-- Campi dinamici per tipo campagna -->
+      <div id="campCampiDinamici"></div>
+
+      <!-- Anteprima messaggio -->
+      <div id="campAnteprimaWrap" style="display:none;background:var(--cream);border-radius:10px;padding:14px 16px;margin-top:4px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Anteprima messaggio</div>
+        <div id="campAnteprimaTesto" style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Destinatari -->
+    <div id="campDestinatariWrap" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">3 — Destinatari</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" class="search-input" style="width:190px;padding:7px 12px;font-size:13px" placeholder="Cerca..." id="campSearch" oninput="filtraCampClienti()">
+          <button class="btn btn-ghost btn-sm" onclick="selezionaTuttiCamp()">Tutti</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('esploratore')">Esploratori</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('ambasciatore')">Ambasciatori</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('custode')">Custodi</button>
+          <button class="btn btn-ghost btn-sm" onclick="deselezionaTuttiCamp()">Reset</button>
+        </div>
+      </div>
+      <div id="campClientiList" style="max-height:320px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">Caricamento clienti...</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="campProgressWrap" style="display:none;background:var(--cream);border-radius:10px;padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--green)" id="campProgressLabel">Invio in corso...</div>
+        <div style="font-size:12px;color:var(--text-muted)" id="campProgressCount">0 / 0</div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div id="campProgressBar" style="height:100%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:3px;width:0%;transition:width 0.3s"></div>
+      </div>
+      <div id="campLogList" style="margin-top:12px;max-height:160px;overflow-y:auto;font-size:12px;display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="resetCampagna()">Reset</button>
+      <button class="btn btn-primary" onclick="inviaCampagna()" id="btnInviaCamp" style="padding:10px 28px">📤 Invia campagna</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: ORDINI
+═══════════════════════════════════════ -->
+<div class="view" id="view-ordini">
+  <div style="padding:32px;max-width:960px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600">Ordini</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="ordiniFilter" onchange="loadOrdini()" class="form-input" style="width:auto;padding:8px 12px;font-size:13px">
+          <option value="tutti">Tutti</option>
+          <option value="pagato">In attesa ritiro</option>
+          <option value="consegnato">Consegnati</option>
+        </select>
+        <button class="btn btn-primary" onclick="exportOrdiniExcel()" style="font-size:12px;padding:9px 18px">📥 Scarica Excel</button>
+      </div>
+    </div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:24px">Tutti gli ordini online con stato pagamento</div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Ordini oggi</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statOggi">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">In attesa ritiro</div>
+        <div style="font-size:28px;font-weight:600;color:var(--gold)" id="statAttesa">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Incasso totale</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statIncasso">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Questo mese</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statMese">—</div>
+      </div>
+    </div>
+
+    <!-- Tabella ordini -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div id="ordiniTable" style="font-size:13px">
+        <div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento ordini...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: GIFT CARD
+═══════════════════════════════════════ -->
+<div class="view" id="view-giftcard">
+  <div style="padding:32px;max-width:960px;margin:0 auto">
+
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green);margin-bottom:6px">Gift Card</div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Genera e gestisci le gift card GREED</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+
+      <!-- Genera nuova gift card -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Genera nuova gift card</div>
+
+        <div class="form-group">
+          <label class="form-label">Valore</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px" id="gcValoriBtn">
+            <button onclick="selezionaValore(15)" class="btn btn-ghost" id="gcBtn15">€15</button>
+            <button onclick="selezionaValore(25)" class="btn btn-ghost" id="gcBtn25">€25</button>
+            <button onclick="selezionaValore(50)" class="btn btn-ghost" id="gcBtn50">€50</button>
+          </div>
+          <input type="number" class="form-input" id="gcValore" placeholder="Importo personalizzato €" min="5" step="5" oninput="deselezionaBottoni()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nome destinatario</label>
+          <input type="text" class="form-input" id="gcNome" placeholder="Mario Rossi">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Telefono destinatario</label>
+          <input type="tel" class="form-input" id="gcTelefono" placeholder="+39 333 123 4567">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Note (opzionale)</label>
+          <input type="text" class="form-input" id="gcNote" placeholder="Es: Regalo compleanno da Luigi">
+        </div>
+
+        <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+          Scadenza: <strong id="gcScadenzaLabel">31 dicembre 2026</strong> · Il codice viene inviato via WhatsApp
+        </div>
+
+        <button class="btn btn-primary" onclick="generaGiftCard()" id="btnGeneraGC" style="width:100%;margin-top:20px;padding:12px">
+          🎁 Genera e invia Gift Card
+        </button>
+      </div>
+
+      <!-- Riscatta gift card -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Riscatta gift card in cassa</div>
+
+        <div class="form-group">
+          <label class="form-label">Codice gift card</label>
+          <input type="text" class="form-input" id="gcCodiceRiscatto" placeholder="GREED-GIFT-XXXX" style="font-family:monospace;font-size:16px;letter-spacing:2px" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <button class="btn btn-secondary" onclick="verificaGiftCard()" style="width:100%;margin-bottom:16px">
+          🔍 Verifica codice
+        </button>
+
+        <div id="gcVerificaResult" style="display:none;background:var(--cream);border-radius:10px;padding:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Gift Card trovata</div>
+          <div id="gcVerificaInfo"></div>
+          <button class="btn btn-primary" onclick="riscattaGiftCard()" id="btnRiscatta" style="width:100%;margin-top:14px">
+            ✓ Segna come utilizzata
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista gift card -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">Gift card emesse</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadGiftCards()">↻ Aggiorna</button>
+      </div>
+      <div id="gcList" style="max-height:400px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
