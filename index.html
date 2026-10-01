@@ -3,2410 +3,1034 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>I Gusti — GREED Gelateria Naturale</title>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Outfit:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<title>Club Greed — CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#1a2e1c;--bg2:#213524;--bg3:#263d29;--bg4:#2d4a30;
-  --border:rgba(247,207,69,.28);--border2:rgba(247,207,69,.18);
-  --cream:#f5f0e8;--cream2:rgba(245,240,232,.90);--cream3:rgba(245,240,232,.65);
-  --gold:#F7CF45;--gold-l:#FFE070;--gold-d:#c8a800;
-  --gold-bg:rgba(247,207,69,.12);--gold-bd:rgba(247,207,69,.32);
-  --red:#d94f38;--red-bg:rgba(217,79,56,.12);--red-bd:rgba(217,79,56,.35);
-  --green-ok:#4caf7d;
-}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--cream);font-family:'Outfit',sans-serif;font-weight:300;overflow-x:hidden}
-
-/* ── PROMO TICKER ── */
-.promo-ticker{position:fixed;top:0;left:0;right:0;z-index:300;background:var(--gold);color:var(--bg);padding:9px 16px;text-align:center;font-size:12px;font-weight:600;letter-spacing:.06em;display:none;align-items:center;justify-content:center;gap:10px;transition:all .4s}
-.promo-ticker.show{display:flex}
-.promo-ticker .ptimer{background:var(--bg);color:var(--gold);padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;letter-spacing:.04em;min-width:50px;text-align:center}
-.promo-ticker .pclose{margin-left:auto;cursor:pointer;opacity:.6;font-size:16px;line-height:1}
-.promo-ticker.show ~ nav{top:38px}
-
-/* ── NAV ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:18px 5vw;display:flex;align-items:center;justify-content:space-between;transition:all .4s;gap:16px}
-nav.scrolled{background:rgba(26,46,28,.97);backdrop-filter:blur(20px);padding:12px 5vw;border-bottom:1px solid var(--border)}
-.nav-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;letter-spacing:.14em;color:var(--cream);text-decoration:none;flex-shrink:0}
-.nav-links{display:flex;gap:22px;list-style:none;align-items:center;flex-wrap:wrap}
-.nav-links a{color:var(--cream2);text-decoration:none;font-size:11px;letter-spacing:.12em;text-transform:uppercase;transition:color .2s}
-.nav-links a:hover{color:var(--gold)}
-.nav-cta{border:1px solid var(--gold);color:var(--gold)!important;padding:7px 18px;border-radius:2px;transition:all .2s!important}
-.nav-cta:hover{background:var(--gold)!important;color:var(--bg)!important}
-.nav-cart-btn{display:flex;align-items:center;gap:7px;background:var(--gold-bg);border:1px solid var(--gold-bd);color:var(--gold);padding:7px 16px;border-radius:2px;cursor:pointer;font-size:12px;font-family:'Outfit',sans-serif;font-weight:500;letter-spacing:.06em;transition:all .2s;flex-shrink:0}
-.nav-cart-btn:hover{background:var(--gold);color:var(--bg)}
-.cart-badge{background:var(--gold);color:var(--bg);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;line-height:1}
-.nav-user{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--cream2);cursor:pointer;flex-shrink:0}
-.nav-user .uname{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.nav-user .ulogout{color:var(--cream3);font-size:11px;text-decoration:underline;cursor:pointer;transition:color .2s}
-.nav-user .ulogout:hover{color:var(--gold)}
-
-/* ── HERO ── */
-.hero{position:relative;min-height:58vh;display:flex;align-items:flex-end;overflow:hidden}
-.hero-bg{position:absolute;inset:0;background:linear-gradient(135deg,var(--bg) 0%,var(--bg3) 60%,var(--bg2) 100%)}
-.hero-pattern{position:absolute;inset:0;background-image:radial-gradient(circle at 70% 30%,rgba(247,207,69,.06) 0%,transparent 50%),radial-gradient(circle at 20% 80%,rgba(247,207,69,.04) 0%,transparent 40%)}
-.hero-content{position:relative;z-index:2;width:100%;padding:110px 5vw 7vh}
-.hero-eyebrow{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:10px}
-.hero-eyebrow::before{content:'';width:36px;height:1px;background:var(--gold)}
-.hero-title{font-family:'Cormorant Garamond',serif;font-size:clamp(52px,8vw,96px);font-weight:300;line-height:.9;margin-bottom:20px}
-.hero-title em{font-style:italic;color:var(--gold-l);display:block}
-.hero-sub{font-size:15px;color:var(--cream2);max-width:500px;line-height:1.65;margin-bottom:28px}
-.hero-pills{display:flex;gap:10px;flex-wrap:wrap}
-.hpill{background:var(--gold-bg);border:1px solid var(--gold-bd);padding:7px 14px;font-size:11px;color:var(--cream2);border-radius:20px;letter-spacing:.04em}
-.hpill b{color:var(--gold)}
-
-/* ── PROMO ATTIVA BANNER (sotto hero) ── */
-.promo-banner{display:none;background:linear-gradient(90deg,var(--gold-d),var(--gold),var(--gold-d));color:var(--bg);padding:16px 5vw;position:relative;overflow:hidden}
-.promo-banner.show{display:block}
-.promo-banner::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,.04) 10px,rgba(0,0,0,.04) 20px)}
-.pb-inner{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.pb-left{display:flex;align-items:center;gap:14px}
-.pb-icon{font-size:28px}
-.pb-testo strong{display:block;font-size:15px;font-weight:700;letter-spacing:.04em}
-.pb-testo span{font-size:13px;opacity:.85}
-.pb-countdown{background:var(--bg);color:var(--gold);padding:10px 20px;border-radius:3px;font-size:22px;font-weight:700;font-family:'Cormorant Garamond',serif;letter-spacing:.08em;min-width:90px;text-align:center}
-.pb-sconto{background:var(--bg);color:var(--gold);padding:10px 18px;border-radius:3px;font-weight:700;font-size:20px;letter-spacing:.04em}
-
-/* ── MAIN ── */
-.main{padding:52px 5vw 80px;max-width:1160px;margin:0 auto}
-
-/* ── SEZIONI ── */
-.sec-hd{display:flex;align-items:center;gap:16px;margin-bottom:28px}
-.sec-hd::after{content:'';flex:1;height:1px;background:var(--border2)}
-.sec-hd h2{font-family:'Cormorant Garamond',serif;font-size:clamp(26px,3vw,38px);font-weight:300;white-space:nowrap}
-.sec-hd h2 em{font-style:italic;color:var(--gold-l)}
-
-/* ── GRIGLIA GUSTI ── */
-.gusti-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:48px}
-.gusto-card{background:var(--bg2);border:1px solid var(--border2);padding:20px 14px;text-align:center;border-radius:3px;transition:all .22s;position:relative;overflow:hidden}
-.gusto-card::before{content:'';position:absolute;inset:0;background:var(--gold-bg);opacity:0;transition:opacity .22s}
-.gusto-card:hover::before{opacity:1}
-.gusto-card:hover{border-color:var(--gold-bd);transform:translateY(-2px)}
-.gusto-emoji{font-size:30px;display:block;margin-bottom:9px;position:relative}
-.gusto-nome{font-size:13px;color:var(--cream);line-height:1.3;position:relative;font-weight:400}
-.gusto-card .offerta-tag{position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:10px;text-transform:uppercase}
-.gusto-allergeni{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:7px;position:relative}
-.al-pill{font-size:9px;background:rgba(217,79,56,.18);border:1px solid rgba(217,79,56,.35);color:#f09080;padding:1px 6px;border-radius:8px;letter-spacing:.02em;white-space:nowrap}
-
-/* ── AUTH CARD ── */
-.auth-wrap{max-width:560px;margin:0 auto 48px}
-.auth-card{background:var(--bg2);border:1px solid var(--border);border-radius:3px;overflow:hidden}
-.auth-tabs{display:flex;border-bottom:1px solid var(--border)}
-.auth-tab{flex:1;padding:16px;text-align:center;font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;color:var(--cream3);transition:all .2s;background:transparent;border:none;font-family:'Outfit',sans-serif}
-.auth-tab.active{color:var(--gold);background:var(--gold-bg);border-bottom:2px solid var(--gold)}
-.auth-body{padding:32px}
-.auth-body h3{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;margin-bottom:6px}
-.auth-body h3 em{font-style:italic;color:var(--gold-l)}
-.auth-body .sub{font-size:13px;color:var(--cream2);margin-bottom:24px;line-height:1.6}
-.pill-fidelity{display:flex;gap:10px;align-items:flex-start;background:var(--gold-bg);border:1px solid var(--gold-bd);padding:14px 16px;border-radius:2px;margin-bottom:22px}
-.pill-fidelity .ic{font-size:20px;flex-shrink:0;margin-top:1px}
-.pill-fidelity p{font-size:12px;color:var(--cream2);line-height:1.55}
-.pill-fidelity strong{color:var(--gold)}
-.fg2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.ff{display:flex;flex-direction:column;gap:4px}
-.ff.full{grid-column:1/-1}
-.ff label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--cream2);font-weight:400}
-.ff label .req{color:var(--gold)}
-.ff input{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--cream);padding:11px 13px;font-family:'Outfit',sans-serif;font-size:14px;outline:none;transition:border .2s;border-radius:2px}
-.ff input:focus{border-color:rgba(247,207,69,.55);background:rgba(255,255,255,.08)}
-.ff input::placeholder{color:var(--cream3)}
-.check-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-.chk{display:flex;gap:10px;padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid var(--border2);cursor:pointer;align-items:flex-start;border-radius:2px;transition:border .2s}
-.chk:hover{border-color:var(--gold-bd)}
-.chk input[type=checkbox]{width:16px;height:16px;flex-shrink:0;accent-color:var(--gold);margin-top:2px;cursor:pointer}
-.chk .cb{font-size:12px;color:var(--cream2);line-height:1.5}
-.chk .cb strong{color:var(--cream);font-weight:500;display:block;margin-bottom:1px;font-size:12px}
-.tag-req{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:.08em}
-.tag-opt{font-size:9px;color:var(--cream3);text-transform:uppercase;letter-spacing:.08em}
-.btn-auth{width:100%;background:var(--gold);color:var(--bg);border:none;padding:14px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:'Outfit',sans-serif;border-radius:2px;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-auth:hover{background:var(--gold-l);transform:translateY(-1px)}
-.btn-auth:disabled{opacity:.45;cursor:not-allowed;transform:none}
-.auth-err{background:var(--red-bg);border:1px solid var(--red-bd);color:#f09080;padding:10px 14px;font-size:12px;border-radius:2px;margin-bottom:14px;display:none}
-.auth-err.show{display:block}
-.auth-legal{text-align:center;font-size:11px;color:var(--cream3);margin-top:10px;line-height:1.5}
-.auth-legal a{color:var(--gold);text-decoration:none}
-.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--bg);border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── QR BENVENUTO ── */
-.qr-benvenuto{display:none;text-align:center;padding:36px 32px}
-.qr-benvenuto.show{display:block}
-.qr-benvenuto h3{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;margin-bottom:6px}
-.qr-benvenuto h3 em{font-style:italic;color:var(--gold-l)}
-.qr-benvenuto p{font-size:13px;color:var(--cream2);margin-bottom:20px;line-height:1.6}
-.qr-box{display:inline-block;background:#fff;padding:14px;border-radius:4px;margin-bottom:14px}
-.qr-code-txt{font-size:11px;color:var(--cream3);letter-spacing:.12em;margin-bottom:20px;text-transform:uppercase}
-.btn-ordina-ora{background:var(--gold);color:var(--bg);border:none;padding:14px 36px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;font-family:'Outfit',sans-serif;transition:all .3s}
-.btn-ordina-ora:hover{background:var(--gold-l)}
-
-/* ── CONFIGURATORE ── */
-.configuratore{display:none;max-width:720px;margin:0 auto}
-.conf-hd{text-align:center;margin-bottom:36px}
-.conf-hd h2{font-family:'Cormorant Garamond',serif;font-size:clamp(30px,4vw,48px);font-weight:300;margin-bottom:6px}
-.conf-hd h2 em{font-style:italic;color:var(--gold-l)}
-.conf-hd p{font-size:13px;color:var(--cream2)}
-.step-block{margin-bottom:40px}
-.step-hd{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border)}
-.step-n{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;margin-top:2px}
-.step-ttl{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:300}
-.step-ttl em{font-style:italic;color:var(--gold-l)}
-.step-sub{font-size:12px;color:var(--cream2);margin-top:2px}
-
-/* VASCHETTE */
-.vaschette{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.vaschetta{border:2px solid var(--border);padding:22px 14px;text-align:center;cursor:pointer;transition:all .22s;position:relative;background:rgba(255,255,255,.02);border-radius:3px}
-.vaschetta:hover,.vaschetta.sel{border-color:var(--gold);background:var(--gold-bg)}
-.vaschetta.sel::after{content:'✓';position:absolute;top:8px;right:10px;color:var(--gold);font-size:13px;font-weight:700}
-.v-size{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;display:block;margin-bottom:2px}
-.v-peso{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--cream3);display:block;margin-bottom:10px}
-.v-price{font-size:26px;font-weight:300;color:var(--gold);font-family:'Cormorant Garamond',serif;display:block;margin-bottom:2px}
-.v-price-orig{font-size:14px;color:var(--cream3);text-decoration:line-through;display:none;margin-right:4px}
-.v-price-scontato{font-size:26px;font-weight:300;color:var(--red);font-family:'Cormorant Garamond',serif;display:none}
-.v-slots{font-size:11px;color:var(--cream2)}
-.v-pop{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--bg);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 10px;font-weight:700;white-space:nowrap;border-radius:10px}
-.sconto-attivo-badge{display:none;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
-.sconto-attivo-badge.show{display:inline-block}
-
-/* GUSTI SLOTS */
-.gusti-slots{display:flex;flex-direction:column;gap:7px}
-.gusto-slot{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.04);border:1px solid var(--border);padding:10px 14px;border-radius:3px;transition:border .2s}
-.gusto-slot.filled{border-color:var(--gold-bd);background:var(--gold-bg)}
-.slot-num{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--gold);opacity:.35;width:24px;text-align:center;flex-shrink:0}
-.slot-num.active{opacity:1}
-.slot-select{flex:1;background:transparent;border:none;color:var(--cream);font-family:'Outfit',sans-serif;font-size:14px;outline:none;cursor:pointer;-webkit-appearance:none}
-.slot-select option{background:var(--bg2);color:var(--cream)}
-.slot-arrow{color:var(--cream2);font-size:11px;flex-shrink:0;pointer-events:none}
-.gusti-info-b{font-size:12px;color:var(--cream2);text-align:center;padding:9px;border:1px dashed var(--border);border-radius:3px;margin-top:6px}
-.gusti-info-b b{color:var(--gold)}
-
-/* EXTRA */
-.extras-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.extra-card{background:rgba(255,255,255,.04);border:2px solid var(--border);padding:16px;border-radius:3px;cursor:pointer;transition:all .22s;text-align:center}
-.extra-card:hover,.extra-card.sel{border-color:var(--gold);background:var(--gold-bg)}
-.extra-card.sel .ec-check{opacity:1}
-.ec-emoji{font-size:26px;display:block;margin-bottom:6px}
-.ec-nome{font-size:13px;color:var(--cream);font-weight:400}
-.ec-note{font-size:11px;color:var(--cream2);margin-top:3px}
-.ec-check{font-size:11px;color:var(--gold);font-weight:700;margin-top:4px;opacity:0;transition:opacity .2s}
-.coni-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
-.cono-card{background:rgba(255,255,255,.04);border:2px solid var(--border);padding:12px 8px;border-radius:3px;cursor:pointer;transition:all .22s;text-align:center}
-.cono-card:hover,.cono-card.sel{border-color:var(--gold);background:var(--gold-bg)}
-.cono-emoji{font-size:22px;display:block;margin-bottom:4px}
-.cono-nome{font-size:11px;color:var(--cream2)}
-.cono-card.sel .cono-nome{color:var(--gold);font-weight:500}
-.extra-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream2);margin:14px 0 8px}
-
-/* NOTE */
-.note-ta{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--cream);padding:12px 14px;font-family:'Outfit',sans-serif;font-size:13px;resize:vertical;min-height:72px;outline:none;transition:border .2s;border-radius:3px}
-.note-ta:focus{border-color:var(--gold-bd)}
-.note-ta::placeholder{color:var(--cream2)}
-
-/* ── CARRELLO ── */
-.cart-drawer{position:fixed;right:0;top:0;bottom:0;width:360px;background:var(--bg2);border-left:1px solid var(--border);z-index:500;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.4)}
-.cart-drawer.open{transform:translateX(0)}
-.cart-overlay{position:fixed;inset:0;background:rgba(20,35,22,.7);z-index:499;opacity:0;pointer-events:none;transition:opacity .3s}
-.cart-overlay.show{opacity:1;pointer-events:all}
-.cart-header{padding:22px 22px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.cart-header h3{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300}
-.cart-header h3 em{font-style:italic;color:var(--gold-l)}
-.cart-close{background:none;border:none;color:var(--cream2);font-size:22px;cursor:pointer;padding:4px;line-height:1;transition:color .2s}
-.cart-close:hover{color:var(--gold)}
-.cart-body{flex:1;overflow-y:auto;padding:16px 22px}
-.cart-empty{text-align:center;padding:48px 16px;color:var(--cream3)}
-.cart-empty .ce-icon{font-size:40px;display:block;margin-bottom:12px}
-.cart-empty p{font-size:13px;line-height:1.6}
-.cart-item{background:var(--bg3);border:1px solid var(--border2);border-radius:3px;padding:14px;margin-bottom:10px;position:relative}
-.ci-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
-.ci-nome{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400}
-.ci-del{background:none;border:none;color:var(--cream3);cursor:pointer;font-size:15px;padding:0;line-height:1;transition:color .2s;flex-shrink:0}
-.ci-del:hover{color:var(--red)}
-.ci-dettagli{font-size:12px;color:var(--cream2);line-height:1.6}
-.ci-prezzi{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.ci-orig{font-size:13px;color:var(--cream3);text-decoration:line-through}
-.ci-finale{font-size:18px;font-family:'Cormorant Garamond',serif;font-weight:400;color:var(--gold)}
-.ci-sconto-tag{background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.06em}
-/* Promo applicata al carrello */
-.cart-promo-row{background:var(--red-bg);border:1px solid var(--red-bd);border-radius:3px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;font-size:12px;color:#f09080}
-.cart-promo-row b{color:var(--red)}
-.cart-footer{padding:16px 22px 22px;border-top:1px solid var(--border);flex-shrink:0;overflow-y:auto;max-height:75vh}
-.cart-totale{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.ct-label{font-size:13px;color:var(--cream2)}
-.ct-val{font-family:'Cormorant Garamond',serif;font-size:32px;color:var(--gold)}
-.ct-risparmi{font-size:11px;color:var(--green-ok);text-align:right;margin-top:2px;margin-bottom:10px}
-.btn-checkout{width:100%;background:var(--gold);color:var(--bg);border:none;padding:15px;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:'Outfit',sans-serif;border-radius:2px;display:flex;align-items:center;justify-content:center;gap:8px}
-.btn-checkout:hover{background:var(--gold-l)}
-.btn-checkout:disabled{opacity:.35;cursor:not-allowed}
-.cart-note{text-align:center;font-size:11px;color:var(--cream3);margin-top:8px}
-.btn-aggiungi-altro{width:100%;background:transparent;border:1px solid var(--border);color:var(--cream2);padding:10px;font-size:12px;font-family:'Outfit',sans-serif;cursor:pointer;border-radius:2px;transition:all .2s;margin-bottom:10px;letter-spacing:.06em}
-.btn-aggiungi-altro:hover{border-color:var(--gold-bd);color:var(--gold)}
-.btn-paypal{width:100%;background:#FFC439;color:#003087;border:none;padding:15px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:all .3s;font-family:'Outfit',sans-serif;border-radius:2px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
-.btn-paypal:hover{background:#FFD166;transform:translateY(-1px)}
-.btn-paypal:disabled{opacity:.35;cursor:not-allowed;transform:none}
-.pagamento-sep{text-align:center;font-size:11px;color:var(--cream3);margin:6px 0;letter-spacing:.08em}
-
-/* ── ADMIN: PROMO PANEL ── */
-.admin-bar{background:var(--bg3);border-bottom:1px solid var(--gold-bd);padding:10px 5vw;display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.admin-bar.show{display:flex}
-.admin-bar span{font-size:11px;color:var(--gold);letter-spacing:.06em}
-.admin-btns{display:flex;gap:8px}
-.btn-admin-sm{background:transparent;border:1px solid var(--gold-bd);color:var(--gold);padding:7px 14px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:2px;font-family:'Outfit',sans-serif;transition:all .2s}
-.btn-admin-sm:hover{background:var(--gold);color:var(--bg)}
-.admin-panel{background:var(--bg3);border:1px solid var(--gold-bd);border-radius:3px;padding:28px;margin-bottom:32px;display:none}
-.admin-panel.open{display:block}
-.admin-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:24px}
-.atab{background:none;border:none;color:var(--cream3);font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:10px 18px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
-.atab.active{color:var(--gold);border-bottom-color:var(--gold)}
-.atab-body{display:none}
-.atab-body.active{display:block}
-/* Gusti admin */
-.gusti-list-a{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;margin-bottom:14px;padding-right:4px}
-.gusti-list-a::-webkit-scrollbar{width:3px}
-.gusti-list-a::-webkit-scrollbar-thumb{background:var(--gold-bd);border-radius:2px}
-.gi{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--border2);padding:9px 12px;border-radius:2px}
-.gi.off{opacity:.5}
-.gi-toggle{width:38px;height:22px;position:relative;cursor:pointer;flex-shrink:0}
-.gi-toggle input{opacity:0;width:0;height:0}
-.gi-slider{position:absolute;inset:0;background:rgba(255,255,255,.1);border-radius:11px;transition:.2s}
-.gi-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--cream3);border-radius:50%;transition:.2s}
-.gi-toggle input:checked+.gi-slider{background:var(--gold)}
-.gi-toggle input:checked+.gi-slider::before{transform:translateX(16px);background:var(--bg)}
-.gi-e{width:36px;background:rgba(255,255,255,.06);border:1px solid var(--border2);color:var(--cream);text-align:center;font-size:16px;padding:3px;border-radius:2px;outline:none}
-.gi-n{flex:1;background:transparent;border:none;color:var(--cream);font-family:'Outfit',sans-serif;font-size:13px;outline:none}
-.gi-offerta{width:30px;height:30px;background:none;border:1px solid var(--border2);color:var(--cream3);border-radius:2px;cursor:pointer;font-size:14px;transition:all .2s;flex-shrink:0}
-.gi-offerta.on{background:var(--red-bg);border-color:var(--red-bd);color:var(--red)}
-.gi-del{background:none;border:none;color:rgba(220,80,80,.5);cursor:pointer;font-size:14px;padding:0 3px;transition:color .2s;flex-shrink:0}
-.gi-del:hover{color:var(--red)}
-.admin-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.btn-ag{background:var(--gold-bg);border:1px solid var(--gold-bd);color:var(--gold);padding:9px 16px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:2px;font-family:'Outfit',sans-serif;transition:all .2s}
-.btn-ag:hover{background:var(--gold);color:var(--bg)}
-.btn-sg{background:var(--gold);color:var(--bg);border:none;padding:9px 20px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:2px;font-family:'Outfit',sans-serif;transition:all .2s}
-.btn-sg:hover{background:var(--gold-l)}
-.save-ok{font-size:12px;color:var(--gold);display:none;margin-left:6px}
-.save-ok.show{display:inline}
-/* Promo admin */
-.promo-form{display:flex;flex-direction:column;gap:14px}
-.pf-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.pf-group{display:flex;flex-direction:column;gap:4px}
-.pf-group label{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--cream2)}
-.pf-group input,.pf-group select,.pf-group textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--cream);padding:10px 12px;font-family:'Outfit',sans-serif;font-size:13px;outline:none;transition:border .2s;border-radius:2px}
-.pf-group input:focus,.pf-group select:focus{border-color:var(--gold-bd)}
-.pf-group input[type=range]{padding:4px 0;accent-color:var(--gold)}
-.pf-group select option{background:var(--bg2)}
-.pf-group textarea{resize:vertical;min-height:56px}
-.pf-preview{background:var(--gold);color:var(--bg);padding:12px 16px;border-radius:2px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px}
-.pf-preview .pico{font-size:20px}
-.pf-toggle{display:flex;align-items:center;gap:10px;cursor:pointer}
-.pf-toggle input[type=checkbox]{width:18px;height:18px;accent-color:var(--gold);cursor:pointer}
-.pf-toggle span{font-size:13px;color:var(--cream2)}
-.promo-lista{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.promo-item{background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:2px;padding:12px 14px;display:flex;align-items:center;gap:12px}
-.promo-item.attiva{border-color:var(--gold-bd);background:var(--gold-bg)}
-.pi-info{flex:1}
-.pi-testo{font-size:13px;color:var(--cream);font-weight:500}
-.pi-dettagli{font-size:11px;color:var(--cream2);margin-top:2px}
-.pi-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;letter-spacing:.06em}
-.pi-badge.attiva{background:var(--gold);color:var(--bg)}
-.pi-badge.inattiva{background:rgba(255,255,255,.1);color:var(--cream3)}
-.pi-del{background:none;border:none;color:rgba(220,80,80,.5);cursor:pointer;font-size:14px;padding:0 4px;transition:color .2s}
-.pi-del:hover{color:var(--red)}
-.btn-salva-promo{background:var(--gold);color:var(--bg);border:none;padding:12px 24px;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;border-radius:2px;font-family:'Outfit',sans-serif;transition:all .2s}
-.btn-salva-promo:hover{background:var(--gold-l)}
-
-/* FOOTER */
-footer{background:var(--bg);padding:36px 5vw 22px;border-top:1px solid var(--border2);margin-top:40px}
-.ft{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:22px}
-.fb{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:300}
-.fb small{display:block;font-size:9px;font-family:'Outfit',sans-serif;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-top:3px}
-.fl{display:flex;gap:18px;flex-wrap:wrap}
-.fl a{color:var(--cream2);text-decoration:none;font-size:12px;transition:color .2s}
-.fl a:hover{color:var(--gold)}
-.fb2{border-top:1px solid var(--border2);padding-top:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px}
-.fc{font-size:11px;color:var(--cream2)}
-
-@media(max-width:640px){
-  .vaschette{grid-template-columns:1fr}
-  .extras-grid{grid-template-columns:1fr}
-  .coni-grid{grid-template-columns:1fr 1fr}
-  .pf-row{grid-template-columns:1fr}
-  .fg2{grid-template-columns:1fr}
-  .cart-drawer{width:100%}
-  .nav-links{display:none}
-}
-
-/* ── DELIVERY ── */
-.delivery-toggle{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:18px;border:1.5px solid var(--border);border-radius:4px;overflow:hidden}
-.dt-btn{padding:14px 10px;text-align:center;cursor:pointer;background:transparent;border:none;color:var(--cream2);font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
-.dt-btn:first-child{border-right:1px solid var(--border)}
-.dt-btn.active{background:var(--gold-bg);color:var(--gold)}
-.dt-btn .dt-icon{font-size:20px}
-.dt-btn .dt-price{font-size:10px;opacity:.7}
-.dt-btn.active .dt-price{opacity:1;color:var(--gold)}
-
-.delivery-form{display:none;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:14px;gap:12px;flex-direction:column}
-.delivery-form.show{display:flex}
-.df-row{display:flex;flex-direction:column;gap:5px}
-.df-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream3)}
-.df-input{background:var(--bg2);border:1.5px solid var(--border);color:var(--cream);padding:10px 12px;font-family:'Outfit',sans-serif;font-size:13px;border-radius:3px;outline:none;transition:border-color .2s}
-.df-input:focus{border-color:var(--gold)}
-.df-select{background:var(--bg2);border:1.5px solid var(--border);color:var(--cream);padding:10px 12px;font-family:'Outfit',sans-serif;font-size:13px;border-radius:3px;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none}
-.df-select:focus{border-color:var(--gold)}
-.delivery-badge{background:var(--gold-bg);border:1px solid var(--gold-bd);color:var(--gold);font-size:11px;letter-spacing:.06em;padding:4px 10px;border-radius:2px;text-align:center}
-.delivery-chiuso{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);font-size:12px;padding:10px 14px;border-radius:3px;text-align:center;display:none}
-.delivery-chiuso.show{display:block}
-.delivery-full{background:rgba(217,79,56,.15);border:1px solid rgba(217,79,56,.4);color:#e07060;font-size:12px;padding:10px 14px;border-radius:3px;text-align:center;display:none}
-.delivery-full.show{display:block}
-.cart-note-delivery{font-size:11px;color:var(--cream3);text-align:center;margin-top:6px;line-height:1.5}
-
-</style>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
 
-<!-- FIREBASE -->
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc,
-         query, where, orderBy, limit, serverTimestamp }
-  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const app = initializeApp({
-  apiKey:"AIzaSyBwAZb_A3IjPv7iL0cLhVnWO-Cuw_DD5g4",
-  authDomain:"club-greed.firebaseapp.com",
-  projectId:"club-greed",
-  storageBucket:"club-greed.firebasestorage.app",
-  messagingSenderId:"704669833762",
-  appId:"1:704669833762:web:917f4c7b104bc8ad39087b"
-});
-const db = getFirestore(app);
-
-// Esponi globalmente
-Object.assign(window, {
-  _db:db, _fbCol:collection, _fbDoc:doc, _fbGetDoc:getDoc,
-  _fbGetDocs:getDocs, _fbSetDoc:setDoc, _fbAddDoc:addDoc, _fbUpdateDoc:updateDoc,
-  _fbQuery:query, _fbWhere:where, _fbOrderBy:orderBy,
-  _fbLimit:limit, _fbTS:serverTimestamp
-});
-
-// 1. Carica gusti da Firebase
-async function caricaGusti(){
-  try{
-    const snap = await getDoc(doc(db,'config','gusti'));
-    if(snap.exists() && snap.data().lista){
-      window.GUSTI = snap.data().lista;
-    } else {
-      window.GUSTI = [];
-    }
-  }catch(e){ window.GUSTI = []; }
-  document.dispatchEvent(new Event('gustiPronti'));
-}
-
-// 2. Carica promozioni attive
-async function caricaPromo(){
-  try{
-    const snap = await getDoc(doc(db,'config','promozioni'));
-    if(snap.exists() && snap.data().lista) window.PROMOZIONI = snap.data().lista;
-  }catch(e){}
-  document.dispatchEvent(new Event('promoPronte'));
-}
-
-caricaGusti();
-caricaPromo();
-</script>
-
-<!-- PROMO TICKER (fascia oraria attiva) -->
-<div class="promo-ticker" id="promoTicker">
-  <span id="ptTesto">🔥 OFFERTA IN CORSO</span>
-  <span class="ptimer" id="ptTimer">00:00</span>
-  <span class="pclose" onclick="chiudiTicker()">✕</span>
+<!-- PIN SCREEN -->
+<div id="pin-screen" style="
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:#0a0a0a;z-index:99999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:'Outfit',sans-serif;
+">
+  <div style="font-size:28px;font-weight:700;color:#c8a96e;letter-spacing:2px;margin-bottom:4px">GREED</div>
+  <div style="font-size:13px;color:#666;margin-bottom:40px">Club CRM — Accesso riservato</div>
+  <div id="pin-dots" style="display:flex;gap:14px;margin-bottom:28px"></div>
+  <div style="display:grid;grid-template-columns:repeat(3,70px);gap:10px;">
+    <button onclick="cp('1')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">1</button>
+    <button onclick="cp('2')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">2</button>
+    <button onclick="cp('3')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">3</button>
+    <button onclick="cp('4')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">4</button>
+    <button onclick="cp('5')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">5</button>
+    <button onclick="cp('6')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">6</button>
+    <button onclick="cp('7')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">7</button>
+    <button onclick="cp('8')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">8</button>
+    <button onclick="cp('9')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">9</button>
+    <button onclick="cp('0')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;grid-column:2">0</button>
+    <button onclick="pdel()" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#888;font-size:16px;cursor:pointer;">⌫</button>
+  </div>
+  <div id="pin-err" style="color:#c0392b;font-size:13px;margin-top:14px;min-height:18px;"></div>
 </div>
-
-<nav id="nav">
-  <a href="https://gelateriagreed.it/" class="nav-logo">GREED</a>
-  <ul class="nav-links">
-    <li><a href="https://gelateriagreed.it/">Home</a></li>
-    <li><a href="https://gelateriagreed.it/la-nostra-filosofia/">Filosofia</a></li>
-    <li><a href="https://gelateriagreed.it/la-storia/">La Storia</a></li>
-    <li><a href="https://gelateriagreed.it/dove-siamo/">Dove Siamo</a></li>
-  </ul>
-  <div id="navUtente" style="display:none" class="nav-user">
-    <span>👤</span>
-    <span class="uname" id="navUtenteNome"></span>
-    <span class="ulogout" onclick="logout()">Esci</span>
-  </div>
-  <button class="nav-cart-btn" id="navCartBtn" onclick="apriCarrello()" style="display:none">
-    🛒 Carrello
-    <span class="cart-badge" id="cartBadge">0</span>
-  </button>
-</nav>
-
-<!-- BARRA ADMIN (lazy: clonata solo se admin) -->
-<template id="adminBarTpl">
-<div class="admin-bar show" id="adminBar">
-  <span>⚙ Admin — Gestisci gusti, promozioni e offerte</span>
-  <div class="admin-btns">
-    <button class="btn-admin-sm" onclick="apriAdminTab('gusti')">Gusti</button>
-    <button class="btn-admin-sm" onclick="apriAdminTab('promozioni')">Promozioni</button>
-    <button id="admin-google-btn" class="btn-admin-sm" onclick="window._adminLogin()" style="margin-left:auto;background:#ea4335;color:#fff;border:none">🔑 Google</button>
-    <button class="btn-admin-sm" onclick="window._adminLogout()" style="color:#f99;border-color:#f99">Esci</button>
-  </div>
-</div>
-</template>
-<div id="adminBarMount"></div>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-bg"></div>
-  <div class="hero-pattern"></div>
-  <div class="hero-content">
-    <p class="hero-eyebrow">GREED · Gelateria Naturale · Frascati</p>
-    <h1 class="hero-title">I nostri<br><em>gusti</em></h1>
-    <p class="hero-sub">Materie prime selezionate, territorio laziale, stagioni rispettate. Ogni vaschetta preparata fresca.</p>
-    <div class="hero-pills">
-      <span class="hpill" id="pillGusti">⚬ Caricamento...</span>
-      <span class="hpill">🌿 Senza glutine <b>AIC</b></span>
-      <span class="hpill">📍 Piazza Roma 16, Frascati</span>
-    </div>
-  </div>
-</section>
-
-<!-- PROMO BANNER (fascia oraria grande) -->
-<div class="promo-banner" id="promoBanner">
-  <div class="pb-inner">
-    <div class="pb-left">
-      <span class="pb-icon" id="pbIcon">🔥</span>
-      <div class="pb-testo">
-        <strong id="pbTitolo">Offerta in corso!</strong>
-        <span id="pbDescrizione">Sconto attivo sugli ordini</span>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="pb-sconto" id="pbSconto">-20%</div>
-      <div>
-        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;margin-bottom:3px">TERMINA TRA</div>
-        <div class="pb-countdown" id="pbCountdown">00:00</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="main">
-
-  <!-- ══ PANNELLO ADMIN (lazy: clonato solo se admin) ══ -->
-  <template id="adminPanelTpl">
-  <div class="admin-panel open" id="adminPanel">
-    <div class="admin-tabs">
-      <button class="atab active" data-tab="gusti" onclick="switchAdminTab('gusti',this)">🍦 Gusti disponibili</button>
-      <button class="atab" data-tab="promozioni" onclick="switchAdminTab('promozioni',this)">🔥 Promozioni & Offerte</button>
-      <button class="atab" data-tab="delivery" onclick="switchAdminTab('delivery',this)">🛵 Delivery</button>
-    </div>
-
-    <!-- TAB GUSTI -->
-    <div class="atab-body active" id="atab-gusti">
-      <p style="font-size:12px;color:var(--cream2);margin-bottom:14px">Attiva/disattiva gusti · Modifica nomi · 🏷 = segna come in offerta (appare badge rosso)</p>
-      <div class="gusti-list-a" id="gustiListA"></div>
-      <div class="admin-row">
-        <button class="btn-ag" onclick="aggiungiGustoA()">+ Aggiungi gusto</button>
-        <button class="btn-sg" onclick="salvaGustiA()">💾 Salva</button>
-        <span class="save-ok" id="saveOkG">✓ Salvato!</span>
-      </div>
-    </div>
-
-    <!-- TAB PROMOZIONI -->
-    <div class="atab-body" id="atab-promozioni">
-      <p style="font-size:12px;color:var(--cream2);margin-bottom:18px">Crea offerte spot o promozioni in fasce orarie. Lo sconto viene applicato automaticamente al carrello quando è attivo.</p>
-
-      <!-- Lista promo esistenti -->
-      <div class="promo-lista" id="promoLista"></div>
-
-      <!-- Form nuova promo -->
-      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border2);padding:20px;border-radius:3px;margin-bottom:16px">
-        <p style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin-bottom:14px">Nuova promozione</p>
-        <div class="promo-form">
-          <div class="pf-row">
-            <div class="pf-group">
-              <label>Titolo</label>
-              <input type="text" id="pTitolo" placeholder="es: Happy Hour Mattina">
-            </div>
-            <div class="pf-group">
-              <label>Descrizione breve</label>
-              <input type="text" id="pDesc" placeholder="es: 20% su tutto dalle 10 alle 11">
-            </div>
-          </div>
-          <div class="pf-row">
-            <div class="pf-group">
-              <label>Tipo</label>
-              <select id="pTipo" onchange="aggiornaTipoPromo()">
-                <option value="fascia">⏰ Fascia oraria (si attiva automaticamente)</option>
-                <option value="spot">🔴 Spot (attivi/disattivi manualmente)</option>
-              </select>
-            </div>
-            <div class="pf-group">
-              <label>Sconto %</label>
-              <input type="range" id="pSconto" min="5" max="50" step="5" value="20" oninput="aggiornaPreviewPromo()">
-              <span id="pScontoVal" style="font-size:12px;color:var(--gold);margin-top:4px">Sconto: <b>20%</b></span>
-            </div>
-          </div>
-          <div id="pFasciaOra" class="pf-row">
-            <div class="pf-group">
-              <label>Ora inizio</label>
-              <input type="time" id="pOraInizio" value="10:00">
-            </div>
-            <div class="pf-group">
-              <label>Ora fine</label>
-              <input type="time" id="pOraFine" value="11:00">
-            </div>
-          </div>
-          <div class="pf-row">
-            <div class="pf-group">
-              <label>Emoji icona</label>
-              <input type="text" id="pEmoji" value="🔥" maxlength="2" placeholder="🔥">
-            </div>
-            <div class="pf-group">
-              <label>Giorni della settimana</label>
-              <input type="text" id="pGiorni" value="Lun,Mar,Mer,Gio,Ven,Sab,Dom" placeholder="Lun,Mar,Mer,Gio,Ven,Sab,Dom">
-            </div>
-            <div class="pf-group" id="limiteGroup">
-              <label>Vaschette disponibili (0 = illimitato)</label>
-              <input type="number" id="pLimite" value="0" min="0" step="1" placeholder="es: 10">
-            </div>
-          </div>
-          <!-- Preview -->
-          <div class="pf-preview" id="pPreview">
-            <span class="pico">🔥</span>
-            <span id="pPreviewTesto">Offerta 20% • 10:00 – 11:00</span>
-          </div>
-          <div>
-            <button class="btn-salva-promo" onclick="salvaPromo()">+ Aggiungi promozione</button>
-          </div>
-        </div>
-      </div>
-      <button class="btn-sg" onclick="salvaPromozioni()">💾 Salva tutto su Firebase</button>
-      <span class="save-ok" id="saveOkP">✓ Salvato!</span>
-    </div>
-
-    <!-- TAB DELIVERY -->
-    <div class="atab-body" id="atab-delivery">
-      <p style="font-size:12px;color:var(--cream2);margin-bottom:20px">
-        Il delivery è <strong>automaticamente chiuso il mercoledì</strong>. Usa gli override per gestire eccezioni (festivi, chiusure straordinarie, aperture speciali).
-      </p>
-
-      <!-- Schema settimanale -->
-      <div style="margin-bottom:24px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cream3);margin-bottom:10px">Schema automatico</div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center">
-          <div id="wd-lun" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border)">LUN<br><span style="font-size:16px">🛵</span></div>
-          <div id="wd-mar" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border)">MAR<br><span style="font-size:16px">🛵</span></div>
-          <div id="wd-mer" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;background:rgba(217,79,56,.12);border:1px solid rgba(217,79,56,.3);color:#e07060">MER<br><span style="font-size:16px">✖</span></div>
-          <div id="wd-gio" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border)">GIO<br><span style="font-size:16px">🛵</span></div>
-          <div id="wd-ven" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border)">VEN<br><span style="font-size:16px">🛵</span></div>
-          <div id="wd-sab" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border)">SAB<br><span style="font-size:16px">🛵</span></div>
-          <div id="wd-dom" style="padding:10px 4px;border-radius:3px;font-size:11px;font-weight:600;letter-spacing:.06em;border:1px solid var(--border)">DOM<br><span style="font-size:16px">🛵</span></div>
-        </div>
-      </div>
-
-      <!-- Override oggi -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cream3);margin-bottom:12px">Override per oggi</div>
-        <div id="deliveryOggiStatus" style="font-size:13px;color:var(--cream2);margin-bottom:12px">Caricamento...</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn-sg" onclick="setDeliveryOverride('aperto')" style="flex:1">✅ Forza APERTO oggi</button>
-          <button class="btn-admin-sm" onclick="setDeliveryOverride('chiuso')" style="flex:1">🚫 Forza CHIUSO oggi</button>
-          <button class="btn-admin-sm" onclick="setDeliveryOverride(null)" style="flex:1">↩ Ripristina auto</button>
-        </div>
-      </div>
-
-      <span class="save-ok" id="saveOkDelivery" style="display:none">✓ Salvato!</span>
-    </div>
-  </div>
-  </template>
-  <div id="adminPanelMount"></div>
-
-  <!-- ══ GRIGLIA GUSTI ══ -->
-  <div id="gustiSection" style="display:none">
-    <div class="sec-hd"><h2>I gusti di <em>oggi</em></h2></div>
-    <div class="gusti-grid" id="gustiGrid">
-      <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--cream2);font-size:13px">Caricamento gusti...</div>
-    </div>
-  </div>
-
-  <!-- ══ AUTH: registrazione / login ══ -->
-  <div id="authSection">
-    <div class="sec-hd"><h2>Accedi per <em>ordinare</em></h2></div>
-    <div class="auth-wrap">
-      <div class="auth-card">
-        <div class="auth-tabs">
-          <button class="auth-tab active" onclick="switchAuthTab('reg',this)">Sono nuovo</button>
-          <button class="auth-tab" onclick="switchAuthTab('login',this)">Ho già un account</button>
-        </div>
-
-        <!-- ── REGISTRAZIONE ── -->
-        <div id="tabReg" class="auth-body">
-          <h3>Benvenuto, <em>registrati</em></h3>
-          <p class="sub">Crea il tuo account gratuito per ordinare online, saltare la fila e ricevere il tuo QR personale.</p>
-          <div class="pill-fidelity">
-            <span class="ic">🎁</span>
-            <p>Con la registrazione entri automaticamente nella <strong>Carta Fedeltà GREED</strong>: punti ad ogni acquisto, regalo di compleanno e accesso anticipato a promozioni.</p>
-          </div>
-          <div class="auth-err" id="regErr"></div>
-          <form onsubmit="registrati(event)">
-            <div class="fg2">
-              <div class="ff"><label>Nome <span class="req">*</span></label><input type="text" id="rNome" placeholder="Mario" required></div>
-              <div class="ff"><label>Cognome <span class="req">*</span></label><input type="text" id="rCognome" placeholder="Rossi" required></div>
-              <div class="ff"><label>Cellulare <span class="req">*</span></label><input type="tel" id="rTel" placeholder="333 000 0000" required></div>
-              <div class="ff"><label>Data di nascita <span class="req">*</span></label><input type="date" id="rNascita" required></div>
-              <div class="ff full"><label>Email <span style="color:var(--cream3);font-size:10px">(opzionale)</span></label><input type="email" id="rEmail" placeholder="mario@email.it"></div>
-            </div>
-            <div class="check-stack">
-              <label class="chk" for="chkP">
-                <input type="checkbox" id="chkP" required>
-                <div class="cb"><strong>Privacy Policy <span class="tag-req">· Obbligatoria</span></strong>Accetto il trattamento dei dati ai sensi del GDPR per la gestione dell'account e degli ordini.</div>
-              </label>
-              <label class="chk" for="chkF">
-                <input type="checkbox" id="chkF" checked required>
-                <div class="cb"><strong>Carta Fedeltà GREED <span class="tag-req">· Obbligatoria</span></strong>Acconsento all'iscrizione al programma fedeltà per punti e regalo di compleanno.</div>
-              </label>
-              <label class="chk" for="chkM">
-                <input type="checkbox" id="chkM" checked>
-                <div class="cb"><strong>Comunicazioni <span class="tag-opt">· Opzionale</span></strong>Acconsento a ricevere offerte e novità via SMS/email. Revocabile in qualsiasi momento.</div>
-              </label>
-            </div>
-            <button type="submit" class="btn-auth" id="btnReg">Crea account e ottieni il QR →</button>
-            <p class="auth-legal">Dati protetti e non ceduti a terzi. <a href="/privacy">Privacy Policy completa</a></p>
-          </form>
-        </div>
-
-        <!-- ── LOGIN ── -->
-        <div id="tabLogin" class="auth-body" style="display:none">
-          <h3>Bentornato, <em>accedi</em></h3>
-          <p class="sub">Inserisci il tuo numero di telefono o email per accedere al tuo account e ordinare.</p>
-          <div class="auth-err" id="loginErr"></div>
-          <form onsubmit="login(event)">
-            <div class="fg2" style="grid-template-columns:1fr;gap:10px">
-              <div class="ff"><label>Cellulare o Email</label><input type="text" id="lCred" placeholder="333 000 0000" required></div>
-            </div>
-            <div style="margin-bottom:20px"></div>
-            <button type="submit" class="btn-auth" id="btnLogin">Accedi →</button>
-          </form>
-          <p style="text-align:center;font-size:12px;color:var(--cream2);margin-top:14px">Non sei ancora iscritto? <a href="#" style="color:var(--gold)" onclick="switchAuthTab('reg',null)">Registrati gratis →</a></p>
-        </div>
-
-        <!-- ── QR BENVENUTO (dopo registrazione) ── -->
-        <div class="qr-benvenuto" id="qrBenvenuto">
-          <h3>Benvenuto <em id="qrNomeUtente"></em>!</h3>
-          <p>Il tuo QR personale è pronto. Usalo per i check-in in gelateria e accumula punti fedeltà.</p>
-          <div class="qr-box"><div id="qrCodeDiv"></div></div>
-          <div class="qr-code-txt" id="qrCodeTxt"></div>
-          <p style="font-size:12px;color:var(--cream2);margin-bottom:20px">✉️ Scrivi <b>BONUS</b> su WhatsApp per ricevere <b style="color:var(--gold)">20 punti regalo</b>! 🎁</p>
-          <button class="btn-ordina-ora" onclick="mostraOrdine()">Ordina la tua vaschetta →</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ CONFIGURATORE ORDINE ══ -->
-  <div class="configuratore" id="configuratore">
-    <div class="conf-hd">
-      <h2>Il tuo <em>ordine</em></h2>
-      <p id="confSaluto"></p>
-    </div>
-
-    <!-- Step 1: Vaschetta -->
-    <div class="step-block">
-      <div class="step-hd">
-        <div class="step-n">1</div>
-        <div>
-          <div class="step-ttl">Scegli la <em>vaschetta</em></div>
-          <div class="step-sub">Dimensione e numero di gusti</div>
-        </div>
-      </div>
-      <div id="scontoAttivoInfo" style="display:none;background:var(--red-bg);border:1px solid var(--red-bd);padding:10px 14px;border-radius:2px;font-size:12px;color:#f09080;margin-bottom:12px"></div>
-      <div class="vaschette">
-        <div class="vaschetta" data-price="16" data-slots="3" onclick="sceldiVaschetta(this)">
-          <span class="v-size">Piccola</span><span class="v-peso">~500g</span>
-          <span class="v-price" id="vp0">€ 16</span>
-          <span class="v-price-orig" id="vo0"></span><span class="v-price-scontato" id="vs0"></span>
-          <span class="v-slots">fino a 3 gusti</span>
-          <span class="sconto-attivo-badge" id="vb0"></span>
-        </div>
-        <div class="vaschetta" data-price="23" data-slots="4" onclick="sceldiVaschetta(this)">
-          <div class="v-pop">Più scelta</div>
-          <span class="v-size">Media</span><span class="v-peso">~750g</span>
-          <span class="v-price" id="vp1">€ 23</span>
-          <span class="v-price-orig" id="vo1"></span><span class="v-price-scontato" id="vs1"></span>
-          <span class="v-slots">fino a 4 gusti</span>
-          <span class="sconto-attivo-badge" id="vb1"></span>
-        </div>
-        <div class="vaschetta" data-price="30" data-slots="5" onclick="sceldiVaschetta(this)">
-          <span class="v-size">Grande</span><span class="v-peso">~1kg</span>
-          <span class="v-price" id="vp2">€ 30</span>
-          <span class="v-price-orig" id="vo2"></span><span class="v-price-scontato" id="vs2"></span>
-          <span class="v-slots">fino a 5 gusti</span>
-          <span class="sconto-attivo-badge" id="vb2"></span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 2: Gusti -->
-    <div class="step-block">
-      <div class="step-hd">
-        <div class="step-n">2</div>
-        <div>
-          <div class="step-ttl">Scegli i <em>gusti</em></div>
-          <div class="step-sub">Puoi sceglierne meno di quelli disponibili</div>
-        </div>
-      </div>
-      <div class="gusti-slots" id="gustiSlots"></div>
-      <div class="gusti-info-b" id="gustiInfoB">Seleziona prima una vaschetta</div>
-    </div>
-
-    <!-- Step 3: Extra -->
-    <div class="step-block">
-      <div class="step-hd">
-        <div class="step-n">3</div>
-        <div>
-          <div class="step-ttl">Extra <em>opzionali</em></div>
-          <div class="step-sub">Panna montata e tipo di contenitore</div>
-        </div>
-      </div>
-      <div class="extras-grid">
-        <div class="extra-card" id="extPanna" onclick="togglePanna(this)">
-          <span class="ec-emoji">🍦</span>
-          <div class="ec-nome">Vaschetta di panna</div>
-          <div style="display:flex;gap:6px;justify-content:center;margin-top:4px">
-            <button onclick="event.stopPropagation();scegliPanna(3.50)" id="pannaPiccolaBtn" style="padding:3px 8px;border-radius:6px;border:1.5px solid var(--gold);background:transparent;color:var(--gold);font-size:0.75rem;cursor:pointer;font-weight:700">€3,50</button>
-            <button onclick="event.stopPropagation();scegliPanna(5.00)" id="pannaGrandeBtn" style="padding:3px 8px;border-radius:6px;border:1.5px solid var(--cream2);background:transparent;color:var(--cream2);font-size:0.75rem;cursor:pointer;font-weight:700">€5,00</button>
-          </div>
-          <div class="ec-check">✓ Aggiunta</div>
-        </div>
-        <div class="extra-card" id="extMiniconi" onclick="toggleMiniconi(this)">
-          <span class="ec-emoji">🍡</span>
-          <div class="ec-nome">Kit 6 miniconi</div>
-          <div class="ec-note">+ €1,50</div>
-          <div class="ec-check">✓ Aggiunto</div>
-        </div>
-        <div class="extra-card" id="extConi" onclick="toggleConi(this)">
-          <span class="ec-emoji">🧇</span>
-          <div class="ec-nome">Vuoi un cono?</div>
-          <div class="ec-note">scegli il tipo ↓</div>
-          <div class="ec-check">✓ Selezionato</div>
-        </div>
-      </div>
-      <div id="coniSection" style="display:none">
-        <div class="extra-label">Seleziona tipo e quantità:</div>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-          <!-- Cono cialda -->
-          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:1.3rem">🧇</span>
-              <div>
-                <div style="font-weight:700;font-size:0.9rem">Cono cialda</div>
-                <div style="font-size:0.75rem;color:var(--gold)">€0,50 cad</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <button onclick="cambiaQta('cialda',-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--gold);background:transparent;color:var(--gold);font-size:1.1rem;cursor:pointer;font-weight:700">−</button>
-              <span id="qtaCialda" style="font-size:1.1rem;font-weight:700;min-width:24px;text-align:center">0</span>
-              <button onclick="cambiaQta('cialda',1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--gold);background:transparent;color:var(--gold);font-size:1.1rem;cursor:pointer;font-weight:700">+</button>
-            </div>
-          </div>
-          <!-- Coppetta -->
-          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.05);border-radius:10px;padding:10px 14px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:1.3rem">🥤</span>
-              <div>
-                <div style="font-weight:700;font-size:0.9rem">Coppetta/cucchiaino</div>
-                <div style="font-size:0.75rem;color:var(--gold)">€0,50 cad</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <button onclick="cambiaQta('coppetta',-1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--gold);background:transparent;color:var(--gold);font-size:1.1rem;cursor:pointer;font-weight:700">−</button>
-              <span id="qtaCoppetta" style="font-size:1.1rem;font-weight:700;min-width:24px;text-align:center">0</span>
-              <button onclick="cambiaQta('coppetta',1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--gold);background:transparent;color:var(--gold);font-size:1.1rem;cursor:pointer;font-weight:700">+</button>
-            </div>
-          </div>
-        </div>
-        <div id="coniTotaleLabel" style="font-size:0.82rem;color:var(--cream2);margin-top:6px;text-align:right"></div>
-      </div>
-    </div>
-
-    <!-- Step 4: Note -->
-    <div class="step-block">
-      <div class="step-hd">
-        <div class="step-n">4</div>
-        <div>
-          <div class="step-ttl">Note <em>opzionali</em></div>
-          <div class="step-sub">Allergie, richieste particolari, orario di ritiro</div>
-        </div>
-      </div>
-      <textarea class="note-ta" id="noteOrdine" placeholder="Es: allergia alle noci, gusti separati, arrivo alle 16:30..."></textarea>
-    </div>
-
-    <!-- Bottone aggiungi al carrello -->
-    <div style="text-align:center">
-      <button class="btn-auth" id="btnAggiungi" disabled onclick="aggiungiAlCarrello()" style="max-width:400px;margin:0 auto">
-        🛒 Aggiungi al carrello
-      </button>
-    </div>
-  </div>
-
-</div><!-- /main -->
-
-<!-- ══ CARRELLO DRAWER ══ -->
-<div class="cart-overlay" id="cartOverlay" onclick="chiudiCarrello()"></div>
-<div class="cart-drawer" id="cartDrawer">
-  <div class="cart-header">
-    <div>
-      <h3>Il tuo <em>carrello</em></h3>
-    </div>
-    <button class="cart-close" onclick="chiudiCarrello()">✕</button>
-  </div>
-  <div class="cart-body" id="cartBody">
-    <div class="cart-empty">
-      <span class="ce-icon">🛒</span>
-      <p>Il carrello è vuoto.<br>Configura la tua vaschetta e aggiungila qui.</p>
-    </div>
-  </div>
-  <div class="cart-footer" id="cartFooter" style="display:none">
-    <button class="btn-aggiungi-altro" onclick="chiudiCarrello();mostraOrdine()">+ Aggiungi un altro articolo</button>
-
-    <!-- ── MODALITÀ CONSEGNA ── -->
-    <div style="margin:12px 0 0;padding-top:12px;border-top:1px solid var(--border)">
-      <div class="df-label" style="margin-bottom:8px">Come vuoi ricevere l'ordine?</div>
-      <div class="delivery-toggle">
-        <button class="dt-btn active" id="btnRitiro" onclick="setModalita('ritiro')">
-          <span class="dt-icon">🏪</span>
-          <span>Ritiro in negozio</span>
-          <span class="dt-price">Gratis · Piazza Roma 16</span>
-        </button>
-        <button class="dt-btn" id="btnDelivery" onclick="setModalita('delivery')">
-          <span class="dt-icon">🛵</span>
-          <span>Consegna a domicilio</span>
-          <span class="dt-price" id="deliveryPriceLabel">da €3,90 · 19:00–20:00</span>
-          <span class="dt-price" style="color:var(--gold);font-weight:600;margin-top:2px">Min. ordine €20</span>
-        </button>
-      </div>
-
-      <!-- Messaggi blocco delivery -->
-      <div class="delivery-chiuso" id="deliveryChiuso">
-        🛵 Delivery non disponibile oggi, riprova domani.
-      </div>
-      <div class="delivery-full" id="deliveryFull">
-        🛵 Consegne complete per oggi! Scegli ritiro o riprova domani.
-      </div>
-
-      <!-- Form indirizzo delivery -->
-      <div class="delivery-form" id="deliveryForm">
-        <div class="df-row">
-          <label class="df-label">Zona di consegna *</label>
-          <select class="df-select" id="deliveryZona" onchange="onZonaChange()">
-            <option value="">Seleziona zona...</option>
-            <optgroup label="🟢 €3,90 — Zona A">
-              <option value="Frascati|3.90">Frascati</option>
-              <option value="Grottaferrata|3.90">Grottaferrata</option>
-            </optgroup>
-            <optgroup label="🟡 €4,90 — Zona B">
-              <option value="Ciampino|4.90">Ciampino</option>
-              <option value="Morena|4.90">Morena</option>
-              <option value="Monte Compatri|4.90">Monte Compatri</option>
-              <option value="Monte Porzio Catone|4.90">Monte Porzio Catone</option>
-              <option value="Tor Vergata|4.90">Tor Vergata</option>
-              <option value="Vermicino|4.90">Vermicino</option>
-              <option value="Finocchio|4.90">Finocchio</option>
-              <option value="Borghesiana|4.90">Borghesiana</option>
-            </optgroup>
-            <optgroup label="🔴 €5,90 — Zona C">
-              <option value="Marino|5.90">Marino</option>
-              <option value="Rocca di Papa|5.90">Rocca di Papa</option>
-              <option value="Rocca Priora|5.90">Rocca Priora</option>
-            </optgroup>
-            <option value="altro">Altra zona (non coperta)</option>
-          </select>
-        </div>
-        <div id="zonaFuoriArea" style="display:none;background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);font-size:12px;padding:10px;border-radius:3px">
-          ⚠️ La tua zona non è ancora coperta dal delivery GREED. Scegli ritiro in negozio o contattaci su WhatsApp.
-        </div>
-        <div class="df-row">
-          <label class="df-label">Via e numero civico *</label>
-          <input class="df-input" id="deliveryVia" type="text" placeholder="es. Via Roma 42" autocomplete="street-address">
-        </div>
-        <div class="df-row">
-          <label class="df-label">Note citofono / piano</label>
-          <input class="df-input" id="deliveryCitofono" type="text" placeholder="es. Rossi, secondo piano">
-        </div>
-        <div class="df-row">
-          <label class="df-label">Fascia di consegna</label>
-          <div class="delivery-badge">🕖 19:00 – 20:00</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── CODICE PROMO ── -->
-    <div id="codicePromoWrap" style="margin:10px 0;padding:12px 0;border-top:1px solid var(--border)">
-      <div style="display:flex;gap:8px">
-        <input type="text" id="codicePromoInput" placeholder="Hai un codice sconto?" style="flex:1;padding:11px 12px;border:1.5px solid var(--border);border-radius:4px;background:var(--bg);color:var(--cream);font-family:'Outfit',sans-serif;font-size:13px;text-transform:uppercase;letter-spacing:.04em" onkeydown="if(event.key==='Enter'){event.preventDefault();applicaCodicePromo();}">
-        <button onclick="applicaCodicePromo()" id="btnApplicaCodice" style="background:var(--gold);color:var(--bg);border:none;padding:0 18px;border-radius:4px;font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;font-family:'Outfit',sans-serif">Applica</button>
-      </div>
-      <div id="codicePromoMsg" style="font-size:12px;margin-top:8px;display:none"></div>
-    </div>
-
-    <!-- ── TOTALE ── -->
-    <div class="cart-totale">
-      <span class="ct-label">Subtotale gelato</span>
-      <span class="ct-val" id="cartSubtotale">€ 0,00</span>
-    </div>
-    <div id="deliveryCostoRow" style="display:none;justify-content:space-between;align-items:center;font-size:13px;color:var(--cream2);margin-bottom:8px">
-      <span>Consegna a domicilio</span>
-      <span id="deliveryCostoVal" style="color:var(--gold)">+€ 4,90</span>
-    </div>
-    <div class="cart-totale" style="border-top:1px solid var(--border);padding-top:10px">
-      <span class="ct-label">Totale</span>
-      <span class="ct-val" id="cartTotale">€ 0,00</span>
-    </div>
-    <div class="ct-risparmi" id="cartRisparmi" style="display:none"></div>
-
-    <!-- Avviso ordine minimo -->
-    <div id="minOrdineWarn" style="display:none;background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red);font-size:12px;padding:8px 12px;border-radius:3px;margin-bottom:8px;text-align:center">
-      Ordine minimo delivery: 20€ di gelato
-    </div>
-
-    <button class="btn-checkout" id="btnCheckout" onclick="simulaCheckout()">🔒 Paga con Carta</button>
-    <div class="pagamento-sep">oppure</div>
-    <button class="btn-paypal" id="btnPayPal" onclick="simulaCheckoutPayPal()">💳 Paga con PayPal</button>
-    <p class="cart-note" id="cartNote">Pagamento sicuro · Ritiro: Piazza Roma 16, Frascati</p>
-  </div>
-</div>
-
-<footer>
-  <div class="ft">
-    <div class="fb">GREED <small>Gelateria Naturale · Frascati</small></div>
-    <div class="fl">
-      <a href="https://gelateriagreed.it/">Home</a>
-      <a href="https://gelateriagreed.it/la-nostra-filosofia/">Filosofia</a>
-      <a href="https://gelateriagreed.it/dove-siamo/">Dove Siamo</a>
-      <a href="https://gelateriagreed.it/crm/">CRM Admin</a>
-      <a href="/privacy">Privacy</a>
-    </div>
-  </div>
-  <div class="fb2">
-    <p class="fc">© 2025 GREED Gelateria Naturale · P.IVA 16745501003 · Piazza Roma 16, Frascati (RM)</p>
-    <p class="fc">Pagamenti sicuri con Stripe 🔒</p>
-  </div>
-</footer>
 
 <script>
-/* ══════════════════════════════════════════════════
-   DATI DEFAULT
-══════════════════════════════════════════════════ */
-window.GUSTI = [
-  {n:"Ape Regina",                 e:"🍯", attivo:true, offerta:false},
-  {n:"Fior di Latte",              e:"🥛", attivo:true, offerta:false},
-  {n:"Variegato Nocciola e Cacao", e:"🌰", attivo:true, offerta:false},
-  {n:"Stracciatella",              e:"🍫", attivo:true, offerta:false},
-  {n:"Crema",                      e:"🥚", attivo:true, offerta:false},
-  {n:"Zabaione",                   e:"🍷", attivo:true, offerta:false},
-  {n:"Caffè",                      e:"☕", attivo:true, offerta:false},
-  {n:"Nocciola della Tuscia",      e:"🌰", attivo:true, offerta:false},
-  {n:"Liquirizia DOP Calabria",    e:"🖤", attivo:true, offerta:false},
-  {n:"Cioccolato",                 e:"🍫", attivo:true, offerta:false},
-  {n:"Fave di Cacao",              e:"🫘", attivo:true, offerta:false},
-  {n:"Mela e Cannella",            e:"🍎", attivo:true, offerta:false},
-  {n:"Pera",                       e:"🍐", attivo:true, offerta:false},
-  {n:"Bergamotto DOP",             e:"🍋", attivo:true, offerta:false},
-  {n:"Arancia",                    e:"🍊", attivo:true, offerta:false},
-  {n:"Mandorla",                   e:"🤍", attivo:true, offerta:false},
-  {n:"Pistacchio",                 e:"💚", attivo:true, offerta:false},
-  {n:"Burro e Confettura di Fichi",e:"🫙", attivo:true, offerta:false},
-  {n:"Cacio e Pepe ★",            e:"🧀", attivo:true, offerta:false},
-  {n:"Gusto di stagione",          e:"🍦", attivo:true, offerta:false},
-];
-
-window.PROMOZIONI = [];
-
-/* Stato utente loggato */
-let utenteLoggato = null;
-// Controlla sessionStorage
-const uSaved = sessionStorage.getItem('greed_utente');
-if(uSaved){ try{ utenteLoggato = JSON.parse(uSaved); }catch(e){} }
-
-/* Carrello */
-let carrello = [];
-
-/* Promo attiva corrente */
-let promoAttiva = null;
-
-/* ══ NAV SCROLL ══ */
-window.addEventListener('scroll', ()=>
-  document.getElementById('nav').classList.toggle('scrolled', scrollY>80));
-
-/* ══ ADMIN DETECT ══ */
-function isAdmin(){
-  return document.body.classList.contains('logged-in') ||
-         localStorage.getItem('greed_admin')==='1';
-}
-
-/* ══ MOUNT ADMIN UI (solo se admin) ══ */
-function mountAdminUI(){
-  if(!isAdmin()) return;
-  // Evita doppio mount
-  if(document.getElementById('adminBar')) return;
-
-  const barTpl = document.getElementById('adminBarTpl');
-  const panelTpl = document.getElementById('adminPanelTpl');
-  const barMount = document.getElementById('adminBarMount');
-  const panelMount = document.getElementById('adminPanelMount');
-
-  if(barTpl && barMount){
-    barMount.appendChild(barTpl.content.cloneNode(true));
-  }
-  if(panelTpl && panelMount){
-    panelMount.appendChild(panelTpl.content.cloneNode(true));
-  }
-}
-
-/* ══ INIT ══ */
-document.addEventListener('gustiPronti', ()=>{ disegnaGriglia(); aggiornaHero(); if(isAdmin()) renderAdminGusti(); });
-document.addEventListener('promoPronte', ()=>{ avviaTimerPromo(); if(isAdmin()) renderPromoLista(); });
-// Gusti mostrati solo da Firebase - nessun fallback hardcoded
-
-mountAdminUI();
-if(utenteLoggato) {
-  mostraUtenteNav();
-  const gs = document.getElementById('gustiSection');
-  if(gs) gs.style.display = 'block';
-}
-
-/* ══════════════════════════════════════════════════
-   GRIGLIA GUSTI
-══════════════════════════════════════════════════ */
-function gustiAttivi(){ return window.GUSTI.filter(g=>(g.attivo||g.a) && g.n && g.n.trim()); }
-
-function aggiornaHero(){
-  const n = gustiAttivi().length;
-  document.getElementById('pillGusti').innerHTML = '🍨 <b>' + n + '</b> gusti disponibili';
-}
-
-function disegnaGriglia(){
-  const grid = document.getElementById('gustiGrid');
-  const lista = gustiAttivi();
-  if(!lista.length){ grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--cream2)">Nessun gusto disponibile oggi</div>'; return; }
-  grid.innerHTML = lista.map(g=>{
-    const al = g.al && g.al.length ? `<div class="gusto-allergeni">${g.al.map(a=>`<span class="al-pill">${a}</span>`).join('')}</div>` : '';
-    return `
-    <div class="gusto-card">
-      <span class="gusto-emoji">${g.e}</span>
-      <div class="gusto-nome">${g.n}</div>
-      ${al}
-      ${(g.offerta||g.o) ? '<span class="offerta-tag">Offerta</span>' : ''}
-    </div>`;
-  }).join('');
-}
-
-/* ══════════════════════════════════════════════════
-   PROMOZIONI — LOGICA FASCIA ORARIA
-══════════════════════════════════════════════════ */
-let timerPromoInterval = null;
-
-function avviaTimerPromo(){
-  if(timerPromoInterval) clearInterval(timerPromoInterval);
-  controllaPromo();
-  timerPromoInterval = setInterval(controllaPromo, 10000); // check ogni 10s
-}
-
-function controllaPromo(){
-  const ora = new Date();
-  const hhmm = ora.getHours()*60 + ora.getMinutes();
-  const giorni = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-  const giornoOggi = giorni[ora.getDay()];
-
-  let trovata = null;
-  for(const p of window.PROMOZIONI){
-    if(!p.attiva) continue;
-    if(p.tipo === 'spot'){
-      trovata = p; break;
-    }
-    if(p.tipo === 'fascia'){
-      // Controlla giorno
-      if(p.giorni && !p.giorni.split(',').map(g=>g.trim()).includes(giornoOggi)) continue;
-      // Controlla orario
-      const [h1,m1] = (p.oraInizio||'00:00').split(':').map(Number);
-      const [h2,m2] = (p.oraFine||'23:59').split(':').map(Number);
-      const inizio = h1*60+m1, fine = h2*60+m2;
-      if(hhmm >= inizio && hhmm < fine){ trovata = p; break; }
-    }
-  }
-
-  if(trovata !== promoAttiva){
-    promoAttiva = trovata;
-    aggiornaUIPromo();
-  }
-
-  // Aggiorna countdown se fascia attiva
-  if(promoAttiva && promoAttiva.tipo === 'fascia'){
-    const [hf,mf] = (promoAttiva.oraFine||'23:59').split(':').map(Number);
-    const fineMin = hf*60+mf;
-    const diffMin = fineMin - hhmm;
-    const mm = String(Math.floor(diffMin)).padStart(2,'0');
-    const ss = String(60 - ora.getSeconds()).padStart(2,'0');
-    const ctStr = mm + ':' + ss;
-    const el1 = document.getElementById('ptTimer');
-    const el2 = document.getElementById('pbCountdown');
-    if(el1) el1.textContent = ctStr;
-    if(el2) el2.textContent = ctStr;
-  }
-}
-
-function aggiornaUIPromo(){
-  const ticker = document.getElementById('promoTicker');
-  const banner = document.getElementById('promoBanner');
-
-  if(!promoAttiva){
-    ticker.classList.remove('show');
-    banner.classList.remove('show');
-    aggiornaPrezziBanner(0);
-    return;
-  }
-
-  const sconto = promoAttiva.sconto || 20;
-  const emoji  = promoAttiva.emoji  || '🔥';
-  const titolo = promoAttiva.titolo || 'Offerta in corso!';
-  const desc   = promoAttiva.desc   || 'Sconto ' + sconto + '%';
-
-  // Ticker
-  document.getElementById('ptTesto').textContent = emoji + ' ' + titolo + ' — Sconto ' + sconto + '%';
-  ticker.classList.add('show');
-
-  // Banner
-  document.getElementById('pbIcon').textContent = emoji;
-  document.getElementById('pbTitolo').textContent = titolo;
-  document.getElementById('pbDescrizione').textContent = desc;
-  document.getElementById('pbSconto').textContent = '-' + sconto + '%';
-  if(promoAttiva.tipo === 'fascia'){
-    banner.classList.add('show');
-  }
-
-  // Aggiorna prezzi vaschette
-  aggiornaPrezziBanner(sconto);
-
-  // Aggiorna riepilogo carrello se open
-  aggiornaCarrelloUI();
-}
-
-function aggiornaPrezziBanner(sconto){
-  const prezzi = [16, 23, 30];
-  prezzi.forEach((p, i)=>{
-    const vpEl = document.getElementById('vp'+i);
-    const voEl = document.getElementById('vo'+i);
-    const vsEl = document.getElementById('vs'+i);
-    const vbEl = document.getElementById('vb'+i);
-    const info = document.getElementById('scontoAttivoInfo');
-
-    if(sconto > 0){
-      const scontato = (p * (1 - sconto/100)).toFixed(2).replace('.',',');
-      vpEl.style.display = 'none';
-      voEl.textContent = '€ ' + p;
-      voEl.style.display = 'inline';
-      vsEl.textContent = '€ ' + scontato;
-      vsEl.style.display = 'inline';
-      vbEl.textContent = '-' + sconto + '%';
-      vbEl.classList.add('show');
-      if(info){
-        info.style.display = 'block';
-        info.innerHTML = '🔥 <b>Sconto ' + sconto + '% attivo</b> · ' + (promoAttiva?.titolo||'Offerta in corso') + ' — lo sconto sarà applicato automaticamente nel carrello!';
-      }
-    } else {
-      vpEl.style.display = 'block';
-      voEl.style.display = 'none';
-      vsEl.style.display = 'none';
-      vbEl.classList.remove('show');
-      if(info) info.style.display = 'none';
-    }
-  });
-}
-
-function chiudiTicker(){ document.getElementById('promoTicker').classList.remove('show'); }
-
-/* ══════════════════════════════════════════════════
-   AUTH: REGISTRAZIONE
-══════════════════════════════════════════════════ */
-function switchAuthTab(tab, btn){
-  document.getElementById('tabReg').style.display   = tab==='reg'   ? 'block' : 'none';
-  document.getElementById('tabLogin').style.display = tab==='login' ? 'block' : 'none';
-  document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  else document.querySelectorAll('.auth-tab')[tab==='reg'?0:1].classList.add('active');
-}
-
-async function registrati(e){
-  e.preventDefault();
-  const btn = document.getElementById('btnReg');
-  const err = document.getElementById('regErr');
-  err.classList.remove('show');
-
-  const nome    = document.getElementById('rNome').value.trim();
-  const cognome = document.getElementById('rCognome').value.trim();
-  const tel     = document.getElementById('rTel').value.trim();
-  const nascita = document.getElementById('rNascita').value;
-  const email   = document.getElementById('rEmail').value.trim();
-  const mkt     = document.getElementById('chkM').checked;
-
-  if(!nome||!cognome||!tel||!nascita){
-    err.textContent = 'Compila tutti i campi obbligatori.'; err.classList.add('show'); return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Registrazione in corso...';
-
-  try{
-    // Controlla se già esiste (per telefono)
-    if(window._fbGetDocs){
-      const q = window._fbQuery(window._fbCol(window._db,'clienti'), window._fbWhere('telefono','==',tel), window._fbLimit(1));
-      const snap = await window._fbGetDocs(q);
-      if(!snap.empty){
-        err.textContent = 'Questo numero è già registrato. Usa "Ho già un account" per accedere.';
-        err.classList.add('show');
-        btn.disabled=false; btn.textContent='Crea account e ottieni il QR →'; return;
-      }
-    }
-
-    const qrCode = 'GRD-' + Date.now();
-    const docRef = await window._fbAddDoc(
-      window._fbCol(window._db,'clienti'),
-      { nome, cognome, email, telefono:tel, dataNascita:nascita,
-        punti:0, qrCode, privacy:true, marketing:mkt, sms:true,
-        createdAt:window._fbTS() }
-    );
-
-    utenteLoggato = { id:docRef.id, nome, cognome, tel, email, punti:0, qrCode };
-    sessionStorage.setItem('greed_utente', JSON.stringify(utenteLoggato));
-    mostraQRBenvenuto(nome, qrCode);
-    mostraUtenteNav();
-
-  }catch(err2){
-    console.error(err2);
-    err.textContent = 'Errore di rete. Riprova tra qualche secondo.'; err.classList.add('show');
-  }
-  btn.disabled=false; btn.innerHTML='Crea account e ottieni il QR →';
-}
-
-/* ── QR Benvenuto ── */
-function mostraQRBenvenuto(nome, qrCode){
-  document.getElementById('tabReg').style.display   = 'none';
-  document.getElementById('tabLogin').style.display = 'none';
-  document.querySelector('.auth-tabs').style.display = 'none';
-
-  const qrDiv = document.getElementById('qrBenvenuto');
-  document.getElementById('qrNomeUtente').textContent = nome;
-  document.getElementById('qrCodeTxt').textContent   = qrCode;
-  qrDiv.classList.add('show');
-
-  setTimeout(()=>{
-    const container = document.getElementById('qrCodeDiv');
-    container.innerHTML = '';
-    try{
-      new QRCode(container,{ text:qrCode, width:160, height:160, colorDark:'#1a2e1c', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.H });
-    }catch(er){ container.textContent = qrCode; }
-  }, 200);
-}
-
-/* ── LOGIN ── */
-async function login(e){
-  e.preventDefault();
-  const btn = document.getElementById('btnLogin');
-  const err = document.getElementById('loginErr');
-  err.classList.remove('show');
-  const credRaw = document.getElementById('lCred').value.trim();
-  const cred = credRaw.includes('@') ? credRaw : credRaw.replace(/^\+?39\s?/, '').replace(/\s/g, '').replace(/[^0-9]/g, '');
-  if(!cred){ err.textContent='Inserisci cellulare o email.'; err.classList.add('show'); return; }
-
-  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Ricerca in corso...';
-
-  try{
-    const campo = cred.includes('@') ? 'email' : 'telefono';
-    // Cerca con e senza prefisso +39
-    const variants = cred.includes('@') ? [cred] : [cred, '+39'+cred, '39'+cred];
-    let snap = null;
-    for(const v of variants){
-      const q = window._fbQuery(window._fbCol(window._db,'clienti'), window._fbWhere(campo,'==',v), window._fbLimit(1));
-      snap = await window._fbGetDocs(q);
-      if(!snap.empty) break;
-    }
-    if(snap.empty){
-      err.textContent = 'Account non trovato. Controlla il numero/email o registrati.'; err.classList.add('show');
-    } else {
-      const d = snap.docs[0]; const dati = d.data();
-      utenteLoggato = { id:d.id, nome:dati.nome, cognome:dati.cognome, tel:dati.telefono, email:dati.email, punti:dati.punti||0, qrCode:dati.qrCode };
-      sessionStorage.setItem('greed_utente', JSON.stringify(utenteLoggato));
-      mostraUtenteNav();
-      mostraOrdine();
-    }
-  }catch(er){ err.textContent='Errore di rete. Riprova.'; err.classList.add('show'); }
-  btn.disabled=false; btn.textContent='Accedi →';
-}
-
-function logout(){
-  utenteLoggato=null; sessionStorage.removeItem('greed_utente');
-  document.getElementById('navUtente').style.display='none';
-  document.getElementById('navCartBtn').style.display='none';
-  document.getElementById('authSection').style.display='block';
-  document.getElementById('configuratore').style.display='none';
-  document.getElementById('tabReg').style.display='block';
-  document.querySelector('.auth-tabs').style.display='flex';
-}
-
-function mostraUtenteNav(){
-  const gs = document.getElementById('gustiSection');
-  if(gs) gs.style.display = 'block';
-  document.getElementById('navUtenteNome').textContent = utenteLoggato.nome;
-  document.getElementById('navUtente').style.display='flex';
-  document.getElementById('navCartBtn').style.display='flex';
-}
-
-function mostraOrdine(){
-  document.getElementById('authSection').style.display='none';
-  document.getElementById('configuratore').style.display='block';
-  document.getElementById('confSaluto').textContent = 'Ciao ' + (utenteLoggato?.nome||'') + '! Configura la tua vaschetta e aggiungila al carrello.';
-  document.getElementById('configuratore').scrollIntoView({behavior:'smooth'});
-}
-
-/* ══════════════════════════════════════════════════
-   CONFIGURATORE
-══════════════════════════════════════════════════ */
-let vaschettaSel = null;
-let selezioni    = [];
-let extraPanna   = false;
-let extraPannaCosto = 0;
-let extraMiniconi = false;
-let extraCono    = null;
-let extraConoCosto = 0;
-let gustoScorta  = '';
-
-function sceldiVaschetta(el){
-  document.querySelectorAll('.vaschetta').forEach(v=>v.classList.remove('sel'));
-  el.classList.add('sel');
-  const slots = parseInt(el.dataset.slots);
-  const price = parseInt(el.dataset.price);
-  vaschettaSel = { slots, price, label: el.querySelector('.v-size').textContent + ' ~' + el.querySelector('.v-peso').textContent };
-  selezioni = Array(slots).fill('');
-  // Aggiorna prezzo panna in base alla vaschetta
-  extraPannaCosto = (price <= 16) ? 3.50 : 5.00;
-  const pannalabel = document.getElementById('pannaPrezzoLabel');
-  if(pannalabel) pannalabel.textContent = '+ €' + extraPannaCosto.toFixed(2).replace('.',',');
-  renderSlots(slots);
-  aggiornaBtnAggiungi();
-}
-
-function renderSlots(n){
-  const optsHtml = gustiAttivi().map(g => `<option value="${g.n}">${g.e} ${g.n}</option>`).join('');
-  const c = document.getElementById('gustiSlots');
-  c.innerHTML='';
-  for(let i=0;i<n;i++){
-    c.innerHTML+=`<div class="gusto-slot" id="slot${i}">
-      <span class="slot-num" id="snum${i}">${i+1}</span>
-      <select class="slot-select" onchange="aggSel(${i},this.value)">
-        <option value="">— Seleziona gusto —</option>${optsHtml}
-      </select>
-      <span class="slot-arrow">▾</span>
-    </div>`;
-  }
-  document.getElementById('gustiInfoB').innerHTML = 'Scegli fino a <b>'+n+'</b> gusti';
-  // Aggiungi slot scorta
-  const optsHtml2 = gustiAttivi().map(g => `<option value="${g.n}">${g.e} ${g.n}</option>`).join('');
-  const scortaHtml = `<div class="gusto-slot" style="border-color:rgba(247,207,69,.4);margin-top:8px">
-    <span class="slot-num" style="background:rgba(247,207,69,.2);color:var(--gold)">★</span>
-    <select class="slot-select" id="scorta-select">
-      <option value="">— Gusto di scorta (consigliato) —</option>${optsHtml2}
-    </select>
-    <span class="slot-arrow">▾</span>
-  </div>`;
-  document.getElementById('gustiSlots').insertAdjacentHTML('beforeend', scortaHtml);
-}
-
-function aggSel(i,val){
-  selezioni[i]=val;
-  document.getElementById('slot'+i).classList.toggle('filled',val!=='');
-  document.getElementById('snum'+i).classList.toggle('active',val!=='');
-  const scelti=selezioni.filter(s=>s).length;
-  const rim=vaschettaSel.slots-scelti;
-  document.getElementById('gustiInfoB').innerHTML = rim>0
-    ? 'Puoi aggiungere ancora <b>'+rim+'</b> gusto/i (o procedi così)'
-    : '<b>✓</b> Gusti selezionati!';
-  aggiornaBtnAggiungi();
-}
-
-// Quantità coni separati
-let qtaCialda = 0, qtaCoppetta = 0;
-
-function togglePanna(el){
-  extraPanna=el.classList.toggle('sel');
-  if(!extraPanna){ extraPannaCosto=0; }
-  else if(extraPannaCosto===0){ scegliPanna(3.50); }
-  aggiornaBtnAggiungi();
-}
-
-function scegliPanna(prezzo){
-  extraPanna=true;
-  extraPannaCosto=prezzo;
-  document.getElementById('extPanna').classList.add('sel');
-  document.getElementById('pannaPiccolaBtn').style.borderColor = prezzo===3.50 ? 'var(--gold)' : 'var(--cream2)';
-  document.getElementById('pannaPiccolaBtn').style.color = prezzo===3.50 ? 'var(--gold)' : 'var(--cream2)';
-  document.getElementById('pannaGrandeBtn').style.borderColor = prezzo===5.00 ? 'var(--gold)' : 'var(--cream2)';
-  document.getElementById('pannaGrandeBtn').style.color = prezzo===5.00 ? 'var(--gold)' : 'var(--cream2)';
-  aggiornaBtnAggiungi();
-}
-
-function toggleMiniconi(el){
-  extraMiniconi=el.classList.toggle('sel');
-  aggiornaBtnAggiungi();
-}
-
-function toggleConi(el){
-  const on=el.classList.toggle('sel');
-  document.getElementById('coniSection').style.display=on?'block':'none';
-  if(!on){ qtaCialda=0; qtaCoppetta=0; extraConoCosto=0; extraCono=null;
-    document.getElementById('qtaCialda').textContent='0';
-    document.getElementById('qtaCoppetta').textContent='0';
-    document.getElementById('coniTotaleLabel').textContent='';
-  }
-  aggiornaBtnAggiungi();
-}
-
-function cambiaQta(tipo, delta){
-  if(tipo==='cialda'){
-    qtaCialda = Math.max(0, qtaCialda+delta);
-    document.getElementById('qtaCialda').textContent = qtaCialda;
-  } else {
-    qtaCoppetta = Math.max(0, qtaCoppetta+delta);
-    document.getElementById('qtaCoppetta').textContent = qtaCoppetta;
-  }
-  extraConoCosto = (qtaCialda + qtaCoppetta) * 0.50;
-  extraCono = (qtaCialda>0||qtaCoppetta>0) ? 
-    [qtaCialda>0?qtaCialda+'x Cono cialda':'', qtaCoppetta>0?qtaCoppetta+'x Coppetta':''].filter(Boolean).join(', ') : null;
-  const tot = extraConoCosto;
-  document.getElementById('coniTotaleLabel').textContent = tot>0 ? 'Totale contenitori: €'+tot.toFixed(2).replace('.',',') : '';
-  aggiornaBtnAggiungi();
-}
-
-function aggiornaBtnAggiungi(){
-  // Ok se ha vaschetta+gusti, oppure solo extra (cono, panna, miniconi)
-  const haVaschetta = vaschettaSel && selezioni.filter(s=>s).length>0;
-  const haExtra = extraPanna || extraMiniconi || extraCono || qtaCialda>0 || qtaCoppetta>0;
-  document.getElementById('btnAggiungi').disabled = !(haVaschetta || haExtra);
-}
-
-/* ══════════════════════════════════════════════════
-   CARRELLO
-══════════════════════════════════════════════════ */
-function prezzoConSconto(prezzo){
-  if(!promoAttiva) return prezzo;
-  const sc = promoAttiva.sconto||0;
-  return parseFloat((prezzo*(1-sc/100)).toFixed(2));
-}
-
-/* ══════════════════════════════════════════════════
-   CODICE PROMO PERSONALE (dormienti) — collezione codiciPromo
-   Documento: codiciPromo/<CODICE> = { sconto, scadenza(ts), usato(bool),
-              soloVaschette(bool), clienteId, titolo }
-══════════════════════════════════════════════════ */
-let codicePromoAttivo = null; // { codice, sconto, soloVaschette, titolo }
-
-function _codiceMsg(testo, tipo){
-  const el = document.getElementById('codicePromoMsg');
-  if(!el) return;
-  el.style.display = 'block';
-  el.textContent = testo;
-  el.style.color = tipo==='ok' ? '#7cc47c' : (tipo==='err' ? '#f09080' : 'var(--cream2)');
-}
-
-window.applicaCodicePromo = async function(){
-  const inp = document.getElementById('codicePromoInput');
-  const btn = document.getElementById('btnApplicaCodice');
-  const codice = (inp.value||'').trim().toUpperCase();
-  if(!codice){ _codiceMsg('Inserisci un codice.', 'err'); return; }
-  if(!window._fbGetDoc){ _codiceMsg('Servizio non disponibile, riprova.', 'err'); return; }
-
-  btn.disabled = true; const txt = btn.textContent; btn.textContent = '...';
-  try{
-    const ref  = window._fbDoc(window._db, 'codiciPromo', codice);
-    const snap = await window._fbGetDoc(ref);
-    if(!snap.exists()){ _codiceMsg('Codice non valido.', 'err'); codicePromoAttivo=null; aggiornaCarrelloUI(); return; }
-    const d = snap.data();
-
-    if(d.usato === true){ _codiceMsg('Questo codice è già stato utilizzato.', 'err'); codicePromoAttivo=null; aggiornaCarrelloUI(); return; }
-
-    const scadMs = d.scadenza?.seconds ? d.scadenza.seconds*1000 : (d.scadenza ? new Date(d.scadenza).getTime() : null);
-    if(scadMs && Date.now() > scadMs){ _codiceMsg('Questo codice è scaduto.', 'err'); codicePromoAttivo=null; aggiornaCarrelloUI(); return; }
-
-    codicePromoAttivo = {
-      codice,
-      sconto: d.sconto || 0,
-      soloVaschette: d.soloVaschette !== false, // default true
-      titolo: d.titolo || 'Codice sconto'
-    };
-    _codiceMsg(`✓ Codice applicato: -${codicePromoAttivo.sconto}% ${codicePromoAttivo.soloVaschette?'sulle vaschette':''}`, 'ok');
-    inp.disabled = true; btn.style.display = 'none';
-    aggiornaCarrelloUI();
-  }catch(e){
-    _codiceMsg('Errore nel verificare il codice, riprova.', 'err');
-    console.error('codicePromo', e);
-  }finally{
-    btn.disabled = false; if(btn.style.display!=='none') btn.textContent = txt;
-  }
-};
-
-// Marca il codice come usato dopo pagamento andato a buon fine
-async function bruciaCodicePromo(){
-  if(!codicePromoAttivo || !window._fbUpdateDoc) return;
-  try{
-    await window._fbUpdateDoc(
-      window._fbDoc(window._db, 'codiciPromo', codicePromoAttivo.codice),
-      { usato:true, usatoAt: window._fbTS(), usatoDa: (utenteLoggato?.id||null) }
-    );
-  }catch(e){ console.error('bruciaCodicePromo', e); }
-}
-
-function aggiungiAlCarrello(){
-  const haVaschetta = vaschettaSel && selezioni.filter(s=>s).length>0;
-  const haExtra = extraPanna || extraMiniconi || extraCono || qtaCialda>0 || qtaCoppetta>0;
-  if(!haVaschetta && !haExtra) return;
-  // Verifica limite vaschette promo
-  if(promoAttiva && promoAttiva.limiteVaschette > 0){
-    if((promoAttiva.vaschettePrenot||0) >= promoAttiva.limiteVaschette){
-      alert('⚠️ Le vaschette scontate sono esaurite per questa promozione!');
-      return;
-    }
-  }
-  const scelti=selezioni.filter(s=>s);
-  const prezzoBase = (vaschettaSel?vaschettaSel.price:0) + (extraPanna?extraPannaCosto:0) + (extraMiniconi?1.5:0) + extraConoCosto;
-  const prezzoFin  = prezzoConSconto(prezzoBase);
-  const sconto     = promoAttiva ? promoAttiva.sconto : 0;
-  const scorta     = document.getElementById('scorta-select') ? document.getElementById('scorta-select').value : '';
-
-  const item = {
-    id: Date.now(),
-    vaschetta: vaschettaSel ? vaschettaSel.label : null,
-    gusti: [...scelti],
-    scorta: scorta,
-    panna: extraPanna,
-    pannaCosto: extraPanna ? extraPannaCosto : 0,
-    miniconi: extraMiniconi,
-    cono: extraCono,
-    note: document.getElementById('noteOrdine').value.trim(),
-    prezzoBase,
-    prezzoFinale: prezzoFin,
-    sconto,
-    promoNome: promoAttiva?.titolo || null
-  };
-
-  // Incrementa contatore vaschette promo se attiva con limite
-  if(promoAttiva && promoAttiva.limiteVaschette > 0 && item.sconto > 0){
-    promoAttiva.vaschettePrenot = (promoAttiva.vaschettePrenot||0) + 1;
-    // Se raggiunto il limite disattiva la promo
-    if(promoAttiva.vaschettePrenot >= promoAttiva.limiteVaschette){
-      promoAttiva.attiva = false;
-      aggiornaUIPromo();
-      salvaPromozioni();
-    }
-  }
-  carrello.push(item);
-  aggiornaCarrelloUI();
-  aggiornaCarrelloBadge();
-  apriCarrello();
-
-  // Reset configuratore
-  vaschettaSel=null; selezioni=[]; extraPanna=false; extraPannaCosto=0; extraMiniconi=false; extraCono=null; extraConoCosto=0; gustoScorta='';
-  document.querySelectorAll('.vaschetta').forEach(v=>v.classList.remove('sel'));
-  document.querySelectorAll('.extra-card').forEach(v=>v.classList.remove('sel'));
-  document.querySelectorAll('.cono-card').forEach(v=>v.classList.remove('sel'));
-  document.getElementById('gustiSlots').innerHTML='';
-  document.getElementById('coniSection').style.display='none';
-  document.getElementById('noteOrdine').value='';
-  document.getElementById('gustiInfoB').textContent='Seleziona prima una vaschetta';
-  document.getElementById('btnAggiungi').disabled=true;
-}
-
-function aggiornaCarrelloUI(){
-  const body   = document.getElementById('cartBody');
-  const footer = document.getElementById('cartFooter');
-
-  if(!carrello.length){
-    body.innerHTML=`<div class="cart-empty"><span class="ce-icon">🛒</span><p>Il carrello è vuoto.<br>Configura la tua vaschetta e aggiungila qui.</p></div>`;
-    footer.style.display='none'; return;
-  }
-
-  // Calcola se c'è promo nel carrello
-  let totBase=0, totFin=0, haSconto=false;
-  let html='';
-
-  // Banner promo attiva nel carrello
-  if(promoAttiva){
-    html+=`<div class="cart-promo-row">🔥 <span><b>${promoAttiva.titolo}</b> — sconto <b>${promoAttiva.sconto}%</b> applicato automaticamente</span></div>`;
-  }
-
-  // Banner codice promo personale
-  if(codicePromoAttivo){
-    html+=`<div class="cart-promo-row">🎟️ <span><b>${codicePromoAttivo.titolo}</b> — sconto <b>${codicePromoAttivo.sconto}%</b>${codicePromoAttivo.soloVaschette?' sulle vaschette':''} (codice ${codicePromoAttivo.codice})</span></div>`;
-  }
-
-  carrello.forEach(item=>{
-    const gusti=item.gusti.join(', ');
-    const extra=[];
-    if(item.panna) extra.push('Panna montata +€1,50');
-    if(item.cono)  extra.push(item.cono);
-
-    // Sconto effettivo: il migliore tra promo pubblica e codice personale
-    const isVaschetta = !!item.vaschetta;
-    let dispSconto = item.sconto || 0;
-    if(codicePromoAttivo && (!codicePromoAttivo.soloVaschette || isVaschetta)){
-      dispSconto = Math.max(dispSconto, codicePromoAttivo.sconto);
-    }
-    const dispFinale = parseFloat((item.prezzoBase*(1-dispSconto/100)).toFixed(2));
-    // Allinea l'item ai valori mostrati, così checkout e totale restano coerenti
-    item.sconto = dispSconto;
-    item.prezzoFinale = dispFinale;
-    if(codicePromoAttivo && dispSconto===codicePromoAttivo.sconto && dispSconto>0) item.promoNome = codicePromoAttivo.titolo;
-
-    totBase+=item.prezzoBase;
-    totFin+=dispFinale;
-    if(dispSconto>0) haSconto=true;
-
-    html+=`<div class="cart-item">
-      <div class="ci-top">
-        <div class="ci-nome">Vaschetta ${item.vaschetta}</div>
-        <button class="ci-del" onclick="rimuoviDalCarrello(${item.id})">✕</button>
-      </div>
-      <div class="ci-dettagli">
-        <b style="color:var(--cream)">Gusti:</b> ${gusti}<br>
-        ${extra.length?'<b style="color:var(--cream)">Extra:</b> '+extra.join(', ')+'<br>':''}
-        ${item.note?'<b style="color:var(--cream)">Note:</b> '+item.note+'<br>':''}
-      </div>
-      <div class="ci-prezzi">
-        ${dispSconto>0?`<span class="ci-orig">€ ${item.prezzoBase.toFixed(2).replace('.',',')}</span>`:''}
-        <span class="ci-finale">€ ${dispFinale.toFixed(2).replace('.',',')}</span>
-        ${dispSconto>0?`<span class="ci-sconto-tag">-${dispSconto}%</span>`:''}
-        ${item.promoNome?`<span style="font-size:11px;color:var(--cream2)">${item.promoNome}</span>`:''}
-      </div>
-    </div>`;
-  });
-
-  body.innerHTML=html;
-  footer.style.display='block';
-
-  document.getElementById('cartTotale').textContent='€ '+totFin.toFixed(2).replace('.',',');
-  const risparmiEl=document.getElementById('cartRisparmi');
-  if(haSconto && totBase>totFin){
-    const risparmio=(totBase-totFin).toFixed(2).replace('.',',');
-    risparmiEl.textContent='💚 Risparmi €'+risparmio+' grazie alla promozione attiva!';
-    risparmiEl.style.display='block';
-  } else { risparmiEl.style.display='none'; }
-}
-
-function rimuoviDalCarrello(id){
-  carrello=carrello.filter(i=>i.id!==id);
-  aggiornaCarrelloUI(); aggiornaCarrelloBadge();
-}
-
-function aggiornaCarrelloBadge(){
-  const badge=document.getElementById('cartBadge');
-  if(badge) badge.textContent=carrello.length;
-  aggiornaTotaleCart();
-}
-
-function apriCarrello(){
-  document.getElementById('cartDrawer').classList.add('open');
-  document.getElementById('cartOverlay').classList.add('show');
-}
-function chiudiCarrello(){
-  document.getElementById('cartDrawer').classList.remove('open');
-  document.getElementById('cartOverlay').classList.remove('show');
-}
-
-async function simulaCheckout(){
-  if(!carrello.length) return;
-  if(!utenteLoggato) { alert('Effettua il login per procedere al pagamento.'); return; }
-  if(!validaDelivery()) return;
-
-  const btn = document.getElementById('btnCheckout');
-  btn.disabled = true;
-  btn.textContent = 'Preparazione ordine...';
-
-  const subtot = carrello.reduce((s,i)=>s+i.prezzoFinale, 0);
-  const delivInfo = getDeliveryInfo();
-  const delivCosto = delivInfo ? delivInfo.costo : 0;
-  const tot = subtot + delivCosto;
-  const ordineId = 'ORD-' + Date.now();
-
-  try {
-    const resp = await fetch('https://creasessionestripe-u3jmxuuypq-ey.a.run.app', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ordineId,
-        totale: tot,
-        totaleGelato: subtot,
-        costoConsegna: delivCosto,
-        tipoConsegna: modalitaConsegna,
-        delivery: delivInfo,
-        carrello: carrello.map(i => ({
-          vaschetta: i.vaschetta,
-          gusti: i.gusti || [],
-          scorta: i.scorta || '',
-          panna: i.panna || false,
-          pannaCosto: i.pannaCosto || 0,
-          miniconi: i.miniconi || false,
-          cono: i.cono || null,
-          note: i.note || ''
-        })),
-        cliente: {
-          id: utenteLoggato.id || '',
-          nome: utenteLoggato.nome || '',
-          cognome: utenteLoggato.cognome || '',
-          telefono: utenteLoggato.tel || utenteLoggato.telefono || '',
-          email: utenteLoggato.email || ''
-        },
-        codicePromo: codicePromoAttivo ? codicePromoAttivo.codice : null
-      })
-    });
-
-    const data = await resp.json();
-
-    if(data.url) {
-      if(codicePromoAttivo) sessionStorage.setItem('greed_codice_pending', codicePromoAttivo.codice);
-      if(modalitaConsegna === 'delivery') await incrementaDelivery();
-      window.location.href = data.url;
-    } else {
-      throw new Error(data.error || 'Errore pagamento');
-    }
-
-  } catch(e) {
-    console.error('Errore checkout:', e);
-    alert('Errore nel pagamento: ' + e.message + '\nRiprova o contatta GREED.');
-    btn.disabled = false;
-    btn.innerHTML = '🔒 Paga con Carta';
-  }
-}
-
-async function simulaCheckoutPayPal(){
-  if(!carrello.length) return;
-  if(!utenteLoggato){ alert('Effettua il login per procedere al pagamento.'); return; }
-  if(!validaDelivery()) return;
-
-  const btn = document.getElementById('btnPayPal');
-  const btnS = document.getElementById('btnCheckout');
-  btn.disabled = true; btnS.disabled = true;
-  btn.textContent = 'Preparazione ordine...';
-
-  const subtot = carrello.reduce((s,i)=>s+i.prezzoFinale, 0);
-  const delivInfo = getDeliveryInfo();
-  const delivCosto = delivInfo ? delivInfo.costo : 0;
-  const tot = subtot + delivCosto;
-  const ordineId = 'ORD-' + Date.now();
-
-  try {
-    const resp = await fetch('https://europe-west3-club-greed.cloudfunctions.net/creaOrdinePayPal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ordineId,
-        totale: tot,
-        totaleGelato: subtot,
-        costoConsegna: delivCosto,
-        tipoConsegna: modalitaConsegna,
-        delivery: delivInfo,
-        carrello: carrello.map(i => ({
-          vaschetta: i.vaschetta,
-          gusti: i.gusti || [],
-          scorta: i.scorta || '',
-          panna: i.panna || false,
-          pannaCosto: i.pannaCosto || 0,
-          miniconi: i.miniconi || false,
-          cono: i.cono || null,
-          note: i.note || ''
-        })),
-        cliente: {
-          id: utenteLoggato.id || '',
-          nome: utenteLoggato.nome || '',
-          cognome: utenteLoggato.cognome || '',
-          telefono: utenteLoggato.tel || utenteLoggato.telefono || '',
-          email: utenteLoggato.email || ''
-        },
-        codicePromo: codicePromoAttivo ? codicePromoAttivo.codice : null
-      })
-    });
-
-    const data = await resp.json();
-    if(data.url){
-      if(codicePromoAttivo) sessionStorage.setItem('greed_codice_pending', codicePromoAttivo.codice);
-      if(modalitaConsegna === 'delivery') await incrementaDelivery();
-      window.location.href = data.url;
-    } else {
-      throw new Error(data.error || 'Errore PayPal');
-    }
-  } catch(e) {
-    console.error('Errore PayPal checkout:', e);
-    alert('Errore nel pagamento: ' + e.message + '\nRiprova o usa la carta.');
-    btn.disabled = false; btnS.disabled = false;
-    btn.textContent = 'Paga con PayPal';
-  }
-}
-
-function stampaBuonoOrdine(ordineId, ts, tot){
-  const win = window.open('','_blank','width=400,height=600');
-  let righe = '';
-  carrello.forEach((item,i) => {
-    righe += `<div class="item">
-      <b>${item.vaschetta}</b><br>
-      Gusti: ${item.gusti.join(', ')}<br>
-      ${item.scorta ? '<span style="color:#c8860a">★ Scorta: '+item.scorta+'</span><br>' : ''}
-      ${item.panna ? 'Vaschetta panna: +€'+item.pannaCosto.toFixed(2)+'<br>' : ''}
-      ${item.miniconi ? 'Kit 6 miniconi: +€1,50<br>' : ''}
-      ${item.cono ? 'Cono: '+item.cono+'<br>' : ''}
-      ${item.note ? 'Note: '+item.note+'<br>' : ''}
-      <b>€ ${item.prezzoFinale.toFixed(2)}</b>
-    </div>`;
-  });
-
-  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <style>
-    body{font-family:Arial,sans-serif;padding:20px;font-size:13px}
-    h2{text-align:center;font-size:18px;margin-bottom:4px}
-    .sub{text-align:center;color:#666;font-size:11px;margin-bottom:16px}
-    .cliente{background:#f5f0e8;padding:10px;border-radius:4px;margin-bottom:12px}
-    .item{border:1px solid #ddd;padding:10px;border-radius:4px;margin-bottom:8px}
-    .totale{font-size:16px;font-weight:bold;text-align:right;margin-top:12px;border-top:2px solid #1a2e1c;padding-top:8px}
-    .qr{text-align:center;margin-top:12px;font-size:11px;color:#666}
-  </style></head><body>
-  <h2>GREED — Gelateria Naturale</h2>
-  <div class="sub">Piazza Roma 16, Frascati · ${ts}</div>
-  <div class="cliente">
-    <b>${utenteLoggato.nome} ${utenteLoggato.cognome||''}</b><br>
-    📞 ${utenteLoggato.telefono||'—'}<br>
-    🔖 ${ordineId}
-  </div>
-  ${righe}
-  <div class="totale">TOTALE: € ${tot.toFixed(2)}</div>
-  <div class="qr">Mostra il QR WhatsApp per il ritiro</div>
-  </body></html>`);
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 500);
-}
-
-/* ══════════════════════════════════════════════════
-   ADMIN: GUSTI
-══════════════════════════════════════════════════ */
-function apriAdminTab(tab){
-  document.getElementById('adminPanel').classList.add('open');
-  switchAdminTab(tab, document.querySelector(`.atab[data-tab="${tab}"]`));
-}
-
-function switchAdminTab(tab, btn){
-  document.querySelectorAll('.atab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.atab-body').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  document.getElementById('atab-'+tab).classList.add('active');
-  if(tab==='gusti') renderAdminGusti();
-  if(tab==='promozioni') renderPromoLista();
-  if(tab==='delivery') renderDeliveryAdmin();
-}
-
-// ─── DELIVERY ADMIN ───────────────────────────────────────────────────────────
-const NOMI_GIORNI = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
-const WD_IDS = ['dom','lun','mar','mer','gio','ven','sab'];
-
-async function renderDeliveryAdmin() {
-  const oggi = new Date().toISOString().slice(0,10);
-  const giornoOggi = new Date().getDay(); // 0=Dom ... 3=Mer
-  const statusEl = document.getElementById('deliveryOggiStatus');
-
-  // Evidenzia giorno corrente nello schema settimanale
-  WD_IDS.forEach((id, idx) => {
-    const el = document.getElementById('wd-' + id);
-    if (!el) return;
-    const isOggi = idx === giornoOggi;
-    el.style.outline = isOggi ? '2px solid var(--gold)' : 'none';
-    el.style.outlineOffset = '2px';
-  });
-
-  try {
-    const ref = window._fbDoc(window._fbDb, 'config', 'delivery');
-    const snap = await window._fbGetDoc(ref);
-    const d = snap.exists() ? snap.data() : {};
-    const hasOverride = d.overrideData === oggi;
-    const giornoNome = NOMI_GIORNI[giornoOggi];
-    const chiusoAuto = DELIVERY_GIORNI_CHIUSI.includes(giornoOggi);
-
-    if (hasOverride) {
-      const stato = d.override === 'aperto' ? '✅ APERTO (override manuale)' : '🚫 CHIUSO (override manuale)';
-      statusEl.innerHTML = `Oggi è <strong>${giornoNome}</strong> — ${stato}`;
-    } else if (chiusoAuto) {
-      statusEl.innerHTML = `Oggi è <strong>${giornoNome}</strong> — ✖ Chiuso automatico (mercoledì)`;
-    } else {
-      statusEl.innerHTML = `Oggi è <strong>${giornoNome}</strong> — 🛵 Aperto automaticamente`;
-    }
-  } catch(e) {
-    statusEl.textContent = 'Errore caricamento stato delivery.';
-  }
-}
-
-async function setDeliveryOverride(valore) {
-  const oggi = new Date().toISOString().slice(0,10);
-  const ref = window._fbDoc(window._fbDb, 'config', 'delivery');
-  try {
-    if (valore === null) {
-      // Rimuove override: imposta overrideData a null
-      await window._fbSetDoc(ref, { overrideData: null, override: null }, { merge: true });
-    } else {
-      await window._fbSetDoc(ref, { overrideData: oggi, override: valore }, { merge: true });
-    }
-    // Aggiorna UI
-    const saveOk = document.getElementById('saveOkDelivery');
-    saveOk.style.display = 'inline';
-    setTimeout(() => saveOk.style.display = 'none', 2000);
-    await renderDeliveryAdmin();
-    await checkDelivery(); // ricarica stato delivery lato cliente
-  } catch(e) {
-    alert('Errore salvataggio: ' + e.message);
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-function renderAdminGusti(){
-  const list=document.getElementById('gustiListA');
-  list.innerHTML='';
-  window.GUSTI.forEach((g,i)=>{
-    const div=document.createElement('div');
-    div.className='gi'+(g.attivo?'':' off');
-    div.innerHTML=`
-      <label class="gi-toggle"><input type="checkbox" ${g.attivo?'checked':''} onchange="toggleGustoA(${i},this)"><span class="gi-slider"></span></label>
-      <input class="gi-e" type="text" value="${g.e}" maxlength="2">
-      <input class="gi-n" type="text" value="${g.n}" placeholder="Nome gusto">
-      <button class="gi-offerta ${g.offerta?'on':''}" title="Segna in offerta" onclick="toggleOffertaA(${i},this)">🏷</button>
-      <button class="gi-del" onclick="eliminaGustoA(${i})">✕</button>`;
-    list.appendChild(div);
-  });
-}
-
-function toggleGustoA(i,chk){
-  window.GUSTI[i].attivo=chk.checked;
-  chk.closest('.gi').className='gi'+(chk.checked?'':' off');
-}
-function toggleOffertaA(i,btn){
-  window.GUSTI[i].offerta=!window.GUSTI[i].offerta;
-  btn.classList.toggle('on',window.GUSTI[i].offerta);
-}
-function aggiungiGustoA(){
-  window.GUSTI.push({n:'Nuovo gusto',e:'🍦',attivo:true,offerta:false});
-  renderAdminGusti();
-  document.getElementById('gustiListA').scrollTop=9999;
-}
-function eliminaGustoA(i){
-  if(!confirm('Eliminare "'+window.GUSTI[i].n+'"?')) return;
-  window.GUSTI.splice(i,1); renderAdminGusti();
-}
-async function salvaGustiA(){
-  const items=document.querySelectorAll('#gustiListA .gi');
-  const nuovi=[];
-  items.forEach(item=>{
-    const chk=item.querySelector('input[type=checkbox]');
-    const emo=item.querySelector('.gi-e').value.trim()||'🍦';
-    const nom=item.querySelector('.gi-n').value.trim()||'Gusto';
-    const off=item.querySelector('.gi-offerta').classList.contains('on');
-    nuovi.push({e:emo,n:nom,attivo:chk.checked,offerta:off});
-  });
-  window.GUSTI=nuovi;
-  try{
-    await window._fbSetDoc(window._fbDoc(window._db,'config','gusti'),{lista:window.GUSTI,aggiornato:window._fbTS()});
-    const ok=document.getElementById('saveOkG');
-    ok.classList.add('show'); setTimeout(()=>ok.classList.remove('show'),3000);
-    disegnaGriglia(); aggiornaHero();
-    if(vaschettaSel) renderSlots(vaschettaSel.slots);
-  }catch(er){ alert('Errore salvataggio gusti.'); console.error(er); }
-}
-
-/* ══════════════════════════════════════════════════
-   ADMIN: PROMOZIONI
-══════════════════════════════════════════════════ */
-function aggiornaPreviewPromo(){
-  const sc   = document.getElementById('pSconto').value;
-  const tipo = document.getElementById('pTipo').value;
-  const oi   = document.getElementById('pOraInizio').value;
-  const of   = document.getElementById('pOraFine').value;
-  document.getElementById('pScontoVal').innerHTML='Sconto: <b>'+sc+'%</b>';
-  document.getElementById('pPreviewTesto').textContent=
-    'Sconto '+sc+'%' + (tipo==='fascia' ? ' • '+oi+' – '+of : ' • Spot');
-  document.getElementById('pPreview').querySelector('.pico').textContent=
-    document.getElementById('pEmoji').value||'🔥';
-}
-
-function aggiornaTipoPromo(){
-  const tipo=document.getElementById('pTipo').value;
-  document.getElementById('pFasciaOra').style.display=tipo==='fascia'?'grid':'none';
-  aggiornaPreviewPromo();
-}
-
-function renderPromoLista(){
-  const lista=document.getElementById('promoLista');
-  if(!window.PROMOZIONI.length){
-    lista.innerHTML='<div style="font-size:12px;color:var(--cream3);padding:10px 0">Nessuna promozione creata.</div>';
-    return;
-  }
-  lista.innerHTML=window.PROMOZIONI.map((p,i)=>`
-    <div class="promo-item ${p.attiva?'attiva':''}">
-      <span style="font-size:20px">${p.emoji||'🔥'}</span>
-      <div class="pi-info">
-        <div class="pi-testo">${p.titolo} — <b>-${p.sconto}%</b></div>
-        <div class="pi-dettagli">${p.tipo==='fascia'?'⏰ '+p.oraInizio+'–'+p.oraFine+(p.giorni?' ('+p.giorni+')':''):'🔴 Spot'} · ${p.desc||''}</div>
-        ${p.limiteVaschette ? '<div class="pi-dettagli" style="color:var(--gold)">📦 Vaschette: '+p.vaschettePrenot+'/'+p.limiteVaschette+'</div>' : ''}
-      </div>
-      <span class="pi-badge ${p.attiva?'attiva':'inattiva'}" style="cursor:pointer" onclick="togglePromoAttiva(${i})">${p.attiva?'ATTIVA':'OFF'}</span>
-      <button class="pi-del" onclick="eliminaPromo(${i})">✕</button>
-    </div>`).join('');
-}
-
-function salvaPromo(){
-  const titolo=document.getElementById('pTitolo').value.trim();
-  if(!titolo){ alert('Inserisci un titolo.'); return; }
-  const limite = parseInt(document.getElementById('pLimite').value)||0;
-  const nuova={
-    titolo,
-    desc:    document.getElementById('pDesc').value.trim(),
-    tipo:    document.getElementById('pTipo').value,
-    sconto:  parseInt(document.getElementById('pSconto').value),
-    emoji:   document.getElementById('pEmoji').value||'🔥',
-    oraInizio:document.getElementById('pOraInizio').value,
-    oraFine: document.getElementById('pOraFine').value,
-    giorni:  document.getElementById('pGiorni').value.trim(),
-    limiteVaschette: limite,
-    vaschettePrenot: 0,
-    attiva:  true
-  };
-  window.PROMOZIONI.push(nuova);
-  renderPromoLista();
-  // Reset
-  document.getElementById('pTitolo').value='';
-  document.getElementById('pDesc').value='';
-}
-
-function togglePromoAttiva(i){
-  window.PROMOZIONI[i].attiva=!window.PROMOZIONI[i].attiva;
-  renderPromoLista(); controllaPromo();
-}
-function eliminaPromo(i){
-  if(!confirm('Eliminare?')) return;
-  window.PROMOZIONI.splice(i,1); renderPromoLista(); controllaPromo();
-}
-
-async function salvaPromozioni(){
-  try{
-    await window._fbSetDoc(window._fbDoc(window._db,'config','promozioni'),{lista:window.PROMOZIONI,aggiornato:window._fbTS()});
-    const ok=document.getElementById('saveOkP');
-    ok.classList.add('show'); setTimeout(()=>ok.classList.remove('show'),3000);
-    controllaPromo();
-  }catch(er){ alert('Errore salvataggio promozioni.'); console.error(er); }
-}
-
-/* ══ INIT SE UTENTE GIÀ LOGGATO ══ */
-if(utenteLoggato){
-  document.getElementById('authSection').style.display='none';
-  document.getElementById('configuratore').style.display='block';
-  document.getElementById('confSaluto').textContent='Ciao '+utenteLoggato.nome+'! Configura la tua vaschetta e aggiungila al carrello.';
-}
-
-/* Shortcut admin */
-document.addEventListener('keydown',e=>{
-  if(e.ctrlKey&&e.shiftKey&&e.key==='G'){
-    localStorage.setItem('greed_admin','1');
-    mountAdminUI();
-    alert('Modalità admin attivata (Ctrl+Shift+G)');
-  }
-});
-
-/* -- Gestione ritorno da Stripe / PayPal -- */
 (function(){
-  var params = new URLSearchParams(window.location.search);
-  var ordine = params.get('ordine');
-  var ordineId = params.get('id');
-  var metodo = params.get('metodo');
-  var token = params.get('token');
-  var payerId = params.get('PayerID');
+  const PIN = '0044';
+  let entered = '';
+  const SESSION_KEY = 'greed_crm_auth';
 
-  if(ordine === 'success' && ordineId){
-    // Brucia il codice promo personale solo ora che il pagamento è confermato
-    var _codPending = sessionStorage.getItem('greed_codice_pending');
-    if(_codPending && window._fbUpdateDoc){
-      window._fbUpdateDoc(window._fbDoc(window._db,'codiciPromo',_codPending), { usato:true, usatoAt: window._fbTS() })
-        .then(function(){ sessionStorage.removeItem('greed_codice_pending'); })
-        .catch(function(e){ console.error('burn codice', e); });
-    }
-    if(metodo === 'paypal' && token){
-      fetch('https://europe-west3-club-greed.cloudfunctions.net/catturaPagamentoPayPal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paypalOrderId: token, ordineId: ordineId })
-      })
-      .then(function(r){ return r.json(); })
-      .then(function(data){
-        setTimeout(function(){
-          if(data.ok){
-            alert('Pagamento PayPal completato!\n\nOrdine: ' + ordineId + '\nRiceverai il QR su WhatsApp per il ritiro.');
-          } else {
-            alert('Pagamento ricevuto ma errore di conferma.\nContatta GREED con il codice: ' + ordineId);
-          }
-        }, 300);
-      })
-      .catch(function(){
-        setTimeout(function(){
-          alert('Pagamento ricevuto.\nOrdine: ' + ordineId + '\nContatta GREED se non ricevi il QR entro 2 minuti.');
-        }, 300);
-      });
-    } else {
-      setTimeout(function(){
-        alert('Pagamento completato!\n\nOrdine: ' + ordineId + '\nRiceverai il QR su WhatsApp per il ritiro.');
-      }, 500);
-    }
-  } else if(ordine === 'cancel'){
-    setTimeout(function(){
-      alert('Pagamento annullato. Puoi riprovare quando vuoi.');
-    }, 500);
-  }
-})();
-
-
-/* ══════════════════════════════════════════════════
-   DELIVERY — Logica completa
-══════════════════════════════════════════════════ */
-const DELIVERY_MIN       = 20.00;
-// Zone e prezzi: il valore è codificato nel value del select come "NomeZona|prezzo"
-const DELIVERY_ZONE = {
-  '3.90': ['Frascati','Grottaferrata'],
-  '4.90': ['Ciampino','Morena','Monte Compatri','Monte Porzio Catone','Tor Vergata','Vermicino','Finocchio','Borghesiana'],
-  '5.90': ['Marino','Rocca di Papa','Rocca Priora']
-};
-const DELIVERY_ORE_STOP  = 16; // Ordini entro le 16:00
-const DELIVERY_MAX       = 10;
-
-let modalitaConsegna = 'ritiro'; // 'ritiro' | 'delivery'
-let deliveryDisponibile = true;
-let deliveryCountOggi = 0;
-
-// Giorni chiusura automatica delivery (0=Dom,1=Lun,...,3=Mer,...)
-const DELIVERY_GIORNI_CHIUSI = [3]; // mercoledì sempre chiuso
-
-function isDeliveryGiornoOk() {
-  return !DELIVERY_GIORNI_CHIUSI.includes(new Date().getDay());
-}
-
-// Controlla disponibilità delivery da Firestore
-async function checkDelivery() {
-  try {
-    const oggi = new Date().toISOString().slice(0,10);
-    const ref = window._fbDoc(window._fbDb, 'config', 'delivery');
-    const snap = await window._fbGetDoc(ref);
-    if (snap.exists()) {
-      const d = snap.data();
-      // Override manuale ha precedenza: 'override' può essere 'aperto' o 'chiuso'
-      // Se nessun override per oggi, usa logica automatica (chiuso il mercoledì)
-      if (d.overrideData === oggi) {
-        deliveryDisponibile = d.override === 'aperto';
-      } else {
-        deliveryDisponibile = isDeliveryGiornoOk();
-      }
-      deliveryCountOggi = (d.data === oggi) ? (d.count || 0) : 0;
-    } else {
-      // Nessun doc: usa solo logica automatica
-      deliveryDisponibile = isDeliveryGiornoOk();
-    }
-    // Aggiorna UI pulsante delivery
-    const btnD = document.getElementById('btnDelivery');
-    if (btnD) {
-      if (!deliveryDisponibile) {
-        btnD.disabled = true;
-        btnD.style.opacity = '0.4';
-        btnD.querySelector('.dt-price').textContent = 'Non disponibile';
-      } else {
-        btnD.disabled = false;
-        btnD.style.opacity = '1';
-      }
-    }
-  } catch(e) {
-    console.error('Errore check delivery:', e);
-    deliveryDisponibile = isDeliveryGiornoOk(); // fallback: usa logica automatica
-  }
-}
-
-// Incrementa contatore delivery su Firestore (chiamato dal backend)
-async function incrementaDelivery() {
-  try {
-    const oggi = new Date().toISOString().slice(0,10);
-    const ref = window._fbDoc(window._fbDb, 'config', 'delivery');
-    const snap = await window._fbGetDoc(ref);
-    const cur = snap.exists() && snap.data().data === oggi ? (snap.data().count||0) : 0;
-    await window._fbSetDoc(ref, { data: oggi, count: cur + 1 });
-    deliveryCountOggi = cur + 1;
-  } catch(e) {
-    console.error('Errore incrementa delivery:', e);
-  }
-}
-
-function isDeliveryOrarioOk() {
-  const ora = new Date().getHours();
-  return ora < DELIVERY_ORE_STOP;
-}
-
-function isDeliverySlotOk() {
-  return deliveryCountOggi < DELIVERY_MAX;
-}
-
-function setModalita(m) {
-  if (m === 'delivery' && !deliveryDisponibile) {
-    mostraToastCart('🛵 Delivery non disponibile oggi');
+  // Controlla se già autenticato in questa sessione
+  if(sessionStorage.getItem(SESSION_KEY) === 'ok'){
+    document.getElementById('pin-screen').style.display = 'none';
     return;
   }
-  modalitaConsegna = m;
-  document.getElementById('btnRitiro').classList.toggle('active', m === 'ritiro');
-  document.getElementById('btnDelivery').classList.toggle('active', m === 'delivery');
-  document.getElementById('deliveryForm').classList.toggle('show', m === 'delivery');
-  document.getElementById('deliveryChiuso').classList.toggle('show', m === 'delivery' && (!isDeliveryOrarioOk() || !deliveryDisponibile));
-  document.getElementById('deliveryFull').classList.toggle('show', m === 'delivery' && isDeliveryOrarioOk() && !isDeliverySlotOk());
-  aggiornaTotaleCart();
-  aggiornaNote();
-}
 
-function onZonaChange() {
-  const val = document.getElementById('deliveryZona').value;
-  document.getElementById('zonaFuoriArea').style.display = val === 'altro' ? 'block' : 'none';
-  aggiornaTotaleCart();
-}
-
-function getZonaNome() {
-  const val = document.getElementById('deliveryZona')?.value || '';
-  if (!val || val === 'altro') return '';
-  return val.split('|')[0];
-}
-
-function getDeliveryCosto() {
-  const val = document.getElementById('deliveryZona')?.value || '';
-  if (!val || val === 'altro') return 0;
-  const prezzo = parseFloat(val.split('|')[1]);
-  return isNaN(prezzo) ? 0 : prezzo;
-}
-
-function aggiornaTotaleCart() {
-  const subtot = carrello.reduce((s,i) => s + i.prezzoFinale, 0);
-  let costo = 0;
-  let totale = subtot;
-
-  const isDelivery = modalitaConsegna === 'delivery';
-  if (isDelivery) {
-    costo = getDeliveryCosto();
-    totale = subtot + costo;
+  function renderDots(){
+    document.getElementById('pin-dots').innerHTML =
+      Array(4).fill(0).map((_,i) =>
+        '<div style="width:14px;height:14px;border-radius:50%;border:2px solid '+(i<entered.length?'#c8a96e':'#444')+';background:'+(i<entered.length?'#c8a96e':'transparent')+'"></div>'
+      ).join('');
   }
+  renderDots();
 
-  // Aggiorna UI
-  const subEl = document.getElementById('cartSubtotale');
-  const totEl = document.getElementById('cartTotale');
-  const costoRow = document.getElementById('deliveryCostoRow');
-  const costoVal = document.getElementById('deliveryCostoVal');
-  const priceLabel = document.getElementById('deliveryPriceLabel');
-  const minWarn = document.getElementById('minOrdineWarn');
-
-  if (subEl) subEl.textContent = '€ ' + subtot.toFixed(2).replace('.',',');
-  if (totEl) totEl.textContent = '€ ' + totale.toFixed(2).replace('.',',');
-
-  if (costoRow) costoRow.style.display = isDelivery ? 'flex' : 'none';
-  if (costoVal) {
-    if (costo === 0 && isDelivery) {
-      costoVal.textContent = 'Seleziona zona';
-      costoVal.style.color = 'var(--cream3)';
-    } else {
-      costoVal.textContent = '+€ ' + costo.toFixed(2).replace('.',',');
-      costoVal.style.color = 'var(--gold)';
+  window.cp = function(d){
+    if(entered.length >= 4) return;
+    entered += d;
+    renderDots();
+    if(entered.length === 4){
+      if(entered === PIN){
+        sessionStorage.setItem(SESSION_KEY, 'ok');
+        document.getElementById('pin-screen').style.display = 'none';
+      } else {
+        document.getElementById('pin-err').textContent = 'PIN non corretto';
+        setTimeout(()=>{ entered=''; renderDots(); document.getElementById('pin-err').textContent=''; }, 700);
+      }
     }
-  }
-  if (priceLabel) {
-    const cz = getDeliveryCosto();
-    if (isDelivery && cz > 0) {
-      priceLabel.textContent = '+€' + cz.toFixed(2).replace('.',',') + ' · 19:00–20:00';
-    } else {
-      priceLabel.textContent = 'da €3,90 · 19:00–20:00';
-    }
-  }
-
-  // Avviso ordine minimo
-  if (minWarn) {
-    minWarn.style.display = (isDelivery && subtot < DELIVERY_MIN) ? 'block' : 'none';
-  }
-}
-
-function aggiornaNote() {
-  const noteEl = document.getElementById('cartNote');
-  if (!noteEl) return;
-  if (modalitaConsegna === 'delivery') {
-    noteEl.textContent = 'Pagamento sicuro · Consegna 19:00–20:00 · Ordini entro le 16:00';
-  } else {
-    noteEl.textContent = 'Pagamento sicuro · Ritiro: Piazza Roma 16, Frascati';
-  }
-}
-
-function validaDelivery() {
-  if (modalitaConsegna !== 'delivery') return true;
-
-  // Orario
-  if (!isDeliveryOrarioOk()) {
-    alert('⏰ Ordini delivery chiusi. Accettiamo ordini fino alle 16:00.\nPuoi scegliere il ritiro in negozio oppure ordina domani!');
-    return false;
-  }
-  // Slot
-  if (!isDeliverySlotOk()) {
-    alert('🛵 Consegne complete per oggi! Hai già raggiunto il limite di 10 consegne.\nScegli il ritiro in negozio o riprova domani.');
-    return false;
-  }
-  // Zona
-  const zonaVal = document.getElementById('deliveryZona').value;
-  if (!zonaVal) {
-    alert('⚠️ Seleziona la tua zona di consegna.');
-    return false;
-  }
-  if (zonaVal === 'altro') {
-    alert('⚠️ La tua zona non è ancora coperta dal delivery GREED.\nScegli ritiro in negozio oppure contattaci su WhatsApp!');
-    return false;
-  }
-  // Via
-  const via = document.getElementById('deliveryVia').value.trim();
-  if (!via) {
-    alert('Inserisci via e numero civico per la consegna.');
-    return false;
-  }
-  // Ordine minimo
-  const subtot = carrello.reduce((s,i) => s + i.prezzoFinale, 0);
-  if (subtot < DELIVERY_MIN) {
-    alert(`Ordine minimo per la consegna: €${DELIVERY_MIN.toFixed(2)}.\nAggiungi qualcosa al carrello!`);
-    return false;
-  }
-  return true;
-}
-
-function getDeliveryInfo() {
-  if (modalitaConsegna !== 'delivery') return null;
-  return {
-    zona: getZonaNome(),
-    via: document.getElementById('deliveryVia').value.trim(),
-    citofono: document.getElementById('deliveryCitofono').value.trim(),
-    fascia: '19:00-20:00',
-    costo: getDeliveryCosto()
   };
-}
-
-// Inizializza check delivery all'apertura del carrello
-const _origApriCarrello = typeof apriCarrello !== 'undefined' ? apriCarrello : null;
-function apriCarrelloConCheck() {
-  if (_origApriCarrello) _origApriCarrello();
-  checkDelivery();
-  aggiornaTotaleCart();
-}
-
+  window.pdel = function(){ entered=entered.slice(0,-1); renderDots(); };
+})();
 </script>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-logo">GREED <span>Club CRM</span></div>
+  <nav class="header-nav" id="mainNav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('clienti')">Clienti</button>
+    <button class="nav-btn" onclick="showView('cassa')">Cassa</button>
+    <button class="nav-btn" onclick="showView('checkin')">QR Check-in</button>
+    <button class="nav-btn" onclick="showView('iscrizione')">Form Iscrizione</button>
+    <button class="nav-btn" onclick="showView('campagne')">Campagne</button>
+    <button class="nav-btn" onclick="showView('ordini')">Ordini</button>
+    <button class="nav-btn" onclick="showView('giftcard')">🎁 Gift Card</button>
+    <button class="nav-btn" onclick="showView('eventi')">🎉 Eventi</button>
+  </nav>
+  <div style="position:relative;margin-left:12px">
+    <input type="text" id="quickSearchInput" placeholder="🔍 Cerca cliente..." 
+      oninput="quickSearch(this.value)" onfocus="document.getElementById('quickSearchDrop').style.display='block'"
+      style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:6px 14px;color:#fff;font-size:13px;width:200px;outline:none">
+    <div id="quickSearchDrop" style="display:none;position:absolute;top:36px;left:0;width:300px;background:#1a2e1c;border:1px solid rgba(255,255,255,.15);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:9999;max-height:320px;overflow-y:auto"></div>
+  </div>
+</header>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: DASHBOARD
+═══════════════════════════════════════ -->
+<div class="view active" id="view-dashboard">
+  <div class="dashboard-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-label">Clienti Totali</div>
+      <div class="stat-value" id="statTotali">—</div>
+      <div class="stat-sub">iscritti al Club Greed</div>
+    </div>
+    <div class="stat-card" onclick="filtraClientiPerLivello('esploratore')" style="cursor:pointer" title="Clicca per vedere gli Esploratori">
+      <div class="stat-label">Esploratori</div>
+      <div class="stat-value" id="statEsploratori">—</div>
+      <div class="stat-sub">0–199 punti</div>
+    </div>
+    <div class="stat-card" onclick="filtraClientiPerLivello('ambasciatore')" style="cursor:pointer" title="Clicca per vedere gli Ambasciatori">
+      <div class="stat-label">Ambasciatori</div>
+      <div class="stat-value" id="statAmbasciatori">—</div>
+      <div class="stat-sub">200–499 punti</div>
+    </div>
+    <div class="stat-card green" onclick="filtraClientiPerLivello('custode')" style="cursor:pointer" title="Clicca per vedere i Custodi del Gusto">
+      <div class="stat-label">Custodi del Gusto</div>
+      <div class="stat-value" id="statCustodi">—</div>
+      <div class="stat-sub">500+ punti</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Punti Distribuiti</div>
+      <div class="stat-value" id="statPunti">—</div>
+      <div class="stat-sub">totale programma</div>
+    </div>
+  </div>
+
+  <div class="table-section" style="margin-bottom:24px">
+    <div class="section-header">
+      <div class="section-title">📊 Segmentazione clienti RFM</div>
+      <span style="font-size:12px;color:var(--text-muted)">Clicca su un segmento per filtrare i clienti</span>
+    </div>
+    <div id="rfmSection" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;padding:4px 0"></div>
+  </div>
+
+  <div class="table-section">
+    <div class="section-header">
+      <div class="section-title">Ultimi iscritti</div>
+      <button class="btn btn-primary" onclick="showView('clienti')">Vedi tutti →</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Livello</th>
+            <th>Punti</th>
+            <th>Segmento</th>
+            <th>Iscritto il</th>
+          </tr>
+        </thead>
+        <tbody id="dashboardTable">
+          <tr><td colspan="5"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CLIENTI
+═══════════════════════════════════════ -->
+<div class="view" id="view-clienti">
+  <div class="table-section" style="padding-top:32px">
+    <div class="section-header">
+      <div class="section-title">Clienti Club Greed</div>
+      <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Cerca per nome o email..." id="searchInput" oninput="filterClienti()">
+        <button class="btn btn-primary" onclick="openNuovoCliente()">+ Nuovo cliente</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Email / Tel</th>
+            <th>Livello</th>
+            <th>Punti</th>
+            <th>Iscritto</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="clientiTable">
+          <tr><td colspan="6"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CASSA
+═══════════════════════════════════════ -->
+<div class="view" id="view-cassa">
+  <div class="cassa-wrap">
+    <div class="cassa-title">Cassa — Carica Punti</div>
+    <div class="cassa-sub">Cerca il cliente per nome, email o codice QR</div>
+
+    <div class="scan-area">
+      <!-- Pulsante avvia fotocamera -->
+      <div id="qrStartArea" style="text-align:center;padding:12px 0 4px">
+        <button class="btn btn-primary" onclick="avviaScanner()" id="btnAvviaScanner" style="font-size:15px;padding:14px 32px;letter-spacing:.06em">
+          📷 Inquadra QR cliente
+        </button>
+        <div style="margin:14px 0 6px;font-size:12px;color:var(--text-muted)">— oppure cerca manualmente —</div>
+        <div style="display:flex;gap:10px;max-width:400px;margin:0 auto">
+          <input type="text" class="form-input" placeholder="Nome, email o codice GRD-..." id="cassaSearch" oninput="cercaClienteCassa()">
+          <button class="btn btn-primary" onclick="cercaClienteCassa()">Cerca</button>
+        </div>
+        <div id="cassaResults" style="margin-top:16px;text-align:left;max-width:400px;margin:16px auto 0"></div>
+      </div>
+      <!-- Finestra fotocamera -->
+      <div id="qrScanArea" style="display:none;text-align:center">
+        <div style="position:relative;width:280px;margin:0 auto 12px">
+          <video id="qrVideo" style="width:280px;height:280px;object-fit:cover;border-radius:10px;border:3px solid var(--green)" playsinline></video>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Avvicina il QR del cliente alla fotocamera</p>
+        <button class="btn btn-ghost btn-sm" onclick="fermaScanner()">✕ Chiudi fotocamera</button>
+      </div>
+    </div>
+
+    <div class="cliente-found" id="clienteFound">
+      <div class="cliente-info">
+        <div class="cliente-avatar" id="foundAvatar"></div>
+        <div>
+          <div class="cliente-name" id="foundName"></div>
+          <div class="cliente-meta" id="foundMeta"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
+        <div style="background:var(--cream);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Punti spendibili</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--green)" id="foundPunti">0</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Punti storici</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--gold)" id="foundPuntiStorici">0</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:14px;text-align:center">
+          <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Livello</div>
+          <div style="font-size:15px;font-weight:600;color:var(--green);margin-top:6px" id="foundLevel">—</div>
+        </div>
+      </div>
+
+      <div style="background:var(--cream);border-radius:10px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px">Aggiungi punti acquisto</div>
+        <div class="punti-add-form">
+          <div class="form-group">
+            <label class="form-label">Importo €</label>
+            <input type="number" class="form-input" id="cassaImporto" placeholder="Es: 12.50" min="0" step="0.5" oninput="calcolaPunti()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Punti da aggiungere</label>
+            <input type="number" class="form-input" id="cassaPuntiCalc" placeholder="Automatico" readonly style="background:var(--cream-dark)">
+          </div>
+          <button class="btn btn-secondary" onclick="aggiungiPuntiCassa()" style="margin-bottom:0;flex-shrink:0">Aggiungi</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost btn-sm" onclick="aggiungiCheckinCassa()">✓ Check-in (+5 pt)</button>
+        <button class="btn btn-ghost btn-sm" onclick="openQrCliente(currentCassaCliente)">QR cliente</button>
+        <button class="btn btn-danger btn-sm" onclick="resetCassa()" style="margin-left:auto">✕ Chiudi</button>
+      </div>
+
+      <!-- Premi Social -->
+      <div style="background:var(--cream);border-radius:10px;padding:16px 20px;margin-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px">🌟 Premi Social</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('google',15)">⭐ Google +15</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tripadvisor',15)">🦉 TripAdvisor +15</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('instagram',10)">📸 Story IG +10</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('facebook',10)">📘 Story FB +10</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tiktok',10)">🎵 Story TikTok +10</button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CHECK-IN QR
+═══════════════════════════════════════ -->
+<div class="view" id="view-checkin">
+  <div class="checkin-wrap">
+    <div class="checkin-qr-day">
+      <div class="checkin-title">QR Check-in Giornaliero</div>
+      <div class="checkin-date" id="checkinDate"></div>
+      <div style="display:flex;justify-content:center;margin:20px 0">
+        <div class="qr-canvas-wrap">
+          <div id="checkinQrCanvas" style="width:200px;height:200px;margin:0 auto"></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);max-width:300px;margin:0 auto;line-height:1.5">
+        Esponi questo QR in cassa. Cambia ogni giorno automaticamente.
+      </div>
+      <div class="checkin-points-badge">+5 punti presenza</div>
+    </div>
+    <button class="btn btn-primary" onclick="window.print()" style="width:100%"> Stampa QR del giorno</button>
+
+    <div style="margin-top:32px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--green);margin-bottom:16px">Check-in di oggi</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Orario</th><th>Punti</th></tr></thead>
+          <tbody id="checkinTable"><tr><td colspan="3"><div class="empty"><div class="empty-icon">☕</div><div class="empty-text">Nessun check-in oggi</div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: FORM ISCRIZIONE
+═══════════════════════════════════════ -->
+<div class="view" id="view-iscrizione">
+  <div class="iscrizione-wrap">
+    <div class="iscrizione-card">
+      <div class="iscrizione-logo">GREED</div>
+      <div class="iscrizione-sub">Unisciti al Club — Non un semplice gelato. Un'esperienza riservata.</div>
+
+      <div id="iscrizioneForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-input" id="regNome" placeholder="Mario">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cognome *</label>
+            <input type="text" class="form-input" id="regCognome" placeholder="Rossi">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="regEmail" placeholder="mario.rossi@email.it">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefono *</label>
+          <input type="tel" class="form-input" id="regTel" placeholder="+39 333 123 4567">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data di nascita</label>
+          <input type="date" class="form-input" id="regNascita">
+        </div>
+        <hr class="form-divider">
+        <div class="form-group">
+          <label class="form-label">Consensi</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="regPrivacy" required>
+              <span>* Acconsento al trattamento dei dati personali ai sensi del GDPR (obbligatorio)</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="regMarketing">
+              <span>Acconsento a ricevere comunicazioni marketing via email</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="regSms">
+              <span>Acconsento a ricevere comunicazioni via SMS/WhatsApp</span>
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px;border-radius:10px" onclick="registraCliente()">
+          Iscriviti al Club Greed →
+        </button>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5">
+          I tuoi dati sono al sicuro e non vengono ceduti a terzi.<br>
+          Piazza Roma 16, Frascati — gelateriagreed.it
+        </div>
+      </div>
+
+      <div class="iscrizione-success" id="iscrizioneSuccess">
+        <div class="success-icon"></div>
+        <div class="success-title">Benvenuto nel Club!</div>
+        <div class="success-text" id="successText"></div>
+        <button class="btn btn-primary" style="margin-top:24px" onclick="resetForm()">Nuova iscrizione</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODALS
+═══════════════════════════════════════ -->
+
+<!-- Modal: Nuovo/Modifica Cliente -->
+<div class="modal-overlay" id="modalCliente">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalCliente')">×</button>
+    <div class="modal-title" id="modalClienteTitle">Nuovo Cliente</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome *</label>
+        <input type="text" class="form-input" id="mNome" placeholder="Mario">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cognome *</label>
+        <input type="text" class="form-input" id="mCognome" placeholder="Rossi">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input type="email" class="form-input" id="mEmail" placeholder="mario@email.it">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Telefono</label>
+      <input type="tel" class="form-input" id="mTel" placeholder="+39 333 123 4567">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data di nascita</label>
+      <input type="date" class="form-input" id="mNascita">
+    </div>
+    <input type="hidden" id="mPunti" value="0">
+    <div class="form-group">
+      <label class="form-label">Consensi</label>
+      <div class="checkbox-group">
+        <label class="checkbox-item"><input type="checkbox" id="mPrivacy"> Privacy accettata</label>
+        <label class="checkbox-item"><input type="checkbox" id="mMarketing"> Marketing email</label>
+        <label class="checkbox-item"><input type="checkbox" id="mSms"> SMS/WhatsApp</label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalCliente')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaCliente()" id="btnSalvaCliente">Salva cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: QR Cliente -->
+<div class="modal-overlay" id="modalQr">
+  <div class="modal" style="width:400px;text-align:center">
+    <button class="modal-close" onclick="closeModal('modalQr')">×</button>
+    <div class="modal-title" style="text-align:center">QR Cliente</div>
+    <div class="qr-display">
+      <div class="qr-canvas-wrap">
+        <canvas id="qrCanvas" width="200" height="200"></canvas>
+      </div>
+      <div class="qr-name" id="qrName"></div>
+      <div class="qr-level" id="qrLevel"></div>
+      <div class="qr-points"><span id="qrPoints">0</span> <span style="font-size:16px;color:var(--text-muted)">punti</span></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="window.print()"> Stampa QR</button>
+  </div>
+</div>
+
+<!-- Modal: Aggiungi Punti -->
+<div class="modal-overlay" id="modalPunti">
+  <div class="modal" style="width:400px">
+    <button class="modal-close" onclick="closeModal('modalPunti')">×</button>
+    <div class="modal-title">Gestisci Punti</div>
+    <div class="punti-current">
+      <div>
+        <div class="punti-current-label">Punti attuali</div>
+        <div class="punti-current-val" id="modalPuntiAttuali">0</div>
+      </div>
+      <div id="modalLivelloAttuale"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Importo acquisto (€)</label>
+      <input type="number" class="form-input" id="importoAcquisto" placeholder="Es: 15.00" min="0" step="0.5" oninput="aggiornaCalcoloPunti()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Punti da aggiungere</label>
+      <input type="number" class="form-input" id="puntiDaAggiungere" placeholder="Automatico" oninput="syncPuntiManuali()">
+    </div>
+    <div style="background:var(--cream);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);margin-bottom:16px">
+       Esploratore: 2 pt/€ · Ambasciatore: 3 pt/€ · Custode: 4 pt/€
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalPunti')">Annulla</button>
+      <button class="btn btn-secondary" onclick="confermaPunti()">Aggiungi punti</button>
+    </div>
+    <div style="border-top:1px solid var(--cream-dark);margin-top:16px;padding-top:16px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">🏆 Riscatta Premio</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button onclick="riscattaPremio('Cono/coppetta piccolo',150)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍦</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Cono/coppetta</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">150 punti</div>
+        </button>
+        <button onclick="riscattaPremio('Vaschetta gelato 500g',350)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍨</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Vaschetta 500g</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">350 punti</div>
+        </button>
+        <button onclick="riscattaPremio('Vaschetta gelato 750g',500)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍨</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Vaschetta 750g</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">500 punti</div>
+        </button>
+        <button onclick="riscattaPremio('Vaschetta gelato 1kg',650)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍨</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Vaschetta 1kg</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">650 punti</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Storico Punti Cliente -->
+<div class="modal-overlay" id="modalStorico">
+  <div class="modal" style="width:560px">
+    <button class="modal-close" onclick="closeModal('modalStorico')">×</button>
+    <div class="modal-title">Storico — <span id="storicoNome" style="color:var(--green-light)"></span></div>
+    <div id="storicoTotale" style="background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Punti totali</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--green)" id="storicoTotPunti">0</div>
+    </div>
+    <div id="storicoList" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;color:var(--text-muted);padding:20px">Caricamento...</div>
+    </div>
+  </div>
+</div>
+<script type="module" src="app.js"></script>
+
+
+<!-- MODAL DETTAGLIO ORDINE -->
+<div id="ordineModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:16px;padding:28px;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;position:relative">
+    <button onclick="chiudiOrdineModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:4px">Ordine <span id="modalOrdineId" style="color:var(--green)"></span></div>
+    <div id="modalOrdineStato" style="font-size:12px;margin-bottom:16px"></div>
+    <div id="modalOrdineBody"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-primary" onclick="consegnaOrdine()" id="btnConsegna" style="flex:1">✓ Consegnato</button>
+      <button class="btn btn-ghost btn-sm" onclick="chiudiOrdineModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW: CAMPAGNE
+═══════════════════════════════════════ -->
+<div class="view" id="view-campagne">
+  <div style="padding:32px;max-width:980px;margin:0 auto">
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🛑 KILL SWITCH GLOBALE                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="killSwitchBox" style="background:linear-gradient(135deg,#fff5f5,#fff);border:2px solid #c62828;border-radius:14px;padding:20px 24px;margin-bottom:20px;box-shadow:0 4px 12px rgba(198,40,40,0.1)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#c62828;margin-bottom:4px">🛑 Blocco invii globale</div>
+          <div id="killSwitchStato" style="font-size:13px;color:var(--text-muted)">Caricamento stato...</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="btnKillAttiva" onclick="attivaKillSwitch()" class="btn" style="background:#c62828;color:white;padding:10px 20px;font-weight:700">🛑 BLOCCA TUTTI GLI INVII</button>
+          <button id="btnKillDisattiva" onclick="disattivaKillSwitch()" class="btn" style="background:#2e7d32;color:white;padding:10px 20px;font-weight:700;display:none">✅ Riabilita invii</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green)">Campagne WhatsApp</div>
+      <div id="campBadge" style="font-size:13px;color:var(--text-muted)">Nessun cliente selezionato</div>
+    </div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Seleziona il tipo di campagna, compila i campi e scegli i destinatari</div>
+
+    <!-- ORA FURBA -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">⚡ Ora Furba — Sconto automatico 10:00-11:00</div>
+          <div style="font-size:12px;color:var(--text-muted)">Quando attiva, gli ordini in fascia oraria ricevono uno sconto automatico del 20%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Max ordini:</span>
+            <input type="number" id="ofMaxOrdini" min="1" max="999" style="width:70px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif" value="10">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Oggi:</span>
+            <span id="ofOrdiniOggi" style="font-weight:700;font-size:16px;color:var(--green)">—</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <div id="ofToggle" onclick="toggleOraFurba()" style="width:48px;height:26px;border-radius:13px;background:var(--border);position:relative;cursor:pointer;transition:background 0.2s">
+              <div id="ofToggleDot" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;transition:left 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
+            </div>
+            <span id="ofToggleLabel" style="font-size:13px;font-weight:600;color:var(--text-muted)">Disattiva</span>
+          </label>
+          <button class="btn btn-ghost btn-sm" onclick="salvaOraFurba()">Salva</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetOrdiniOggi()">Reset contatore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Tipo campagna -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">1 — Tipo di campagna</div>
+      <select class="form-input" id="campTipo" onchange="campagnaTipoChanged()" style="font-size:15px;font-weight:500">
+        <option value="">— Scegli campagna —</option>
+        <option value="ora_furba">⏰ Ora Furba (sconto 20% mattina)</option>
+        <option value="ora_furba_dormienti">💤 Ora Furba Dormienti — 30% riattivazione</option>
+        <option value="reminder_bonus">🎁 Reminder BONUS (solo chi non ha riscattato)</option>
+        <option value="promo_flash">🍦 Promo Flash</option>
+        <option value="recensione_social">📸 Recensione &amp; Social</option>
+        <option value="compleanno">🎂 Auguri Compleanno</option>
+        <option value="upgrade">🏆 Upgrade di livello</option>
+        <option value="evento">🎉 Invito Evento</option>
+        <option value="delivery_lancio">🛵 Lancio Delivery</option>
+        <option value="riattivazione">💤 Riattivazione cliente inattivo</option>
+        <option value="festa_papa">👨‍👧 Festa del Papà</option>
+        <option value="festa_mamma">💐 Festa della Mamma</option>
+      </select>
+      <div id="campTipoDesc" style="font-size:12px;color:var(--text-muted);margin-top:10px;font-style:italic;min-height:18px"></div>
+    </div>
+
+    <!-- STEP 2: Contenuto (dinamico per tipo) -->
+    <div id="campContenutoWrap" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">2 — Contenuto campagna</div>
+
+      <!-- Upload immagine -->
+      <div class="form-group" id="campImgGroup">
+        <label class="form-label">Immagine intestazione * <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(1080×1080px · JPG/PNG)</span></label>
+        <div id="campImgUploadArea" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;position:relative" onclick="document.getElementById('campImgFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="campHandleDrop(event)">
+          <input type="file" id="campImgFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="campHandleFile(this.files[0])">
+          <div id="campImgPreviewWrap" style="display:none;margin-bottom:12px">
+            <img id="campImgPreview" style="max-height:140px;max-width:100%;border-radius:8px;object-fit:cover">
+          </div>
+          <div id="campImgPlaceholder">
+            <div style="font-size:32px;margin-bottom:8px">🖼️</div>
+            <div style="font-size:14px;font-weight:500;color:var(--green)">Clicca o trascina un'immagine</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">JPG · PNG · WebP · max 5MB</div>
+          </div>
+          <div id="campImgUploading" style="display:none">
+            <div class="spinner" style="margin:0 auto 8px"></div>
+            <div style="font-size:13px;color:var(--text-muted)">Upload in corso...</div>
+          </div>
+        </div>
+        <div id="campImgStatus" style="font-size:11px;margin-top:6px"></div>
+        <input type="hidden" id="campImmagineUrl">
+      </div>
+
+      <!-- Campi dinamici per tipo campagna -->
+      <div id="campCampiDinamici"></div>
+
+      <!-- Anteprima messaggio -->
+      <div id="campAnteprimaWrap" style="display:none;background:var(--cream);border-radius:10px;padding:14px 16px;margin-top:4px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Anteprima messaggio</div>
+        <div id="campAnteprimaTesto" style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Destinatari -->
+    <div id="campDestinatariWrap" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">3 — Destinatari</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" class="search-input" style="width:190px;padding:7px 12px;font-size:13px" placeholder="Cerca..." id="campSearch" oninput="filtraCampClienti()">
+          <button class="btn btn-ghost btn-sm" onclick="selezionaTuttiCamp()">Tutti</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('esploratore')">Esploratori</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('ambasciatore')">Ambasciatori</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('custode')">Custodi</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaSegmentoCamp('Mai attivato')">💤 Mai attivato</button>
+          <button class="btn btn-ghost btn-sm" onclick="deselezionaTuttiCamp()">Reset</button>
+        </div>
+      </div>
+      <div id="campClientiList" style="max-height:320px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">Caricamento clienti...</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="campProgressWrap" style="display:none;background:var(--cream);border-radius:10px;padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--green)" id="campProgressLabel">Invio in corso...</div>
+        <div style="font-size:12px;color:var(--text-muted)" id="campProgressCount">0 / 0</div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div id="campProgressBar" style="height:100%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:3px;width:0%;transition:width 0.3s"></div>
+      </div>
+      <div id="campLogList" style="margin-top:12px;max-height:160px;overflow-y:auto;font-size:12px;display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="resetCampagna()">Reset</button>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;background:#f8f6f0;padding:12px 16px;border-radius:10px;flex-wrap:wrap">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;width:100%">⚙️ Impostazioni invio (anti-blocco WhatsApp)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--brown)">Messaggi per blocco:</label>
+          <input type="number" id="campBloccoSize" value="50" min="1" max="200" style="width:70px;padding:6px 10px;border:1.5px solid var(--cream2);border-radius:8px;font-size:13px;text-align:center">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--brown)">Pausa tra blocchi (minuti):</label>
+          <input type="number" id="campPausaMin" value="5" min="1" max="60" style="width:70px;padding:6px 10px;border:1.5px solid var(--cream2);border-radius:8px;font-size:13px;text-align:center">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--brown)">Pausa tra messaggi (sec):</label>
+          <input type="number" id="campPausaSec" value="2" min="1" max="30" style="width:70px;padding:6px 10px;border:1.5px solid var(--cream2);border-radius:8px;font-size:13px;text-align:center">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <label style="font-size:12px;color:var(--text-muted);white-space:nowrap">📱 Numero test:</label>
+        <input type="tel" id="campNumeroTest" class="form-input" value="+393476236679" style="width:200px;font-size:13px;padding:8px 12px">
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-ghost" onclick="testInviaCampagna()" id="btnTestCamp" style="border-color:#d4a800;color:#1a2e1c">🧪 Test su di me</button>
+        <button class="btn btn-primary" onclick="inviaCampagna()" id="btnInviaCamp" style="padding:10px 28px">📤 Invia campagna</button>
+      </div>
+    </div>
+
+
+    <!-- ── Dashboard Codici Promo ── -->
+    <div class="table-section" style="margin-top:32px">
+      <div class="section-header">
+        <div class="section-title">🎟 Codici promo inviati</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCodiciPromo()">↻ Aggiorna</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--green)" id="statCodiciTotali">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Codici inviati</div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--success)" id="statCodiciUsati">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Usati (convertiti)</div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--yellow-dark)" id="statCodiciTasso">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Tasso conversione</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Codice</th>
+              <th>Sconto</th>
+              <th>Scadenza</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody id="codiciPromoTable">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">Clicca ↻ per caricare i dati</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Dashboard Conversioni ── -->
+    <div class="table-section" style="margin-top:32px">
+      <div class="section-header">
+        <div class="section-title">📈 Performance campagne (ultimi 30gg)</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadConversioni()">↻ Aggiorna</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Campagna</th>
+              <th>Data</th>
+              <th>Inviati</th>
+              <th>Conversioni</th>
+              <th>Tasso</th>
+            </tr>
+          </thead>
+          <tbody id="conversioniTable">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">Clicca ↻ per caricare i dati</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: ORDINI
+═══════════════════════════════════════ -->
+<div class="view" id="view-ordini">
+  <div style="padding:32px;max-width:960px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600">Ordini</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="ordiniFilter" onchange="loadOrdini()" class="form-input" style="width:auto;padding:8px 12px;font-size:13px">
+          <option value="tutti">Tutti</option>
+          <option value="pagato">In attesa ritiro</option>
+          <option value="consegnato">Consegnati</option>
+        </select>
+        <button class="btn btn-primary" onclick="exportOrdiniExcel()" style="font-size:12px;padding:9px 18px">📥 Scarica Excel</button>
+      </div>
+    </div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:24px">Tutti gli ordini online con stato pagamento</div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Ordini oggi</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statOggi">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">In attesa ritiro</div>
+        <div style="font-size:28px;font-weight:600;color:var(--gold)" id="statAttesa">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Incasso totale</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statIncasso">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Questo mese</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statMese">—</div>
+      </div>
+    </div>
+
+    <!-- Tabella ordini -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div id="ordiniTable" style="font-size:13px">
+        <div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento ordini...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: GIFT CARD
+═══════════════════════════════════════ -->
+<div class="view" id="view-giftcard">
+  <div style="padding:32px;max-width:960px;margin:0 auto">
+
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green);margin-bottom:6px">Gift Card</div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Genera e gestisci le gift card GREED</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+
+      <!-- Genera nuova gift card -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Genera nuova gift card</div>
+
+        <div class="form-group">
+          <label class="form-label">Valore</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px" id="gcValoriBtn">
+            <button onclick="selezionaValore(15)" class="btn btn-ghost" id="gcBtn15">€15</button>
+            <button onclick="selezionaValore(25)" class="btn btn-ghost" id="gcBtn25">€25</button>
+            <button onclick="selezionaValore(50)" class="btn btn-ghost" id="gcBtn50">€50</button>
+          </div>
+          <input type="number" class="form-input" id="gcValore" placeholder="Importo personalizzato €" min="5" step="5" oninput="deselezionaBottoni()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nome destinatario</label>
+          <input type="text" class="form-input" id="gcNome" placeholder="Mario Rossi">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Telefono destinatario</label>
+          <input type="tel" class="form-input" id="gcTelefono" placeholder="+39 333 123 4567">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Note (opzionale)</label>
+          <input type="text" class="form-input" id="gcNote" placeholder="Es: Regalo compleanno da Luigi">
+        </div>
+
+        <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+          Scadenza: <strong id="gcScadenzaLabel">31 dicembre 2026</strong> · Il codice viene inviato via WhatsApp
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-top:16px;margin-bottom:8px">
+          <label style="font-size:12px;color:var(--text-muted);white-space:nowrap">📱 Numero test:</label>
+          <input type="tel" id="gcNumeroTest" class="form-input" value="+393476236679" style="font-size:13px;padding:8px 12px">
+        </div>
+        <button class="btn btn-ghost" onclick="testGeneraGiftCard()" id="btnTestGC" style="width:100%;border-color:#d4a800;color:#1a2e1c;margin-bottom:8px">🧪 Test su di me</button>
+        <button class="btn btn-primary" onclick="generaGiftCard()" id="btnGeneraGC" style="width:100%;padding:12px">
+          🎁 Genera e invia Gift Card
+        </button>
+      </div>
+
+      <!-- Riscatta gift card -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Riscatta gift card in cassa</div>
+
+        <div class="form-group">
+          <label class="form-label">Codice gift card</label>
+          <input type="text" class="form-input" id="gcCodiceRiscatto" placeholder="GREED-GIFT-XXXX" style="font-family:monospace;font-size:16px;letter-spacing:2px" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <button class="btn btn-secondary" onclick="verificaGiftCard()" style="width:100%;margin-bottom:16px">
+          🔍 Verifica codice
+        </button>
+
+        <div id="gcVerificaResult" style="display:none;background:var(--cream);border-radius:10px;padding:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Gift Card trovata</div>
+          <div id="gcVerificaInfo"></div>
+          <button class="btn btn-primary" onclick="riscattaGiftCard()" id="btnRiscatta" style="width:100%;margin-top:14px">
+            ✓ Segna come utilizzata
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista gift card -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">Gift card emesse</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadGiftCards()">↻ Aggiorna</button>
+      </div>
+      <div id="gcList" style="max-height:400px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="view" id="view-eventi">
+  <div class="table-section">
+
+    <!-- Header evento attivo -->
+    <div style="background:var(--cream);border:1.5px solid var(--green);border-radius:14px;padding:20px 24px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Evento attivo</div>
+          <div id="eventoNomeDisplay" style="font-size:22px;font-weight:700;color:var(--green)">Degustazione Vellutà al Tiramisù</div>
+          <div id="eventoInfoDisplay" style="font-size:13px;color:var(--text-muted);margin-top:2px">Domenica 20 luglio 2026 · ore 18:00 · Frascati</div>
+        </div>
+        <button class="btn btn-secondary" onclick="openModalEvento()" style="white-space:nowrap">✏️ Modifica evento</button>
+      </div>
+    </div>
+
+    <!-- Filtro destinatari + invio -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px">
+      <div style="font-weight:600;margin-bottom:14px;font-size:15px">📨 Invia inviti WhatsApp</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn btn-ghost btn-sm filtro-evt active" onclick="setFiltroEvento('tutti',this)">Tutti gli iscritti</button>
+        <button class="btn btn-ghost btn-sm filtro-evt" onclick="setFiltroEvento('attivi',this)">Solo attivi</button>
+        <button class="btn btn-ghost btn-sm filtro-evt" onclick="setFiltroEvento('dormienti',this)">Solo dormienti</button>
+        <button class="btn btn-ghost btn-sm filtro-evt" onclick="setFiltroEvento('champion',this)">Champion & Fedeli</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <label style="font-size:12px;color:var(--text-muted);white-space:nowrap">📱 Numero test:</label>
+        <input type="tel" id="eventoNumeroTest" class="form-input" placeholder="+39 347 623 6679" value="+393476236679" style="width:200px;font-size:13px;padding:8px 12px">
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Orario invio</label>
+          <input type="datetime-local" id="eventoOrarioInvio" class="form-input" style="width:auto;font-size:13px;padding:8px 12px">
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:16px">oppure</div>
+        <button class="btn btn-ghost btn-sm" onclick="setOrarioSubito()" style="margin-top:14px">Invia subito</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div id="eventoDestinatariCount" style="font-size:13px;color:var(--text-muted)">Caricamento...</div>
+        <button class="btn btn-ghost" onclick="testInvioEvento()" id="btnTestEvento" style="border-color:#d4a800;color:#1a2e1c">🧪 Test su di me</button>
+        <button class="btn btn-primary" onclick="inviaInvitiEvento()" id="btnInviaEvento">Pianifica invio →</button>
+      </div>
+    </div>
+
+    <!-- Stats live -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px" id="eventoStats">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--green)" id="statPresenti">0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Presenti</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--amber)" id="statInvitati">0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Invitati</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--blue,#1565c0)" id="statMedPunti">0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Media punti</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--purple,#6a1e6a)" id="statConv">0%</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Tasso presenza</div>
+      </div>
+    </div>
+
+    <!-- Lista presenti -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-weight:600;font-size:15px">Lista presenti</div>
+      <button class="btn btn-ghost btn-sm" onclick="esportaPresenti()">⬇ Esporta CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Cliente</th>
+          <th>Ora arrivo</th>
+          <th>Livello</th>
+          <th>Punti</th>
+          <th>Visite</th>
+          <th>Segmento</th>
+        </tr></thead>
+        <tbody id="eventoPresentiTable"><tr><td colspan="6"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Nessuna presenza ancora</div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal modifica evento -->
+<div class="modal-overlay" id="modalEvento">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="closeModal('modalEvento')">×</button>
+    <h2 style="margin:0 0 20px">Modifica evento</h2>
+    <div class="form-group">
+      <label class="form-label">Nome evento</label>
+      <input class="form-input" id="eventoNomeInput" placeholder="es. Degustazione Vellutà al Tiramisù">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data</label>
+      <input class="form-input" type="date" id="eventoDataInput">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ora</label>
+      <input class="form-input" type="time" id="eventoOraInput">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Luogo</label>
+      <input class="form-input" id="eventoLuogoInput" placeholder="es. Frascati, Piazza Roma 16">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Template WhatsApp (nome)</label>
+      <input class="form-input" id="eventoTemplateInput" placeholder="es. greed_evento_esclusivo">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modalEvento')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaEvento()">Salva evento</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
