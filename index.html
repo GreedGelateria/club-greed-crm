@@ -8,6 +8,28 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script type="module">
+import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+const _a=initializeApp({apiKey:"AIzaSyBwAZb_A3IjPv7iL0cLhVnWO-Cuw_DD5g4",authDomain:"club-greed.firebaseapp.com",projectId:"club-greed"});
+const _auth=getAuth(_a),_gp=new GoogleAuthProvider(),ME="gelateriagreed@gmail.com";
+window._crmLoginGoogle=async function(){
+  const b=document.getElementById("crm-google-btn");
+  if(b){b.disabled=true;b.textContent="Accesso in corso…";}
+  try{
+    const r=await signInWithPopup(_auth,_gp);
+    if(r.user.email!==ME){await signOut(_auth);showGErr("Account non autorizzato. Usa "+ME);}
+  }catch(e){if(e.code!=="auth/popup-closed-by-user")showGErr("Errore: "+e.message);}
+  if(b){b.disabled=false;b.textContent="🔑 Accedi con Google";}
+};
+function showGErr(m){const e=document.getElementById("crm-google-err");if(e){e.textContent=m;e.style.display="block";}}
+onAuthStateChanged(_auth,user=>{
+  if(user&&user.email===ME){
+    document.getElementById("pin-screen").style.display="none";
+    if(typeof loadDashboard==="function")setTimeout(loadDashboard,300);
+  }
+});
+</script>
 </head>
 <body>
 
@@ -35,6 +57,11 @@
     <button onclick="pdel()" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#888;font-size:16px;cursor:pointer;">⌫</button>
   </div>
   <div id="pin-err" style="color:#c0392b;font-size:13px;margin-top:14px;min-height:18px;"></div>
+  <div style="margin-top:22px;text-align:center">
+    <div style="color:#888;font-size:11px;margin-bottom:10px;letter-spacing:.05em">OPPURE</div>
+    <button id="crm-google-btn" onclick="window._crmLoginGoogle()" style="background:#4285f4;color:#fff;border:none;padding:11px 26px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.03em">🔑 Accedi con Google</button>
+    <div id="crm-google-err" style="color:#c0392b;font-size:11px;margin-top:8px;display:none"></div>
+  </div>
 </div>
 
 <script>
