@@ -17,6 +17,16 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
 
+// Ogni chiamata alle funzioni GREED porta con sé l'accesso del CRM (il server lo verifica)
+const _fetchOriginale = window.fetch.bind(window);
+window.fetch = async (url, opt = {}) => {
+  if (/\.run\.app|cloudfunctions\.net/.test(String(url)) && auth.currentUser) {
+    const token = await auth.currentUser.getIdToken();
+    opt = { ...opt, headers: { ...(opt.headers || {}), Authorization: 'Bearer ' + token } };
+  }
+  return _fetchOriginale(url, opt);
+};
+
 // ── Email autorizzata: solo questa può accedere al CRM ──
 const CRM_EMAIL = 'gelateriagreed@gmail.com';
 
