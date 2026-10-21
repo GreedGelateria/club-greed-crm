@@ -439,6 +439,7 @@ function renderClienti(clienti) {
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-secondary btn-sm" onclick="openPunti('${c.id}')">+ Punti</button>
           <button class="btn btn-ghost btn-sm" onclick="openQrCliente('${c.id}')">QR</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.reinviaBenvenuto('${c.id}')" title="Reinvia su WhatsApp il benvenuto con il QR personale">📲</button>
           <button class="btn btn-ghost btn-sm" onclick="openStorico('${c.id}')">📋</button>
           <button class="btn btn-ghost btn-sm" onclick="openModifica('${c.id}')">✏️</button>
           <button class="btn btn-danger btn-sm" onclick="window.eliminaCliente('${c.id}','${c.nome} ${c.cognome}')" title="Elimina cliente">🗑️</button>
@@ -447,6 +448,24 @@ function renderClienti(clienti) {
     </tr>`;
   }).join('');
 }
+
+// -- REINVIA BENVENUTO CON QR -- (messaggio di servizio: parte anche senza consenso marketing)
+window.reinviaBenvenuto = async function(id) {
+  const c = (window.allClienti || []).find(x => x.id === id) || (await getDoc(doc(db, 'clienti', id))).data();
+  if (!c) return;
+  if (!c.telefono) { alert('Questo cliente non ha un numero di telefono.'); return; }
+  if (!confirm(`Reinviare a ${c.nome || ''} ${c.cognome || ''} (${c.telefono}) il WhatsApp di benvenuto con il suo QR personale?`)) return;
+  try {
+    const res = await fetch(N8N_CAMPAGNA_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: 'benvenuto_club_greed', telefono: c.telefono, nome: c.nome || '',
+        immagineUrl: `https://quickchart.io/qr?text=${encodeURIComponent('GRD-' + id)}&size=200` })
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) throw new Error(j.error || ('errore ' + res.status));
+    alert(`✅ Benvenuto con QR inviato a ${c.nome || 'cliente'}.`);
+  } catch (e) { alert('❌ Invio non riuscito: ' + e.message); }
+};
 
 // -- ELIMINA CLIENTE --
 window.eliminaCliente = async function(id, nomeCompleto) {
