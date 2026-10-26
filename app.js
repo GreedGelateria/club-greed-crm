@@ -232,6 +232,7 @@ window.showToast = function(msg, type='') {
 window.showView = function(name) {
   if (name === 'giftcard') { setTimeout(function(){ if(typeof loadGiftCards==='function') loadGiftCards(); }, 200); }
   if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
+  if (name === 'calendario') { setTimeout(function(){ if(typeof loadCalendario==='function') loadCalendario(); }, 50); }
   if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
@@ -1253,6 +1254,65 @@ window.apriDettaglioOrdineAdmin = function(docId) {
 };
 
 /* ─────────────────────────────────────────
+   CALENDARIO E-COMMERCE — giorni di chiusura (config/calendario.chiusure)
+───────────────────────────────────────── */
+let calChiusure = new Set();
+const calMese = new Date(); calMese.setDate(1);
+const calISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const calDaISO = s => { const [y,m,g] = s.split('-').map(Number); return new Date(y, m-1, g); };
+
+async function loadCalendario() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'calendario'));
+    calChiusure = new Set((snap.exists() && snap.data().chiusure) || []);
+  } catch(e) { console.error(e); showToast('Calendario non caricato: ' + e.message, 'error'); }
+  renderCalendario();
+}
+
+window.calCambiaMese = function(n) { calMese.setMonth(calMese.getMonth() + n); renderCalendario(); };
+
+window.calToggleGiorno = async function(iso) {
+  const prima = new Set(calChiusure);
+  if (calChiusure.has(iso)) calChiusure.delete(iso); else calChiusure.add(iso);
+  renderCalendario();
+  try {
+    const oggi = calISO(new Date());
+    const lista = [...calChiusure].filter(x => x >= oggi).sort(); // i giorni passati non servono più
+    await setDoc(doc(db, 'config', 'calendario'), { chiusure: lista, aggiornato: serverTimestamp() });
+    calChiusure = new Set(lista);
+    showToast(prima.has(iso) ? 'Giorno riaperto ✓' : 'Giorno segnato chiuso ✓');
+  } catch(e) {
+    calChiusure = prima; renderCalendario();
+    showToast('Non salvato: ' + e.message, 'error');
+  }
+};
+
+function renderCalendario() {
+  const tit = document.getElementById('calTitolo'), gr = document.getElementById('calGriglia');
+  if (!tit || !gr) return;
+  tit.textContent = calMese.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+  const oggi = calISO(new Date());
+  let h = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(g => `<div style="text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;padding:4px 0">${g}</div>`).join('');
+  const primo = (calMese.getDay() + 6) % 7; // lunedì = 0
+  for (let i = 0; i < primo; i++) h += '<div></div>';
+  const giorni = new Date(calMese.getFullYear(), calMese.getMonth() + 1, 0).getDate();
+  for (let g = 1; g <= giorni; g++) {
+    const iso = calISO(new Date(calMese.getFullYear(), calMese.getMonth(), g));
+    const passato = iso < oggi, chiuso = calChiusure.has(iso);
+    const stile = passato ? 'background:transparent;color:#bbb;border:1px solid transparent;cursor:default'
+      : chiuso ? 'background:var(--red);color:#fff;border:1px solid var(--red);cursor:pointer'
+      : 'background:#fff;color:inherit;border:1px solid var(--border);cursor:pointer';
+    const bordoOggi = iso === oggi ? ';box-shadow:0 0 0 2px var(--green)' : '';
+    h += `<button type="button" ${passato ? 'disabled' : `onclick="calToggleGiorno('${iso}')"`} aria-pressed="${chiuso}" aria-label="${g}${chiuso ? ' chiuso' : ''}" style="${stile}${bordoOggi};border-radius:9px;padding:12px 0;font-size:15px;font-weight:600;font-family:inherit">${g}</button>`;
+  }
+  gr.innerHTML = h;
+  const prossime = [...calChiusure].filter(x => x >= oggi).sort();
+  document.getElementById('calProssime').innerHTML = prossime.length
+    ? '<b>Prossime chiusure:</b> ' + prossime.map(x => calDaISO(x).toLocaleDateString('it-IT', { weekday:'short', day:'numeric', month:'short' })).join(' · ')
+    : '<span style="color:var(--text-muted)">Nessuna chiusura in programma: si può ordinare tutti i giorni.</span>';
+}
+
+/* ─────────────────────────────────────────
    ORA FURBA
 ───────────────────────────────────────── */
 let ofAttiva = false;
@@ -1688,7 +1748,8 @@ window.toggleCampCliente = function(id, checked) {
 };
 
 window.selezionaTuttiCamp = function() {
-  campClientiFiltrati.filter(c => c.telefono).forEach(c => campClientiSelezionati.add(c.id));
+  // Solo chi ha dato il consenso marketing (GDPR + regole Meta)
+  campClientiFiltrati.filter(c => c.telefono && c.marketing === true).forEach(c => campClientiSelezionati.add(c.id));
   renderCampClienti(campClientiFiltrati);
 };
 
@@ -1995,8 +2056,12 @@ NON chiudere il browser durante l'invio.`);
   if (!campiOk) { showToast('Compila tutti i campi del messaggio', 'error'); return; }
   if (campClientiSelezionati.size === 0) { showToast('Seleziona almeno un cliente', 'error'); return; }
 
-  const destinatari = (window.allClienti||[]).filter(c => campClientiSelezionati.has(c.id) && c.telefono);
-  if (!destinatari.length) { showToast('Nessun destinatario con telefono', 'error'); return; }
+  // Le campagne promozionali partono solo verso chi ha il consenso marketing
+  const selezionati = (window.allClienti||[]).filter(c => campClientiSelezionati.has(c.id) && c.telefono);
+  const destinatari = selezionati.filter(c => c.marketing === true);
+  const esclusi = selezionati.length - destinatari.length;
+  if (!destinatari.length) { showToast('Nessun destinatario con consenso marketing', 'error'); return; }
+  if (esclusi && !confirm(`${esclusi} client${esclusi===1?'e':'i'} selezionat${esclusi===1?'o':'i'} senza consenso marketing: non ricever${esclusi===1?'à':'anno'} il messaggio.`)) return;
 
   const ok = confirm(`Inviare "${document.getElementById('campTipo').selectedOptions[0].text}" a ${destinatari.length} client${destinatari.length===1?'e':'i'}?\n\nQuesta operazione non è reversibile.`);
   if (!ok) return;
