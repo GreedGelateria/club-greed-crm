@@ -738,6 +738,16 @@ onAuthStateChanged(_auth,user=>{
         <button class="btn btn-primary" onclick="inviaCampagna()" id="btnInviaCamp" style="padding:10px 28px">📤 Invia campagna</button>
       </div>
     </div>
+    <!-- ── Invio programmato: parte dal server all'orario scelto ── -->
+    <div style="margin-top:16px;padding:16px 18px;border:1.5px dashed var(--green);border-radius:12px;background:#fff">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <label for="campQuando" style="font-size:14px;font-weight:600">📅 Programma l'invio per:</label>
+        <input type="datetime-local" id="campQuando" class="form-input" style="width:auto;font-size:14px;padding:8px 12px">
+        <button class="btn btn-secondary" onclick="programmaCampagna()" id="btnProgrammaCamp" style="padding:10px 22px">📅 Programma</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">Parte da sola, anche a computer spento, entro 5 minuti dall'orario scelto. Usa le stesse pause anti-blocco qui sopra, invia solo dalle 9 alle 14 e dalle 16 alle 20 (fuori fascia si ferma e riprende da sola) e solo a chi ha il consenso marketing.</div>
+      <div id="campProgrammateList" style="margin-top:12px"></div>
+    </div>
 
 
     <!-- ── Dashboard Codici Promo ── -->

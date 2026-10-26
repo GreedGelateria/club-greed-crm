@@ -234,6 +234,7 @@ window.showView = function(name) {
   if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
   if (name === 'calendario') { setTimeout(function(){ if(typeof loadCalendario==='function') loadCalendario(); }, 50); }
   if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
+  if (name === 'campagne') { setTimeout(function(){ if(typeof caricaProgrammate==='function') caricaProgrammate(); }, 250); }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -2156,6 +2157,113 @@ NON chiudere il browser durante l'invio.`);
   count.textContent = `${destinatari.length} / ${destinatari.length}`;
   btn.textContent = 'v Campagna inviata';
   showToast(`Campagna completata: ${inviati} messaggi inviati`, errori ? 'error' : '');
+};
+
+/* ─────────────────────────────────────────
+   CAMPAGNE PROGRAMMATE — il server invia all'orario scelto
+───────────────────────────────────────── */
+const PROGRAMMA_URL = 'https://europe-west3-club-greed.cloudfunctions.net/programmaCampagna';
+const NON_PROGRAMMABILI = ['ora_furba_dormienti', 'delivery_lancio'];
+
+async function chiamaProgramma(dati) {
+  const res = await fetch(PROGRAMMA_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(dati) });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || ('HTTP ' + res.status));
+  return out;
+}
+
+window.programmaCampagna = async function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) { showToast('Seleziona un tipo di campagna', 'error'); return; }
+  if (NON_PROGRAMMABILI.includes(tipo) || cfg.generaCodice) { alert('Questa campagna non si può programmare: va inviata subito dal pulsante "Invia campagna".'); return; }
+
+  const valQuando = document.getElementById('campQuando').value;
+  if (!valQuando) { showToast('Scegli giorno e ora dell\'invio', 'error'); return; }
+  const quando = new Date(valQuando);
+  if (isNaN(quando) || quando.getTime() < Date.now() + 60000) { showToast('Scegli un orario nel futuro', 'error'); return; }
+  const h = quando.getHours();
+  const fuoriFascia = !((h >= 9 && h < 14) || (h >= 16 && h < 20));
+
+  const imgUrl = document.getElementById('campImmagineUrl').value.trim();
+  if (cfg.richiedeImmagine !== false && !imgUrl) { showToast('Carica l\'immagine intestazione', 'error'); return; }
+  const v = {};
+  let campiOk = true;
+  cfg.campi.forEach(f => { const val = (document.getElementById(f.id)||{}).value?.trim() || ''; v[f.id] = val; if (!val) campiOk = false; });
+  if (!campiOk) { showToast('Compila tutti i campi del messaggio', 'error'); return; }
+  if (campClientiSelezionati.size === 0) { showToast('Seleziona almeno un cliente', 'error'); return; }
+
+  const selezionati = (window.allClienti||[]).filter(c => campClientiSelezionati.has(c.id) && c.telefono);
+  const destinatari = selezionati.filter(c => c.marketing === true);
+  const esclusi = selezionati.length - destinatari.length;
+  if (!destinatari.length) { showToast('Nessun destinatario con consenso marketing', 'error'); return; }
+
+  const blocco = parseInt(document.getElementById('campBloccoSize').value) || 50;
+  const pausaMin = parseInt(document.getElementById('campPausaMin').value) || 5;
+  const pausaSec = parseInt(document.getElementById('campPausaSec').value) || 2;
+  const etichetta = document.getElementById('campTipo').selectedOptions[0].text;
+  const quandoTesto = quando.toLocaleString('it-IT', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
+  const blocchi = Math.ceil(destinatari.length / blocco);
+  const durata = Math.ceil((destinatari.length * (pausaSec + 1) + (blocchi - 1) * pausaMin * 60) / 60);
+
+  if (!confirm(`📅 PROGRAMMARE L'INVIO?\n\n${etichetta}\n🕘 Partenza: ${quandoTesto}\n✉️ Destinatari: ${destinatari.length}${esclusi ? ` (${esclusi} esclus${esclusi===1?'o':'i'}: senza consenso marketing)` : ''}\n⏱ Durata stimata: circa ${durata} minut${durata===1?'o':'i'} (${blocchi} blocc${blocchi===1?'o':'hi'} da ${blocco}, pausa ${pausaMin} min)` +
+    (fuoriFascia ? `\n\n⚠️ Alle ${String(h).padStart(2,'0')}:${String(quando.getMinutes()).padStart(2,'0')} gli invii promozionali sono fermi: partirà alle ${h < 9 ? '9:00' : h < 16 ? '16:00' : '9:00 del giorno dopo'}.` : '') +
+    `\n\nHai fatto il test su di te?`)) return;
+
+  const btn = document.getElementById('btnProgrammaCamp');
+  btn.disabled = true; btn.textContent = 'Salvo…';
+  try {
+    const messaggi = destinatari.map(c => {
+      const p = cfg.payload(c, v, imgUrl, null);
+      return { clienteId: c.id, telefono: p.telefono, nome: p.nome, var2: p.var2, var3: p.var3, var4: p.var4 };
+    });
+    const tpl = cfg.payload(destinatari[0], v, imgUrl, null);
+    const out = await chiamaProgramma({ azione:'crea', tipo, etichetta, template: tpl.template || cfg.template, immagineUrl: tpl.immagineUrl || '',
+      quando: quando.getTime(), blocco, pausaMin, pausaSec, messaggi });
+    showToast(`📅 Programmata: ${out.totale} messaggi, ${quandoTesto}`);
+    document.getElementById('campQuando').value = '';
+    caricaProgrammate();
+  } catch(e) {
+    alert('❌ Programmazione non riuscita: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '📅 Programma';
+};
+
+const STATI_PROG = {
+  programmata: ['🕘 Programmata', 'var(--text-muted)'], in_invio: ['📤 In invio', 'var(--green)'], completata: ['✅ Completata', 'var(--green)'],
+  annullata: ['✖ Annullata', 'var(--text-muted)'], sospesa: ['⚠️ Sospesa', 'var(--red)']
+};
+
+async function caricaProgrammate() {
+  const box = document.getElementById('campProgrammateList');
+  if (!box) return;
+  try {
+    const { lista } = await chiamaProgramma({ azione:'elenco' });
+    if (!lista.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">Nessuna campagna programmata.</div>'; return; }
+    box.innerHTML = lista.map(p => {
+      const [lab, col] = STATI_PROG[p.stato] || [p.stato, 'inherit'];
+      const q = new Date(p.quando).toLocaleString('it-IT', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      const fatti = p.inviati + p.saltati + p.errori;
+      const annullabile = ['programmata','in_invio','sospesa'].includes(p.stato);
+      return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--cream-dark);font-size:13px">
+        <b style="color:${col};min-width:120px">${lab}</b>
+        <span style="flex:1;min-width:180px">${p.etichetta} · ${q}</span>
+        <span>${fatti}/${p.totale}${p.inviati !== fatti ? ` <span style="color:var(--text-muted)">(${p.inviati} inviati${p.saltati ? `, ${p.saltati} saltati` : ''}${p.errori ? `, ${p.errori} errori` : ''})</span>` : ''}</span>
+        ${annullabile ? `<button class="btn btn-ghost btn-sm" onclick="annullaProgrammata('${p.id}')">Annulla</button>` : ''}
+        ${p.motivo ? `<div style="width:100%;color:var(--red);font-size:12px">${p.motivo}</div>` : ''}
+      </div>`;
+    }).join('') + '<div style="text-align:right;margin-top:6px"><button class="btn btn-ghost btn-sm" onclick="caricaProgrammate()">↻ Aggiorna</button></div>';
+  } catch(e) {
+    box.innerHTML = `<div style="font-size:13px;color:var(--red)">Elenco non disponibile: ${e.message}</div>`;
+  }
+}
+window.caricaProgrammate = caricaProgrammate;
+
+window.annullaProgrammata = async function(id) {
+  if (!confirm('Annullare questa campagna programmata? I messaggi già partiti restano inviati.')) return;
+  try { await chiamaProgramma({ azione:'annulla', id }); showToast('Campagna annullata'); }
+  catch(e) { alert('❌ ' + e.message); }
+  caricaProgrammate();
 };
 
 /* ─────────────────────────────────────────
