@@ -2795,8 +2795,8 @@ window.showView = function(name) {
 // ═══════════════════════════════════════════════════════════════════════════
 async function _killSwitchAttivo() {
   try {
-    const snap = await firebase.firestore().collection('config').doc('system').get();
-    if (!snap.exists) return false;
+    const snap = await getDoc(doc(db, 'config', 'system'));
+    if (!snap.exists()) return false;
     return snap.data().invii_abilitati === false;
   } catch(e) {
     console.error('[KILL SWITCH] Errore lettura:', e.message);
@@ -2828,9 +2828,9 @@ async function _aggiornaUIKillSwitch() {
 window.attivaKillSwitch = async function() {
   if (!confirm('🛑 BLOCCARE TUTTI GLI INVII?\n\nDopo il blocco:\n• Nessuna campagna può partire\n• Le Function schedulate (compleanni compresi) sono ferme\n• Il webhook Meta non processerà messaggi in uscita\n\nConfermare il blocco?')) return;
   try {
-    await firebase.firestore().collection('config').doc('system').set({
+    await setDoc(doc(db, 'config', 'system'), {
       invii_abilitati: false,
-      bloccato_il: firebase.firestore.FieldValue.serverTimestamp()
+      bloccato_il: serverTimestamp()
     }, { merge: true });
     alert('🛑 INVII BLOCCATI\n\nNessun messaggio partirà finché non riabiliti.');
     _aggiornaUIKillSwitch();
@@ -2842,9 +2842,9 @@ window.attivaKillSwitch = async function() {
 window.disattivaKillSwitch = async function() {
   if (!confirm('✅ Riabilitare gli invii?\n\nDopo la riabilitazione le Function torneranno operative.')) return;
   try {
-    await firebase.firestore().collection('config').doc('system').set({
+    await setDoc(doc(db, 'config', 'system'), {
       invii_abilitati: true,
-      riabilitato_il: firebase.firestore.FieldValue.serverTimestamp()
+      riabilitato_il: serverTimestamp()
     }, { merge: true });
     alert('✅ Invii riabilitati.');
     _aggiornaUIKillSwitch();
