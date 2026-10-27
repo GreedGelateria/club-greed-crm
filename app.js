@@ -234,7 +234,7 @@ window.showView = function(name) {
   if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
   if (name === 'calendario') { setTimeout(function(){ if(typeof loadCalendario==='function') loadCalendario(); }, 50); }
   if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
-  if (name === 'campagne') { setTimeout(function(){ if(typeof caricaProgrammate==='function') caricaProgrammate(); }, 250); }
+  if (name === 'campagne') { setTimeout(function(){ if(typeof caricaProgrammate==='function') caricaProgrammate(); if(typeof caricaRisultatiCampagne==='function') caricaRisultatiCampagne(); }, 250); }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -2265,6 +2265,63 @@ window.annullaProgrammata = async function(id) {
   catch(e) { alert('❌ ' + e.message); }
   caricaProgrammate();
 };
+
+/* ─────────────────────────────────────────
+   RISULTATI CAMPAGNE — invii, clienti convertiti, acquisti e incasso entro 7 giorni
+───────────────────────────────────────── */
+const COSTO_MSG_DEFAULT = 0.06;
+function costoMsg() {
+  let v = NaN;
+  try { v = parseFloat(localStorage.getItem('greed_costo_msg')); } catch(e) {}
+  return isFinite(v) && v >= 0 ? v : COSTO_MSG_DEFAULT;
+}
+window.salvaCostoMsg = function() {
+  const v = parseFloat(document.getElementById('misCosto').value);
+  if (isFinite(v) && v >= 0) { try { localStorage.setItem('greed_costo_msg', String(v)); } catch(e) {} }
+  caricaRisultatiCampagne();
+};
+function nomeCampagna(id, template) {
+  const tipo = String(id).replace(/_\d{10,}$/, '');
+  const opt = [...(document.getElementById('campTipo')?.options || [])].find(o => o.value === tipo);
+  if (opt) return opt.text;
+  if (tipo.startsWith('dormienti')) return '😴 Dormienti';
+  return template || tipo;
+}
+async function caricaRisultatiCampagne() {
+  const tab = document.getElementById('misTabella');
+  if (!tab) return;
+  const costoInput = document.getElementById('misCosto');
+  if (costoInput && document.activeElement !== costoInput) costoInput.value = costoMsg();
+  const euro = n => '€ ' + (Math.round((n || 0) * 100) / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  try {
+    const snap = await getDocs(query(collection(db, 'campagne'), orderBy('ultimoInvio', 'desc'), limit(30)));
+    if (snap.empty) { tab.innerHTML = '<tr><td style="color:var(--text-muted)">Nessuna campagna inviata.</td></tr>'; return; }
+    const th = 'style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);font-size:11px;color:var(--text-muted);white-space:nowrap"';
+    let h = `<thead><tr><th ${th.replace('right','left')}>Campagna</th><th ${th}>Inviata</th><th ${th}>Messaggi</th><th ${th}>Clienti tornati</th><th ${th}>Acquisti</th><th ${th}>Incasso</th><th ${th}>Costo</th><th ${th}>Resa</th></tr></thead><tbody>`;
+    const td = 'style="text-align:right;padding:7px 8px;border-bottom:1px solid var(--cream-dark);white-space:nowrap"';
+    snap.docs.forEach(d => {
+      const x = d.data();
+      const inviati = x.totaleInvii || 0, conv = x.totaleConversioni || 0;
+      const misurata = x.totaleIncasso !== undefined || x.totaleAcquisti !== undefined;
+      const costo = inviati * costoMsg();
+      const quando = x.ultimoInvio?.toDate ? x.ultimoInvio.toDate().toLocaleDateString('it-IT', { day:'numeric', month:'short' }) : '—';
+      const pct = inviati ? Math.round(conv / inviati * 1000) / 10 : 0;
+      const resa = costo > 0 && misurata ? Math.round((x.totaleIncasso || 0) / costo * 10) / 10 : null;
+      const coloreResa = resa === null ? 'inherit' : resa >= 1 ? 'var(--green)' : 'var(--red)';
+      h += `<tr><td style="padding:7px 8px;border-bottom:1px solid var(--cream-dark)">${nomeCampagna(d.id, x.template)}</td>
+        <td ${td}>${quando}</td><td ${td}>${inviati}</td>
+        <td ${td}>${conv} <span style="color:var(--text-muted)">(${String(pct).replace('.', ',')}%)</span></td>
+        <td ${td}>${misurata ? (x.totaleAcquisti || 0) : '—'}</td>
+        <td ${td}>${misurata ? euro(x.totaleIncasso) : '—'}</td>
+        <td ${td}>${euro(costo)}</td>
+        <td ${td.replace('white-space:nowrap', 'white-space:nowrap;font-weight:700;color:' + coloreResa)}>${resa === null ? '—' : String(resa).replace('.', ',') + '×'}</td></tr>`;
+    });
+    tab.innerHTML = h + '</tbody>';
+  } catch(e) {
+    tab.innerHTML = `<tr><td style="color:var(--red)">Risultati non disponibili: ${e.message}</td></tr>`;
+  }
+}
+window.caricaRisultatiCampagne = caricaRisultatiCampagne;
 
 /* ─────────────────────────────────────────
    GIFT CARD
