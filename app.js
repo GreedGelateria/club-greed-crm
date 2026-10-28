@@ -234,7 +234,7 @@ window.showView = function(name) {
   if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
   if (name === 'calendario') { setTimeout(function(){ if(typeof loadCalendario==='function') loadCalendario(); }, 50); }
   if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
-  if (name === 'campagne') { setTimeout(function(){ if(typeof caricaProgrammate==='function') caricaProgrammate(); if(typeof caricaRisultatiCampagne==='function') caricaRisultatiCampagne(); }, 250); }
+  if (name === 'campagne') { setTimeout(function(){ if(typeof caricaProgrammate==='function') caricaProgrammate(); if(typeof caricaRisultatiCampagne==='function') caricaRisultatiCampagne(); if(typeof caricaPassaparola==='function') caricaPassaparola(); }, 250); }
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + name).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -1396,6 +1396,19 @@ const CAMP_CONFIG = {
       immagineUrl: imgUrl
     })
   },
+  passaparola: {
+    template: 'greed_referral',
+    desc: 'Passaparola — ogni cliente riceve il suo link personale. L\'amico che si iscrive da lì ha il 20% sul primo acquisto (online o al banco); chi invita riceve 50 punti quando l\'amico compra.',
+    bottone: true,
+    campi: [],
+    preview: (v, nome) => `Ciao ${nome}! 🎁\n\nHai un amico goloso? Presentalo al Club GREED!\n\n👉 Inoltragli il tuo link personale per iscriversi: greedgelateria.github.io/i-gusti/?invito=XXXXXX\n\nIl tuo amico riceve 20% di sconto sul primo ordine.\nTu guadagni 50 punti extra appena fa il primo acquisto: un passo in più verso il livello superiore.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_referral',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: '{LINK}', var3: '20%', var4: '50'   // {LINK}: il server mette il link personale di ogni cliente
+    })
+  },
   ora_furba_dormienti: {
     template: 'greed_ora_furba_speciale',
     desc: 'Riattivazione inattivi — sconto personale 30% con codice univoco. Ogni cliente riceve un codice usa-e-getta valido 24h, solo vaschette.',
@@ -2322,6 +2335,29 @@ async function caricaRisultatiCampagne() {
   }
 }
 window.caricaRisultatiCampagne = caricaRisultatiCampagne;
+
+/* ─────────────────────────────────────────
+   PASSAPAROLA — amici iscritti dal link, quanti hanno comprato, chi porta più amici
+───────────────────────────────────────── */
+function caricaPassaparola() {
+  const box = document.getElementById('refStats');
+  if (!box) return;
+  const tutti = window.allClienti || [];
+  const invitati = tutti.filter(c => c.invitatoDa);
+  const comprato = invitati.filter(c => c.premioInvitoDato === true);
+  const perId = Object.fromEntries(tutti.map(c => [c.id, c]));
+  const conteggio = {};
+  invitati.forEach(c => { const k = c.invitatoDa; conteggio[k] = conteggio[k] || { iscritti: 0, comprato: 0 }; conteggio[k].iscritti++; if (c.premioInvitoDato === true) conteggio[k].comprato++; });
+  const top = Object.entries(conteggio).sort((a, b) => b[1].comprato - a[1].comprato || b[1].iscritti - a[1].iscritti).slice(0, 5);
+  const kpi = (n, l) => `<div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:10px 12px"><div style="font-size:22px;font-weight:700">${n}</div><div style="font-size:12px;color:var(--text-muted)">${l}</div></div>`;
+  let h = `<div style="display:flex;gap:10px;flex-wrap:wrap">${kpi(invitati.length, 'amici iscritti dal link')}${kpi(comprato.length, 'hanno fatto il primo acquisto')}${kpi(invitati.length ? Math.round(comprato.length / invitati.length * 100) + '%' : '—', 'amici diventati clienti')}${kpi(comprato.length * 50, 'punti dati a chi ha invitato')}</div>`;
+  if (top.length) h += '<div style="margin-top:12px;font-size:13px"><b>Chi porta più amici</b>' + top.map(([id, n]) => {
+    const c = perId[id];
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cream-dark)"><span>${c ? (c.nome || '') + ' ' + (c.cognome || '') : 'Cliente rimosso'}</span><span>${n.iscritti} iscritt${n.iscritti === 1 ? 'o' : 'i'} · ${n.comprato} ${n.comprato === 1 ? 'ha' : 'hanno'} comprato</span></div>`;
+  }).join('') + '</div>';
+  box.innerHTML = h;
+}
+window.caricaPassaparola = caricaPassaparola;
 
 /* ─────────────────────────────────────────
    GIFT CARD
