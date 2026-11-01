@@ -1398,15 +1398,15 @@ const CAMP_CONFIG = {
   },
   passaparola: {
     template: 'greed_referral',
-    desc: 'Passaparola — ogni cliente riceve il suo link personale. L\'amico che si iscrive da lì ha il 20% sul primo acquisto (online o al banco); chi invita riceve 50 punti quando l\'amico compra.',
+    desc: 'Passaparola — ogni cliente riceve il suo link personale. L\'amico che si iscrive da lì ha il 25% sul primo acquisto entro 30 giorni (online o al banco); chi invita riceve 50 punti quando l\'amico compra.',
     bottone: true,
     campi: [],
-    preview: (v, nome) => `Ciao ${nome}! 🎁\n\nHai un amico goloso? Presentalo al Club GREED!\n\n👉 Inoltragli il tuo link personale per iscriversi: greedgelateria.github.io/i-gusti/?invito=XXXXXX\n\nIl tuo amico riceve 20% di sconto sul primo ordine.\nTu guadagni 50 punti extra appena fa il primo acquisto: un passo in più verso il livello superiore.\n\n— GREED Gelateria Naturale · Frascati`,
+    preview: (v, nome) => `Ciao ${nome}! 🎁\n\nHai un amico goloso? Presentalo al Club GREED!\n\n👉 Inoltragli il tuo link personale per iscriversi: greedgelateria.github.io/i-gusti/?invito=XXXXXX\n\nIl tuo amico riceve 25% di sconto sul primo ordine.\nTu guadagni 50 punti extra appena fa il primo acquisto: un passo in più verso il livello superiore.\n\n— GREED Gelateria Naturale · Frascati`,
     payload: (c, v, imgUrl) => ({
       template: 'greed_referral',
       telefono: tel(c), nome: c.nome,
       immagineUrl: imgUrl,
-      var2: '{LINK}', var3: '20%', var4: '50'   // {LINK}: il server mette il link personale di ogni cliente
+      var2: '{LINK}', var3: '25%', var4: '50'   // {LINK}: il server mette il link personale di ogni cliente
     })
   },
   ora_furba_dormienti: {
