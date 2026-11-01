@@ -3397,7 +3397,7 @@ function lampeggiaSchermo() {
 function _creaPulsanteAudio() {
   const btn = document.createElement('div');
   btn.id = 'sbloccaAudioBtn';
-  btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;background:#E0A028;color:#16241C;padding:16px 24px;border-radius:30px;font-size:16px;font-weight:800;box-shadow:0 4px 20px rgba(0,0,0,0.3);cursor:pointer';
+  btn.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:99999;background:#E0A028;color:#16241C;padding:16px 24px;border-radius:30px;font-size:16px;font-weight:800;box-shadow:0 4px 20px rgba(0,0,0,0.3);cursor:pointer';
   btn.textContent = '🔔 Attiva notifiche vocali';
   btn.onclick = () => {
     // Sblocca la sintesi vocale con un primo speak dal gesto utente
