@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Club GREED — Banco e CRM (prova)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<style>.stat-card[onclick]:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12);transition:all .2s}.stat-card[onclick]:active{transform:translateY(0)}</style>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+</head>
+<body>
+
+<!-- ACCESSO: solo account Google GREED (Dario: tutto · staff: banco) -->
+<div id="pin-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;">
+  <div style="font-size:28px;font-weight:700;color:#c8a96e;letter-spacing:2px;margin-bottom:4px">GREED</div>
+  <div style="font-size:13px;color:#888;margin-bottom:34px">Club GREED — Accesso riservato</div>
+  <button id="crm-google-btn" onclick="window.loginGoogle()" style="background:#4285f4;color:#fff;border:none;padding:14px 30px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">🔑 Accedi con Google</button>
+  <div id="crm-google-err" style="color:#c0392b;font-size:12px;margin-top:12px;display:none"></div>
+  <div style="color:#666;font-size:11px;margin-top:26px;text-align:center;line-height:1.6">Banco: account staff GREED · Dario: account personale</div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="header-logo">GREED <span>Club CRM</span></div>
+    <button id="btnConnettiUSB" onclick="connettiStampanteUSB()" style="background:rgba(247,207,69,0.15);border:1px solid rgba(247,207,69,0.35);color:var(--yellow);font-family:Outfit,sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s" title="Connetti stampante Epson via USB">🖨️ Connetti USB</button>
+  </div>
+  <nav class="header-nav" id="mainNav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('clienti')">Clienti</button>
+    <button class="nav-btn" onclick="showView('cassa')">Cassa</button>
+    <button class="nav-btn" onclick="showView('checkin')">QR Check-in</button>
+    <button class="nav-btn" onclick="showView('iscrizione')">Form Iscrizione</button>
+    <button class="nav-btn" onclick="showView('campagne')">Campagne</button>
+    <button class="nav-btn" onclick="showView('ordini')">Ordini</button>
+    <button class="nav-btn" onclick="showView('calendario')">📅 Calendario</button>
+    <button class="nav-btn" onclick="showView('giftcard')">🎁 Gift Card</button>
+    <button class="nav-btn" onclick="showView('eventi')">🎉 Eventi</button>
+  </nav>
+  <div style="position:relative;margin-left:12px">
+    <input type="text" id="quickSearchInput" placeholder="🔍 Cerca cliente..." 
+      oninput="quickSearch(this.value)" onfocus="document.getElementById('quickSearchDrop').style.display='block'"
+      style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:6px 14px;color:#fff;font-size:13px;width:200px;outline:none">
+    <div id="quickSearchDrop" style="display:none;position:absolute;top:36px;left:0;width:300px;background:#1a2e1c;border:1px solid rgba(255,255,255,.15);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:9999;max-height:320px;overflow-y:auto"></div>
+  </div>
+</header>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: DASHBOARD
+═══════════════════════════════════════ -->
+<div class="view active" id="view-dashboard">
+  <div class="dashboard-grid" id="statsGrid">
+    <div class="stat-card">
+      <div class="stat-label">Clienti Totali</div>
+      <div class="stat-value" id="statTotali">—</div>
+      <div class="stat-sub">iscritti al Club Greed</div>
+    </div>
+    <div class="stat-card" onclick="filtraClientiPerLivello('esploratore')" style="cursor:pointer" title="Clicca per vedere gli Esploratori">
+      <div class="stat-label">Esploratori</div>
+      <div class="stat-value" id="statEsploratori">—</div>
+      <div class="stat-sub">0–199 punti</div>
+    </div>
+    <div class="stat-card" onclick="filtraClientiPerLivello('ambasciatore')" style="cursor:pointer" title="Clicca per vedere gli Ambasciatori">
+      <div class="stat-label">Ambasciatori</div>
+      <div class="stat-value" id="statAmbasciatori">—</div>
+      <div class="stat-sub">200–499 punti</div>
+    </div>
+    <div class="stat-card green" onclick="filtraClientiPerLivello('custode')" style="cursor:pointer" title="Clicca per vedere i Custodi del Gusto">
+      <div class="stat-label">Custodi del Gusto</div>
+      <div class="stat-value" id="statCustodi">—</div>
+      <div class="stat-sub">500+ punti</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Punti Distribuiti</div>
+      <div class="stat-value" id="statPunti">—</div>
+      <div class="stat-sub">totale programma</div>
+    </div>
+  </div>
+
+  <div class="table-section" style="margin-bottom:24px">
+    <div class="section-header">
+      <div class="section-title">📊 Segmentazione clienti RFM</div>
+      <span style="font-size:12px;color:var(--text-muted)">Clicca su un segmento per filtrare i clienti</span>
+    </div>
+    <div id="rfmSection" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;padding:4px 0"></div>
+  </div>
+
+  <div class="table-section">
+    <div class="section-header">
+      <div class="section-title">Ultimi iscritti</div>
+      <button class="btn btn-primary" onclick="showView('clienti')">Vedi tutti →</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Livello</th>
+            <th>Punti</th>
+            <th>Segmento</th>
+            <th>Iscritto il</th>
+          </tr>
+        </thead>
+        <tbody id="dashboardTable">
+          <tr><td colspan="5"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CLIENTI
+═══════════════════════════════════════ -->
+<div class="view" id="view-clienti">
+  <div class="table-section" style="padding-top:32px">
+    <div class="section-header">
+      <div class="section-title">Clienti Club Greed</div>
+      <div class="search-bar">
+        <input type="text" class="search-input" placeholder="Cerca per nome o email..." id="searchInput" oninput="filterClienti()">
+        <button class="btn btn-primary" onclick="openNuovoCliente()">+ Nuovo cliente</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Email / Tel</th>
+            <th>Livello</th>
+            <th>Punti</th>
+            <th>Iscritto</th>
+            <th>Azioni</th>
+          </tr>
+        </thead>
+        <tbody id="clientiTable">
+          <tr><td colspan="6"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CASSA
+═══════════════════════════════════════ -->
+<div class="view" id="view-cassa">
+  <div class="cassa-wrap">
+    <div class="cassa-title">Cassa — Carica Punti</div>
+    <div class="cassa-sub">Cerca il cliente per nome, email o codice QR</div>
+
+    <div class="scan-area">
+      <!-- Pulsante avvia fotocamera -->
+      <div id="qrStartArea" style="text-align:center;padding:12px 0 4px">
+        <button class="btn btn-primary" onclick="avviaScanner()" id="btnAvviaScanner" style="font-size:15px;padding:14px 32px;letter-spacing:.06em">
+          📷 Inquadra QR cliente
+        </button>
+        <div style="margin:14px 0 6px;font-size:12px;color:var(--text-muted)">— oppure cerca manualmente —</div>
+        <div style="display:flex;gap:10px;max-width:400px;margin:0 auto">
+          <input type="text" class="form-input" placeholder="Nome, email o codice GRD-..." id="cassaSearch" oninput="cercaClienteCassa()">
+          <button class="btn btn-primary" onclick="cercaClienteCassa()">Cerca</button>
+        </div>
+        <div id="cassaResults" style="margin-top:16px;text-align:left;max-width:400px;margin:16px auto 0"></div>
+      </div>
+      <!-- Finestra fotocamera -->
+      <div id="qrScanArea" style="display:none;text-align:center">
+        <div style="position:relative;width:280px;margin:0 auto 12px">
+          <video id="qrVideo" style="width:280px;height:280px;object-fit:cover;border-radius:10px;border:3px solid var(--green)" playsinline></video>
+        </div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Avvicina il QR del cliente alla fotocamera</p>
+        <button class="btn btn-ghost btn-sm" onclick="fermaScanner()">✕ Chiudi fotocamera</button>
+      </div>
+    </div>
+
+    <div class="cliente-found" id="clienteFound">
+      <div class="cliente-info">
+        <div class="cliente-avatar" id="foundAvatar"></div>
+        <div>
+          <div class="cliente-name" id="foundName"></div>
+          <div class="cliente-meta" id="foundMeta"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px">
+        <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Punti spendibili</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:var(--green)" id="foundPunti">0</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Punti storici</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:var(--gold)" id="foundPuntiStorici">0</div>
+        </div>
+        <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Livello</div>
+          <div style="font-size:14px;font-weight:600;color:var(--green);margin-top:4px" id="foundLevel">—</div>
+        </div>
+      </div>
+
+      <div id="cassaAmicoBox" style="display:none;background:#fff4dd;border:1.5px solid var(--yellow);border-radius:10px;padding:16px 20px;margin-bottom:16px"></div>
+
+      <div style="background:var(--cream);border-radius:10px;padding:20px;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px">Aggiungi punti acquisto</div>
+        <div class="punti-add-form">
+          <div class="form-group">
+            <label class="form-label">Importo €</label>
+            <input type="number" class="form-input" id="cassaImporto" placeholder="Es: 12.50" min="0" step="0.5" oninput="calcolaPunti()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Punti da aggiungere</label>
+            <input type="number" class="form-input" id="cassaPuntiCalc" placeholder="Automatico" readonly style="background:var(--cream-dark)">
+          </div>
+          <button class="btn btn-secondary" onclick="aggiungiPuntiCassa()" style="margin-bottom:0;flex-shrink:0">Aggiungi</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost btn-sm" onclick="aggiungiCheckinCassa()">✓ Check-in (+5 pt)</button>
+        <button class="btn btn-ghost btn-sm" onclick="openQrCliente(currentCassaCliente)">QR cliente</button>
+        <button class="btn btn-danger btn-sm" onclick="resetCassa()" style="margin-left:auto">✕ Chiudi</button>
+      </div>
+
+      <!-- Premi Social -->
+      <div style="background:var(--cream);border-radius:10px;padding:16px 20px;margin-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px">🌟 Premi Social</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('google',15)">⭐ Google +15</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tripadvisor',15)">🦉 TripAdvisor +15</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('instagram',10)">📸 Story IG +10</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('facebook',10)">📘 Story FB +10</button>
+          <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tiktok',10)">🎵 Story TikTok +10</button>
+        </div>
+      </div>
+
+      <!-- ═══ RISCATTA PREMIO ═══ -->
+      <div style="background:var(--green);border-radius:12px;padding:20px;margin-top:12px;color:#fff">
+        <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--yellow);margin-bottom:14px">🎁 Riscatta Premio</div>
+
+        <!-- Doppio saldo punti -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+          <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:4px">Punti accumulati</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--yellow)" id="premioStorici">0</div>
+            <div style="font-size:10px;opacity:0.6;margin-top:2px">non scendono mai</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:4px">Punti disponibili</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#fff" id="premioDisponibili">0</div>
+            <div style="font-size:10px;opacity:0.6;margin-top:2px">per riscattare premi</div>
+          </div>
+        </div>
+
+        <!-- Bottoni premi -->
+        <div style="display:flex;flex-direction:column;gap:8px" id="premioBtns">
+          <!-- generati da JS -->
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: CHECK-IN QR
+═══════════════════════════════════════ -->
+<div class="view" id="view-checkin">
+  <div class="checkin-wrap">
+    <div class="checkin-qr-day">
+      <div class="checkin-title">QR Check-in Giornaliero</div>
+      <div class="checkin-date" id="checkinDate"></div>
+      <div style="display:flex;justify-content:center;margin:20px 0">
+        <div class="qr-canvas-wrap">
+          <div id="checkinQrCanvas" style="width:200px;height:200px;margin:0 auto"></div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);max-width:300px;margin:0 auto;line-height:1.5">
+        Esponi questo QR in cassa. Cambia ogni giorno automaticamente.
+      </div>
+      <div class="checkin-points-badge">+5 punti presenza</div>
+    </div>
+    <button class="btn btn-primary" onclick="stampaQRGiorno()" style="width:100%"> Stampa QR del giorno</button>
+
+    <div style="margin-top:32px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--green);margin-bottom:16px">Check-in di oggi</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Cliente</th><th>Orario</th><th>Punti</th></tr></thead>
+          <tbody id="checkinTable"><tr><td colspan="3"><div class="empty"><div class="empty-icon">☕</div><div class="empty-text">Nessun check-in oggi</div></div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════ STATISTICHE ANNUALI CHECK-IN ═══════ -->
+    <div style="margin-top:48px;padding-top:32px;border-top:2px dashed rgba(0,0,0,0.08)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--green)">📊 Statistiche <span id="statsAnno">2026</span></div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Il cliente più fedele dell'anno riceve una vaschetta di gelato in regalo 🍦</div>
+        </div>
+        <select id="statsAnnoSelect" onchange="loadStatistichePresenze()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);font-family:inherit;font-size:14px;background:#fff;cursor:pointer">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+
+      <!-- KPI grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:14px;margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Totale check-in</div>
+          <div class="stat-value" id="statsTotaleAnno">—</div>
+          <div class="stat-sub">nell'anno</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Clienti unici</div>
+          <div class="stat-value" id="statsClientiUnici">—</div>
+          <div class="stat-sub">hanno fatto check-in</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Media giornaliera</div>
+          <div class="stat-value" id="statsMediaGiorno">—</div>
+          <div class="stat-sub">check-in/giorno</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Miglior giorno</div>
+          <div class="stat-value" id="statsMigliorGiornoValue" style="font-size:20px">—</div>
+          <div class="stat-sub" id="statsMigliorGiornoData">—</div>
+        </div>
+      </div>
+
+      <!-- CARD CLIENTE PIÙ FEDELE (in evidenza) -->
+      <div id="campioneCard" style="background:linear-gradient(135deg, #1a2e1a 0%, #2d4a2d 100%);color:#fff;padding:28px;border-radius:16px;margin-bottom:24px;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,0.18)">
+        <div style="position:absolute;top:-20px;right:-20px;font-size:160px;opacity:0.07">👑</div>
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);font-weight:600;margin-bottom:8px">🏆 Cliente più fedele <span id="statsAnnoCampione">2026</span></div>
+        <div id="campioneNome" style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;margin-bottom:6px">Caricamento...</div>
+        <div id="campioneStats" style="font-size:14px;opacity:0.85;margin-bottom:14px">—</div>
+        <div style="background:rgba(247,207,69,0.18);border:1px solid rgba(247,207,69,0.4);padding:10px 16px;border-radius:8px;display:inline-block;font-size:13px;color:var(--yellow)">
+          🍦 Regalo di fine anno: vaschetta gelato in omaggio
+        </div>
+      </div>
+
+      <!-- Top 10 clienti fedeli -->
+      <div style="margin-bottom:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--green)">🏅 Top 10 clienti fedeli</div>
+          <button class="btn" onclick="stampaClassifica()" style="font-size:13px">🖨️ Stampa classifica per il negozio</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:50px">#</th><th>Cliente</th><th>Check-in</th><th>Primo</th><th>Ultimo</th></tr></thead>
+            <tbody id="topFedeliTable"><tr><td colspan="5"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Caricamento...</div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Grafico mensile -->
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--green);margin-bottom:12px">📈 Andamento mensile</div>
+        <div style="background:var(--white);border-radius:12px;padding:20px;border:1px solid rgba(0,0,0,0.06)">
+          <div id="graficoMensile" style="display:flex;align-items:flex-end;gap:6px;height:200px;padding:10px 0;border-bottom:2px solid rgba(0,0,0,0.08);position:relative"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">
+            <div style="flex:1">Gen</div><div style="flex:1">Feb</div><div style="flex:1">Mar</div><div style="flex:1">Apr</div>
+            <div style="flex:1">Mag</div><div style="flex:1">Giu</div><div style="flex:1">Lug</div><div style="flex:1">Ago</div>
+            <div style="flex:1">Set</div><div style="flex:1">Ott</div><div style="flex:1">Nov</div><div style="flex:1">Dic</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ═══════ FINE STATISTICHE ANNUALI ═══════ -->
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: FORM ISCRIZIONE
+═══════════════════════════════════════ -->
+<div class="view" id="view-iscrizione">
+  <div class="iscrizione-wrap">
+    <div class="iscrizione-card">
+      <div class="iscrizione-logo">GREED</div>
+      <div class="iscrizione-sub">Unisciti al Club — Non un semplice gelato. Un'esperienza riservata.</div>
+
+      <div id="iscrizioneForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nome *</label>
+            <input type="text" class="form-input" id="regNome" placeholder="Mario">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Cognome *</label>
+            <input type="text" class="form-input" id="regCognome" placeholder="Rossi">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="regEmail" placeholder="mario.rossi@email.it">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Telefono *</label>
+          <input type="tel" class="form-input" id="regTel" placeholder="+39 333 123 4567">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data di nascita</label>
+          <input type="date" class="form-input" id="regNascita">
+        </div>
+        <hr class="form-divider">
+        <div class="form-group">
+          <label class="form-label">Consensi</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" id="regPrivacy" required>
+              <span>* Acconsento al trattamento dei dati personali ai sensi del GDPR (obbligatorio)</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="regMarketing">
+              <span>Acconsento a ricevere comunicazioni marketing via email</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="regSms">
+              <span>Acconsento a ricevere comunicazioni via SMS/WhatsApp</span>
+            </label>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px;border-radius:10px" onclick="registraCliente()">
+          Iscriviti al Club Greed →
+        </button>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:12px;line-height:1.5">
+          I tuoi dati sono al sicuro e non vengono ceduti a terzi.<br>
+          Piazza Roma 16, Frascati — gelateriagreed.it
+        </div>
+      </div>
+
+      <div class="iscrizione-success" id="iscrizioneSuccess">
+        <div class="success-icon"></div>
+        <div class="success-title">Benvenuto nel Club!</div>
+        <div class="success-text" id="successText"></div>
+        <button class="btn btn-primary" style="margin-top:24px" onclick="resetForm()">Nuova iscrizione</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODALS
+═══════════════════════════════════════ -->
+
+<!-- Modal: Nuovo/Modifica Cliente -->
+<div class="modal-overlay" id="modalCliente">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modalCliente')">×</button>
+    <div class="modal-title" id="modalClienteTitle">Nuovo Cliente</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nome *</label>
+        <input type="text" class="form-input" id="mNome" placeholder="Mario">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cognome *</label>
+        <input type="text" class="form-input" id="mCognome" placeholder="Rossi">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email *</label>
+      <input type="email" class="form-input" id="mEmail" placeholder="mario@email.it">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Telefono</label>
+      <input type="tel" class="form-input" id="mTel" placeholder="+39 333 123 4567">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data di nascita</label>
+      <input type="date" class="form-input" id="mNascita">
+    </div>
+    <input type="hidden" id="mPunti" value="0">
+    <div class="form-group">
+      <label class="form-label">Consensi</label>
+      <div class="checkbox-group">
+        <label class="checkbox-item"><input type="checkbox" id="mPrivacy"> Privacy accettata</label>
+        <label class="checkbox-item"><input type="checkbox" id="mMarketing"> Marketing email</label>
+        <label class="checkbox-item"><input type="checkbox" id="mSms"> SMS/WhatsApp</label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalCliente')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaCliente()" id="btnSalvaCliente">Salva cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: QR Cliente -->
+<div class="modal-overlay" id="modalQr">
+  <div class="modal" style="width:400px;text-align:center">
+    <button class="modal-close" onclick="closeModal('modalQr')">×</button>
+    <div class="modal-title" style="text-align:center">QR Cliente</div>
+    <div class="qr-display">
+      <div class="qr-canvas-wrap">
+        <canvas id="qrCanvas" width="200" height="200"></canvas>
+      </div>
+      <div class="qr-name" id="qrName"></div>
+      <div class="qr-level" id="qrLevel"></div>
+      <div class="qr-points"><span id="qrPoints">0</span> <span style="font-size:16px;color:var(--text-muted)">punti</span></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="window.print()"> Stampa QR</button>
+  </div>
+</div>
+
+<!-- Modal: Aggiungi Punti -->
+<div class="modal-overlay" id="modalPunti">
+  <div class="modal" style="width:400px">
+    <button class="modal-close" onclick="closeModal('modalPunti')">×</button>
+    <div class="modal-title">Gestisci Punti</div>
+    <div class="punti-current">
+      <div>
+        <div class="punti-current-label">Punti attuali</div>
+        <div class="punti-current-val" id="modalPuntiAttuali">0</div>
+      </div>
+      <div id="modalLivelloAttuale"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Importo acquisto (€)</label>
+      <input type="number" class="form-input" id="importoAcquisto" placeholder="Es: 15.00" min="0" step="0.5" oninput="aggiornaCalcoloPunti()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Punti da aggiungere</label>
+      <input type="number" class="form-input" id="puntiDaAggiungere" placeholder="Automatico" oninput="syncPuntiManuali()">
+    </div>
+    <div style="background:var(--cream);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-muted);margin-bottom:16px">
+       Esploratore: 2 pt/€ · Ambasciatore: 3 pt/€ · Custode: 4 pt/€
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modalPunti')">Annulla</button>
+      <button class="btn btn-secondary" onclick="confermaPunti()">Aggiungi punti</button>
+    </div>
+    <div style="border-top:1px solid var(--cream-dark);margin-top:16px;padding-top:16px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">🏆 Riscatta Premio</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button onclick="riscattaPremio('Cono/coppetta piccolo',150)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍦</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Cono/coppetta</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">150 punti</div>
+        </button>
+        <button onclick="riscattaPremio('Vaschetta gelato 500g',350)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍨</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Vaschetta 500g</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">350 punti</div>
+        </button>
+        <button onclick="riscattaPremio('Vaschetta gelato 750g',500)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍨</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Vaschetta 750g</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">500 punti</div>
+        </button>
+        <button onclick="riscattaPremio('Vaschetta gelato 1kg',650)" style="padding:10px 8px;background:var(--cream);border:1.5px solid var(--green);border-radius:10px;cursor:pointer;font-family:'DM Sans',sans-serif;text-align:center">
+          <div style="font-size:1.1rem">🍨</div>
+          <div style="font-size:0.78rem;font-weight:700;color:var(--green)">Vaschetta 1kg</div>
+          <div style="font-size:0.72rem;color:var(--text-muted)">650 punti</div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Storico Punti Cliente -->
+<div class="modal-overlay" id="modalStorico">
+  <div class="modal" style="width:560px">
+    <button class="modal-close" onclick="closeModal('modalStorico')">×</button>
+    <div class="modal-title">Storico — <span id="storicoNome" style="color:var(--green-light)"></span></div>
+    <div id="storicoTotale" style="background:var(--cream);border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)">Punti totali</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700;color:var(--green)" id="storicoTotPunti">0</div>
+    </div>
+    <div id="storicoList" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;color:var(--text-muted);padding:20px">Caricamento...</div>
+    </div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STAMPA EPSON TM-m30III
+// Cascata: 1) WebUSB diretto  2) Bridge HTTP  3) Finestra browser
+// ═══════════════════════════════════════════════════════════════
+
+// ── Stato USB ──────────────────────────────────────────────────
+let _usbDevice = null;
+let _usbEndpointOut = null;
+
+// Tenta riconnessione automatica a device già autorizzato
+async function _usbAutoConnect() {
+  if (!navigator.usb) return false;
+  try {
+    const devices = await navigator.usb.getDevices();
+    const epson = devices.find(d => d.vendorId === 0x04b8);
+    if (!epson) return false;
+    await epson.open();
+    if (epson.configuration === null) await epson.selectConfiguration(1);
+    await epson.claimInterface(0);
+    _usbDevice = epson;
+    _usbEndpointOut = epson.configuration.interfaces[0].alternate.endpoints
+      .find(e => e.direction === 'out');
+    console.log('[USB] Autoconnesso:', epson.productName);
+    return true;
+  } catch(e) {
+    console.log('[USB] Autoconnect fallito:', e.message);
+    return false;
+  }
+}
+
+// Chiamata manuale dal pulsante (richiede gesto utente)
+window.connettiStampanteUSB = async function() {
+  if (!navigator.usb) {
+    showToast('WebUSB non supportato su questo browser', 'error');
+    return;
+  }
+  try {
+    const device = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x04b8 }] });
+    await device.open();
+    if (device.configuration === null) await device.selectConfiguration(1);
+    await device.claimInterface(0);
+    _usbDevice = device;
+    _usbEndpointOut = device.configuration.interfaces[0].alternate.endpoints
+      .find(e => e.direction === 'out');
+    showToast('Stampante USB connessa ✓');
+    // Aggiorna icona pulsante
+    const btn = document.getElementById('btnConnettiUSB');
+    if (btn) { btn.textContent = '🖨️ USB connessa'; btn.style.background = 'var(--success)'; btn.style.color = '#fff'; }
+  } catch(e) {
+    showToast('Connessione USB annullata o fallita', 'error');
+    console.error(e);
+  }
+};
+
+// ── Builder ESC/POS ────────────────────────────────────────────
+function _buildEscPos(o) {
+  const enc = new TextEncoder();
+  const chunks = [];
+  const cmd = (...b) => chunks.push(new Uint8Array(b));
+  const txt = s => chunks.push(enc.encode(s));
+
+  // Init + centra
+  cmd(0x1B, 0x40);
+  cmd(0x1B, 0x61, 0x01);
+  // Logo testuale grande
+  cmd(0x1D, 0x21, 0x11);   // double width + height
+  txt('GREED\n');
+  cmd(0x1D, 0x21, 0x00);   // reset size
+  txt('Gelateria Naturale - Frascati\n');
+  txt('Piazza Roma 16\n');
+  txt('--------------------------------\n');
+
+  // Dati ordine — sinistra
+  cmd(0x1B, 0x61, 0x00);
+  cmd(0x1D, 0x21, 0x01);   // double height per ID ordine
+  txt('Ordine: ' + (o.ordineId || '-') + '\n');
+  cmd(0x1D, 0x21, 0x00);
+  txt('Cliente: ' + (o.nome||'') + ' ' + (o.cognome||'') + '\n');
+  txt('Tel: ' + (o.telefono||'-') + '\n');
+  txt('--------------------------------\n');
+
+  // Carrello
+  if (o.carrello && o.carrello.length) {
+    o.carrello.forEach(function(item) {
+      cmd(0x1B, 0x45, 0x01);  // bold ON
+      txt((item.vaschetta || '-') + '\n');
+      cmd(0x1B, 0x45, 0x00);  // bold OFF
+      if (item.gusti && item.gusti.length) txt('  ' + item.gusti.join(', ') + '\n');
+      if (item.scorta) txt('  * Scorta: ' + item.scorta + '\n');
+      if (item.panna) txt('  + Panna EUR ' + (item.pannaCosto||0).toFixed(2) + '\n');
+      if (item.miniconi) txt('  + Kit 9 miniconi EUR 1,50\n');
+      if (item.cono) txt('  + ' + item.cono + '\n');
+      if (item.note) txt('  Nota: ' + item.note + '\n');
+      txt('  EUR ' + (item.prezzoFinale||item.pFin||0).toFixed(2) + '\n');
+    });
+  }
+
+  // Totale
+  txt('--------------------------------\n');
+  cmd(0x1D, 0x21, 0x01);   // double height
+  cmd(0x1B, 0x45, 0x01);
+  txt('TOTALE: EUR ' + (o.totale||0).toFixed(2) + '\n');
+  cmd(0x1B, 0x45, 0x00);
+  cmd(0x1D, 0x21, 0x00);
+  txt('\n');
+  cmd(0x1B, 0x61, 0x01);   // centra
+  txt('Grazie e a presto!\n');
+  txt('gelateriagreed.it\n');
+  txt('\n\n\n');
+  cmd(0x1D, 0x56, 0x41, 0x03);  // partial cut
+
+  // Unisci chunk
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  return out;
+}
+
+// ── Encoding CP858 per accentate (Epson default codepage) ──────
+function _cp858(s) {
+  const map = {
+    'à':0x85,'è':0x8A,'é':0x82,'ì':0x8D,'ò':0x95,'ù':0x97,
+    'À':0xB7,'È':0xD4,'É':0x90,'Ì':0xDE,'Ò':0xE3,'Ù':0xEB,
+    'ä':0x84,'ë':0x89,'ï':0x8B,'ö':0x94,'ü':0x81,
+    'Ä':0x8E,'Ë':0xD3,'Ï':0xD8,'Ö':0x99,'Ü':0x9A,
+    'ñ':0xA4,'Ñ':0xA5,'ç':0x87,'Ç':0x80,'·':0xF9,'€':0xD5
+  };
+  const out = [];
+  for (const ch of s) {
+    if (map[ch] !== undefined) out.push(map[ch]);
+    else if (ch.charCodeAt(0) < 128) out.push(ch.charCodeAt(0));
+    else out.push(0x3F); // '?' per caratteri sconosciuti
+  }
+  return new Uint8Array(out);
+}
+
+// ── Builder ESC/POS per QR check-in ────────────────────────────
+function _buildEscPosQR(payload) {
+  const chunks = [];
+  const cmd = (...b) => chunks.push(new Uint8Array(b));
+  const txt = s => chunks.push(_cp858(s));
+
+  cmd(0x1B, 0x40);              // init
+  cmd(0x1B, 0x61, 0x01);        // centra
+
+  // ── CLUB GREED grande ──
+  cmd(0x1D, 0x21, 0x11);        // double width+height
+  txt('CLUB GREED\n');
+  cmd(0x1D, 0x21, 0x00);        // reset
+  txt('Gelateria Naturale \xF9 Frascati\n'); // · in CP858 = 0xF9
+
+  if (payload.tipo === 'qr_checkin') {
+    // Data con accentate corrette
+    const oggi = new Date();
+    const giorni = ['domenica','lunedi','martedi','mercoledi','giovedi','venerdi','sabato'];
+    const mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    const dataStr = giorni[oggi.getDay()] + ' ' + oggi.getDate() + ' ' + mesi[oggi.getMonth()];
+    txt(dataStr + '\n');
+  } else {
+    txt((payload.nome || '') + '\n');
+  }
+
+  // Linea tratteggiata
+  cmd(0x1B, 0x61, 0x01);
+  txt('- - - - - - - - - - - - - - - -\n');
+  txt('Scansiona e guadagna punti!\n\n');
+
+  // ── QR Code ESC/POS nativo (GS ( k) ──
+  const enc = new TextEncoder();
+  const qrStr = payload.qrData || '';
+  const qrBytes = enc.encode(qrStr);
+  const len = qrBytes.length + 3;
+  const pL = len & 0xFF, pH = (len >> 8) & 0xFF;
+  cmd(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // modello 2
+  cmd(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x08);        // modulo size 8 (più grande)
+  cmd(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);        // correzione M
+  chunks.push(new Uint8Array([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]));
+  chunks.push(qrBytes);
+  cmd(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);        // stampa QR
+
+  // ── Testo sotto QR ──
+  txt('\n');
+  txt('- - - - - - - - - - - - - - - -\n');
+  if (payload.tipo === 'qr_checkin') {
+    txt('Ogni acquisto ti avvicina\n');
+    txt('a premi esclusivi.\n');
+    txt('Entra nella famiglia GREED!\n');
+    txt('Iscriviti gratis su\n');
+    txt('gelateriagreed.it\n');
+  } else {
+    txt((payload.nome || '') + '\n');
+    txt('Livello: ' + (payload.livello || '') + '\n');
+    txt('Punti: ' + (payload.punti || 0) + '\n');
+  }
+  txt('\n\n\n');
+  cmd(0x1D, 0x56, 0x41, 0x03); // partial cut
+
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  return out;
+}
+
+// ── Stampa via WebUSB ──────────────────────────────────────────
+async function _stampaUSB(escPosBytes) {
+  if (!_usbDevice || !_usbEndpointOut) {
+    const ok = await _usbAutoConnect();
+    if (!ok) return false;
+  }
+  try {
+    await _usbDevice.transferOut(_usbEndpointOut.endpointNumber, escPosBytes);
+    return true;
+  } catch(e) {
+    console.error('[USB] Errore transferOut:', e);
+    _usbDevice = null; _usbEndpointOut = null;
+    return false;
+  }
+}
+
+// ── Stampa via Firestore → printerJobHandler (no PC, no cavo) ──
+async function _stampaFirestore(payload) {
+  try {
+    await addDoc(collection(db, 'print_jobs'), {
+      ...payload,
+      stampato: false,
+      createdAt: serverTimestamp()
+    });
+    return true;
+  } catch(e) {
+    console.error('[STAMPA] Errore Firestore:', e);
+    return false;
+  }
+}
+
+// ── Fallback: finestra browser ─────────────────────────────────
+function _stampaFinestraBrowser(o) {
+  var riga = '--------------------------------';
+  var gusti = '';
+  if (o.carrello && o.carrello.length) {
+    o.carrello.forEach(function(item) {
+      gusti += '<div style="margin:6px 0"><b>' + (item.vaschetta||'-') + '</b><br>';
+      if (item.gusti && item.gusti.length) gusti += item.gusti.join(', ') + '<br>';
+      if (item.panna) gusti += '+ Panna EUR ' + (item.pannaCosto||0).toFixed(2) + '<br>';
+      if (item.cono) gusti += '+ ' + item.cono + '<br>';
+      if (item.note) gusti += 'Nota: ' + item.note + '<br>';
+      gusti += 'EUR ' + (item.prezzoFinale||item.pFin||0).toFixed(2) + '</div>';
+    });
+  }
+  var w = window.open('', '_blank', 'width=300,height=600');
+  if (!w) { showToast('Popup bloccato — abilita popup per stampa', 'error'); return; }
+  w.document.write('<html><body style="font-family:monospace;font-size:13px;width:280px;margin:0 auto">' +
+    '<div style="text-align:center"><b style="font-size:18px">GREED</b><br>Gelateria Naturale<br>Piazza Roma 16 - Frascati<br>' + riga + '</div>' +
+    '<div><b>Ordine:</b> ' + (o.ordineId||'-') + '<br>' +
+    '<b>Cliente:</b> ' + (o.nome||'') + ' ' + (o.cognome||'') + '<br>' +
+    '<b>Tel:</b> ' + (o.telefono||'-') + '<br>' + riga + '</div>' +
+    gusti +
+    '<div>' + riga + '<br><b style="font-size:15px">TOTALE: EUR ' + (o.totale||0).toFixed(2) + '</b></div>' +
+    '<div style="text-align:center;margin-top:10px">Grazie e a presto!<br>gelateriagreed.it</div>' +
+    '</body></html>');
+  w.document.close();
+  w.print();
+}
+
+// ── Funzione principale stampa ordine (cascata) ────────────────
+window.stampaOrdine = async function() {
+  const o = window._ordineCorrente?.ordine;
+  if (!o) return;
+
+  // 1) USB diretto (se connesso via hub)
+  const escPos = _buildEscPos(o);
+  const okUsb = await _stampaUSB(escPos);
+  if (okUsb) { showToast('🖨️ Stampa inviata ✓'); return; }
+
+  // 2) Firestore → printerJobHandler (fallback)
+  const fsPayload = {
+    tipo: 'ordine',
+    ordineId: o.ordineId,
+    nome: o.nome||'',
+    cognome: o.cognome||'',
+    telefono: o.telefono||'-',
+    metodoPagamento: o.metodoPagamento||'-',
+    carrello: o.carrello||[],
+    totale: o.totale||0
+  };
+  const okFs = await _stampaFirestore(fsPayload);
+  if (okFs) { showToast('🖨️ Stampa inviata ✓'); return; }
+
+  // 3) Fallback finestra browser
+  showToast('Stampa non disponibile — apertura finestra browser', 'error');
+  _stampaFinestraBrowser(o);
+};
+
+// ── CLASSIFICA CHECK-IN DA ESPORRE ── solo numeri socio, niente nomi (privacy)
+const PREMI_GARA = ['Vaschetta di gelato da 1 kg', 'Vaschetta di gelato da 500 g', 'Cono 3 gusti'];
+window.stampaClassifica = async function() {
+  try {
+    showToast('⏳ Preparo la classifica…');
+    const r = await fetch('https://europe-west3-club-greed.cloudfunctions.net/classificaCheckin?n=10');
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error(j.error || ('errore ' + r.status));
+    // Stessa cascata del QR del giorno: prima la stampante USB collegata al Tablet, poi il server
+    let ok = await _stampaUSB(_escPosClassifica(j));
+    if (!ok) ok = await _stampaFirestore({ tipo: 'classifica', _rawXml: _xmlClassifica(j) });
+    // Messaggio in finestra: il riquadro in basso può essere coperto dal pulsante delle notifiche vocali
+    alert(ok ? '🖨️ Classifica inviata alla stampante (' + j.top.length + ' posti, ' + j.partecipanti + ' partecipanti).' : '❌ Stampa non riuscita: la richiesta non è arrivata alla stampante.');
+  } catch (e) { alert('❌ Classifica non disponibile: ' + e.message); }
+};
+// Classifica in comandi ESC/POS per la stampante USB (stesso formato dello scontrino del QR)
+function _escPosClassifica(j) {
+  const chunks = [];
+  const cmd = (...b) => chunks.push(new Uint8Array(b));
+  const txt = s => chunks.push(_cp858(s));
+  const fine = new Date(j.fineGara + 'T23:59:59');
+  const giorni = Math.max(0, Math.ceil((fine - new Date()) / 86400000));
+  cmd(0x1B, 0x40); cmd(0x1B, 0x61, 0x01);
+  cmd(0x1D, 0x21, 0x11); txt('GREED\n'); cmd(0x1D, 0x21, 0x00);
+  txt('Gelateria Naturale \xF9 Frascati\n');
+  txt('- - - - - - - - - - - - - - - -\n\n');
+  cmd(0x1B, 0x45, 0x01); cmd(0x1D, 0x21, 0x01); txt('CLASSIFICA CLUB GREED\n'); cmd(0x1D, 0x21, 0x00); cmd(0x1B, 0x45, 0x00);
+  txt('Check-in ' + j.anno + ' - aggiornata al ' + new Date().toLocaleDateString('it-IT') + '\n\n');
+  cmd(0x1B, 0x61, 0x00); cmd(0x1B, 0x45, 0x01);
+  if (j.top.length) {
+    j.top.forEach(x => {
+      const sx = String(x.posizione).padStart(2, ' ') + '.  Socio N. ' + x.numeroSocio;
+      const dx = x.checkin + ' check-in';
+      txt(sx + ' '.repeat(Math.max(1, 42 - sx.length - dx.length)) + dx + '\n');
+    });
+  } else txt('Nessun check-in ancora: inizia tu!\n');
+  cmd(0x1B, 0x45, 0x00); cmd(0x1B, 0x61, 0x01);
+  txt('\n- - - - - - - - - - - - - - - -\n');
+  cmd(0x1B, 0x45, 0x01); txt('IL 15 DICEMBRE SI PREMIA!\n'); cmd(0x1B, 0x45, 0x00);
+  txt('1. ' + PREMI_GARA[0] + '\n2. ' + PREMI_GARA[1] + '\n3. ' + PREMI_GARA[2] + '\n\n');
+  cmd(0x1B, 0x45, 0x01); txt(giorni > 0 ? 'Mancano ' + giorni + ' giorni\n\n' : 'Gara conclusa\n\n'); cmd(0x1B, 0x45, 0x00);
+  txt('Il tuo numero socio compare quando\nfai il check-in con il QR del giorno.\nA parita di check-in vince chi ci e\narrivato prima.\n\n');
+  txt('Partecipanti: ' + j.partecipanti + '\n\n\n\n');
+  cmd(0x1D, 0x56, 0x41, 0x03);
+  const out = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0)); let off = 0;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  return out;
+}
+function _xmlClassifica(j) {
+  const e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const oggi = new Date();
+  const fine = new Date(j.fineGara + 'T23:59:59');
+  const giorni = Math.max(0, Math.ceil((fine - oggi) / 86400000));
+  const riga = x => {
+    const sx = (String(x.posizione).padStart(2, ' ') + '.  Socio N. ' + x.numeroSocio);
+    const dx = x.checkin + ' check-in';
+    return sx + ' '.repeat(Math.max(1, 42 - sx.length - dx.length)) + dx;
+  };
+  const righe = j.top.length ? j.top.map(riga).join('\n') : 'Nessun check-in ancora: inizia tu!';
+  return `<?xml version="1.0" encoding="utf-8"?>
+<PrintRequestInfo Version="2.00">
+  <ePOSPrint>
+    <Parameter><devid>local_printer</devid><timeout>10000</timeout><printjobid>CL${Date.now()}</printjobid></Parameter>
+    <PrintData>
+      <epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">
+        <text align="center" em="true" dh="true" dw="true">GREED\n</text>
+        <text align="center" em="false" dh="false" dw="false">Gelateria Naturale - Frascati\n</text>
+        <text align="center">- - - - - - - - - - - - - - - -\n</text>
+        <feed line="1"/>
+        <text align="center" em="true" dh="true" dw="false">CLASSIFICA CLUB GREED\n</text>
+        <text align="center" em="false" dh="false">Check-in ${e(j.anno)} - aggiornata al ${e(oggi.toLocaleDateString('it-IT'))}\n</text>
+        <feed line="1"/>
+        <text align="left" em="true">${e(righe)}\n</text>
+        <feed line="1"/>
+        <text align="center">- - - - - - - - - - - - - - - -\n</text>
+        <text align="center" em="true">IL 15 DICEMBRE SI PREMIA!\n</text>
+        <text align="center" em="false">1. ${e(PREMI_GARA[0])}\n2. ${e(PREMI_GARA[1])}\n3. ${e(PREMI_GARA[2])}\n</text>
+        <feed line="1"/>
+        <text align="center" em="true">${giorni > 0 ? 'Mancano ' + giorni + ' giorni' : 'Gara conclusa'}\n</text>
+        <feed line="1"/>
+        <text align="center" em="false">Il tuo numero socio compare quando\nfai il check-in con il QR del giorno.\nA parita di check-in vince chi ci e\narrivato prima.\n</text>
+        <feed line="1"/>
+        <text align="center">Partecipanti: ${e(j.partecipanti)}\n</text>
+        <feed line="3"/>
+        <cut type="feed"/>
+      </epos-print>
+    </PrintData>
+  </ePOSPrint>
+</PrintRequestInfo>`;
+}
+
+// ── stampaQRGiorno e stampaQRCliente aggiornati (cascata) ──────
+window.stampaQRGiorno = async function() {
+  const _oggi = new Date(); const _p2 = n => String(n).padStart(2,'0'); const dayCode = _oggi.getFullYear() + _p2(_oggi.getMonth()+1) + _p2(_oggi.getDate());
+  const qrData = 'https://greedgelateria.github.io/checkin/?code=GREED-CHECKIN-' + dayCode;
+  const oggi = new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
+  const payload = { tipo: 'qr_checkin', qrData, titolo: 'QR Check-in Giornaliero', sottotitolo: oggi };
+
+  // 1) USB diretto (se connesso)
+  const escPos = _buildEscPosQR(payload);
+  const okUsb = await _stampaUSB(escPos);
+  if (okUsb) { showToast('🖨️ QR giorno stampato ✓'); return; }
+
+  // 2) Firestore → printerJobHandler (fallback)
+  const okFs = await _stampaFirestore(payload);
+  if (okFs) { showToast('🖨️ QR giorno inviato ✓'); return; }
+
+  showToast('Stampa QR non disponibile', 'error');
+};
+
+window.stampaQRCliente = async function() {
+  const c = window.allClienti && window.allClienti.find(x => x.id === window.currentQRClienteId);
+  if (!c) { showToast('Nessun cliente selezionato', 'error'); return; }
+  const qrData = 'https://greedgelateria.github.io/checkin/?qr=' + (c.qrCode || c.id);
+  const payload = { tipo: 'qr_cliente', qrData, nome: c.nome + ' ' + (c.cognome||''), punti: c.punti||0, livello: (window.getLivello ? window.getLivelloCliente(c).nome : '') };
+
+  // 1) USB diretto (se connesso)
+  const escPos = _buildEscPosQR(payload);
+  const okUsb = await _stampaUSB(escPos);
+  if (okUsb) { showToast('🖨️ QR cliente stampato ✓'); return; }
+
+  // 2) Firestore → printerJobHandler (fallback)
+  const okFs = await _stampaFirestore(payload);
+  if (okFs) { showToast('🖨️ QR cliente inviato ✓'); return; }
+
+  showToast('Stampa QR non disponibile', 'error');
+};
+
+// Auto-connect al caricamento pagina (silenzioso)
+if (navigator.usb) {
+  window.addEventListener('load', () => _usbAutoConnect());
+}
+</script>
+<script type="module" src="app_unica.js"></script>
+
+
+<!-- MODAL DETTAGLIO ORDINE -->
+<div id="ordineModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:16px;padding:28px;max-width:480px;width:90%;max-height:85vh;overflow-y:auto;position:relative">
+    <button onclick="chiudiOrdineModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">✕</button>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:4px">Ordine <span id="modalOrdineId" style="color:var(--green)"></span></div>
+    <div id="modalOrdineStato" style="font-size:12px;margin-bottom:16px"></div>
+    <div id="modalOrdineBody"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-primary" onclick="consegnaOrdine()" id="btnConsegna" style="flex:1">✓ Consegnato</button>
+      <button class="btn btn-ghost btn-sm" onclick="chiudiOrdineModal()">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════
+     VIEW: CAMPAGNE
+═══════════════════════════════════════ -->
+<div class="view" id="view-campagne">
+  <div style="padding:32px;max-width:980px;margin:0 auto">
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- 🛑 KILL SWITCH GLOBALE                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <div id="killSwitchBox" style="background:linear-gradient(135deg,#fff5f5,#fff);border:2px solid #c62828;border-radius:14px;padding:20px 24px;margin-bottom:20px;box-shadow:0 4px 12px rgba(198,40,40,0.1)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#c62828;margin-bottom:4px">🛑 Blocco invii globale</div>
+          <div id="killSwitchStato" style="font-size:13px;color:var(--text-muted)">Caricamento stato...</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="btnKillAttiva" onclick="attivaKillSwitch()" class="btn" style="background:#c62828;color:white;padding:10px 20px;font-weight:700">🛑 BLOCCA TUTTI GLI INVII</button>
+          <button id="btnKillDisattiva" onclick="disattivaKillSwitch()" class="btn" style="background:#2e7d32;color:white;padding:10px 20px;font-weight:700;display:none">✅ Riabilita invii</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green)">Campagne WhatsApp</div>
+      <div id="campBadge" style="font-size:13px;color:var(--text-muted)">Nessun cliente selezionato</div>
+    </div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Seleziona il tipo di campagna, compila i campi e scegli i destinatari</div>
+
+    <!-- ORA FURBA -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">⚡ Ora Furba — Sconto automatico 10:00-11:00</div>
+          <div style="font-size:12px;color:var(--text-muted)">Quando attiva, gli ordini in fascia oraria ricevono uno sconto automatico del 20%</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Max ordini:</span>
+            <input type="number" id="ofMaxOrdini" min="1" max="999" style="width:70px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:'Outfit',sans-serif" value="10">
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;color:var(--text-muted)">Oggi:</span>
+            <span id="ofOrdiniOggi" style="font-weight:700;font-size:16px;color:var(--green)">—</span>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <div id="ofToggle" onclick="toggleOraFurba()" style="width:48px;height:26px;border-radius:13px;background:var(--border);position:relative;cursor:pointer;transition:background 0.2s">
+              <div id="ofToggleDot" style="width:20px;height:20px;border-radius:50%;background:white;position:absolute;top:3px;left:3px;transition:left 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
+            </div>
+            <span id="ofToggleLabel" style="font-size:13px;font-weight:600;color:var(--text-muted)">Disattiva</span>
+          </label>
+          <button class="btn btn-ghost btn-sm" onclick="salvaOraFurba()">Salva</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetOrdiniOggi()">Reset contatore</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Tipo campagna -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">1 — Tipo di campagna</div>
+      <select class="form-input" id="campTipo" onchange="campagnaTipoChanged()" style="font-size:15px;font-weight:500">
+        <option value="">— Scegli campagna —</option>
+        <option value="ora_furba">⏰ Ora Furba (sconto 20% mattina)</option>
+        <option value="passaparola">🤝 Passaparola (link personale, 25% all'amico)</option>
+        <option value="ora_furba_dormienti">💤 Ora Furba Dormienti — 30% riattivazione</option>
+        <option value="reminder_bonus">🎁 Reminder BONUS (solo chi non ha riscattato)</option>
+        <option value="promo_flash">🍦 Promo Flash</option>
+        <option value="recensione_social">📸 Recensione &amp; Social</option>
+        <option value="compleanno">🎂 Auguri Compleanno</option>
+        <option value="upgrade">🏆 Upgrade di livello</option>
+        <option value="evento">🎉 Invito Evento</option>
+        <option value="delivery_lancio">🛵 Lancio Delivery</option>
+        <option value="riattivazione">💤 Riattivazione cliente inattivo</option>
+        <option value="festa_papa">👨‍👧 Festa del Papà</option>
+        <option value="festa_mamma">💐 Festa della Mamma</option>
+      </select>
+      <div id="campTipoDesc" style="font-size:12px;color:var(--text-muted);margin-top:10px;font-style:italic;min-height:18px"></div>
+    </div>
+
+    <!-- STEP 2: Contenuto (dinamico per tipo) -->
+    <div id="campContenutoWrap" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">2 — Contenuto campagna</div>
+
+      <!-- Upload immagine -->
+      <div class="form-group" id="campImgGroup">
+        <label class="form-label">Immagine intestazione * <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted)">(1080×1080px · JPG/PNG)</span></label>
+        <div id="campImgUploadArea" style="border:2px dashed var(--border);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;position:relative" onclick="document.getElementById('campImgFile').click()" ondragover="event.preventDefault();this.style.borderColor='var(--green)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="campHandleDrop(event)">
+          <input type="file" id="campImgFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="campHandleFile(this.files[0])">
+          <div id="campImgPreviewWrap" style="display:none;margin-bottom:12px">
+            <img id="campImgPreview" style="max-height:140px;max-width:100%;border-radius:8px;object-fit:cover">
+          </div>
+          <div id="campImgPlaceholder">
+            <div style="font-size:32px;margin-bottom:8px">🖼️</div>
+            <div style="font-size:14px;font-weight:500;color:var(--green)">Clicca o trascina un'immagine</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">JPG · PNG · WebP · max 5MB</div>
+          </div>
+          <div id="campImgUploading" style="display:none">
+            <div class="spinner" style="margin:0 auto 8px"></div>
+            <div style="font-size:13px;color:var(--text-muted)">Upload in corso...</div>
+          </div>
+        </div>
+        <div id="campImgStatus" style="font-size:11px;margin-top:6px"></div>
+        <input type="hidden" id="campImmagineUrl">
+      </div>
+
+      <!-- Campi dinamici per tipo campagna -->
+      <div id="campCampiDinamici"></div>
+
+      <!-- Anteprima messaggio -->
+      <div id="campAnteprimaWrap" style="display:none;background:var(--cream);border-radius:10px;padding:14px 16px;margin-top:4px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">Anteprima messaggio</div>
+        <div id="campAnteprimaTesto" style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--text)"></div>
+      </div>
+    </div>
+
+    <!-- STEP 3: Destinatari -->
+    <div id="campDestinatariWrap" style="display:none;background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">3 — Destinatari</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" class="search-input" style="width:190px;padding:7px 12px;font-size:13px" placeholder="Cerca..." id="campSearch" oninput="filtraCampClienti()">
+          <button class="btn btn-ghost btn-sm" onclick="selezionaTuttiCamp()">Tutti</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('esploratore')">Esploratori</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('ambasciatore')">Ambasciatori</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaLivelloCamp('custode')">Custodi</button>
+          <button class="btn btn-ghost btn-sm" onclick="selezionaSegmentoCamp('Mai attivato')">💤 Mai attivato</button>
+          <button class="btn btn-ghost btn-sm" onclick="deselezionaTuttiCamp()">Reset</button>
+        </div>
+      </div>
+      <div id="campClientiList" style="max-height:320px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:14px">Caricamento clienti...</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div id="campProgressWrap" style="display:none;background:var(--cream);border-radius:10px;padding:16px 20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:600;color:var(--green)" id="campProgressLabel">Invio in corso...</div>
+        <div style="font-size:12px;color:var(--text-muted)" id="campProgressCount">0 / 0</div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div id="campProgressBar" style="height:100%;background:linear-gradient(90deg,var(--green),var(--green-light));border-radius:3px;width:0%;transition:width 0.3s"></div>
+      </div>
+      <div id="campLogList" style="margin-top:12px;max-height:160px;overflow-y:auto;font-size:12px;display:flex;flex-direction:column;gap:4px"></div>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="resetCampagna()">Reset</button>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;background:#f8f6f0;padding:12px 16px;border-radius:10px;flex-wrap:wrap">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;width:100%">⚙️ Impostazioni invio (anti-blocco WhatsApp)</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--brown)">Messaggi per blocco:</label>
+          <input type="number" id="campBloccoSize" value="50" min="1" max="200" style="width:70px;padding:6px 10px;border:1.5px solid var(--cream2);border-radius:8px;font-size:13px;text-align:center">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--brown)">Pausa tra blocchi (minuti):</label>
+          <input type="number" id="campPausaMin" value="5" min="1" max="60" style="width:70px;padding:6px 10px;border:1.5px solid var(--cream2);border-radius:8px;font-size:13px;text-align:center">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <label style="font-size:13px;color:var(--brown)">Pausa tra messaggi (sec):</label>
+          <input type="number" id="campPausaSec" value="2" min="1" max="30" style="width:70px;padding:6px 10px;border:1.5px solid var(--cream2);border-radius:8px;font-size:13px;text-align:center">
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <label style="font-size:12px;color:var(--text-muted);white-space:nowrap">📱 Numero test:</label>
+        <input type="tel" id="campNumeroTest" class="form-input" value="+393476236679" style="width:200px;font-size:13px;padding:8px 12px">
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button class="btn btn-ghost" onclick="testInviaCampagna()" id="btnTestCamp" style="border-color:#d4a800;color:#1a2e1c">🧪 Test su di me</button>
+        <button class="btn btn-primary" onclick="inviaCampagna()" id="btnInviaCamp" style="padding:10px 28px">📤 Invia campagna</button>
+      </div>
+    </div>
+    <!-- ── Invio programmato: parte dal server all'orario scelto ── -->
+    <div style="margin-top:16px;padding:16px 18px;border:1.5px dashed var(--green);border-radius:12px;background:#fff">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <label for="campQuando" style="font-size:14px;font-weight:600">📅 Programma l'invio per:</label>
+        <input type="datetime-local" id="campQuando" class="form-input" style="width:auto;font-size:14px;padding:8px 12px">
+        <button class="btn btn-secondary" onclick="programmaCampagna()" id="btnProgrammaCamp" style="padding:10px 22px">📅 Programma</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5">Parte da sola, anche a computer spento, entro 5 minuti dall'orario scelto. Usa le stesse pause anti-blocco qui sopra, invia solo dalle 9 alle 14 e dalle 16 alle 20 (fuori fascia si ferma e riprende da sola) e solo a chi ha il consenso marketing.</div>
+      <div id="campProgrammateList" style="margin-top:12px"></div>
+    </div>
+    <!-- ── Risultati campagne: acquisti entro 7 giorni dall'invio ── -->
+    <div style="margin-top:16px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:15px;font-weight:700">📊 Risultati campagne</div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)">
+          <label for="misCosto">Costo per messaggio €</label>
+          <input type="number" id="misCosto" step="0.001" min="0" class="form-input" style="width:90px;padding:6px 8px;font-size:13px" onchange="salvaCostoMsg()">
+          <button class="btn btn-ghost btn-sm" onclick="caricaRisultatiCampagne()">↻ Aggiorna</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin:6px 0 10px;line-height:1.5">Conta come risultato ogni acquisto, al banco o online, fatto entro 7 giorni dal messaggio. I check-in non contano. Il costo è stimato: inserisci il prezzo per messaggio della tua fattura Meta.</div>
+      <div style="overflow-x:auto"><table id="misTabella" style="width:100%;border-collapse:collapse;font-size:13px"></table></div>
+    </div>
+    <!-- ── Passaparola: amici portati dai clienti ── -->
+    <div style="margin-top:16px;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:#fff">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="font-size:15px;font-weight:700">🤝 Passaparola</div>
+        <button class="btn btn-ghost btn-sm" onclick="caricaPassaparola()">↻ Aggiorna</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin:6px 0 10px">Amici iscritti dal link personale di un cliente. Chi invita riceve 50 punti quando l'amico fa il primo acquisto.</div>
+      <div id="refStats"></div>
+    </div>
+
+
+    <!-- ── Dashboard Codici Promo ── -->
+    <div class="table-section" style="margin-top:32px">
+      <div class="section-header">
+        <div class="section-title">🎟 Codici promo inviati</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCodiciPromo()">↻ Aggiorna</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--green)" id="statCodiciTotali">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Codici inviati</div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--success)" id="statCodiciUsati">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Usati (convertiti)</div>
+        </div>
+        <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--yellow-dark)" id="statCodiciTasso">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Tasso conversione</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Codice</th>
+              <th>Sconto</th>
+              <th>Scadenza</th>
+              <th>Stato</th>
+            </tr>
+          </thead>
+          <tbody id="codiciPromoTable">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">Clicca ↻ per caricare i dati</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Dashboard Conversioni ── -->
+    <div class="table-section" style="margin-top:32px">
+      <div class="section-header">
+        <div class="section-title">📈 Performance campagne (ultimi 30gg)</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadConversioni()">↻ Aggiorna</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Campagna</th>
+              <th>Data</th>
+              <th>Inviati</th>
+              <th>Conversioni</th>
+              <th>Tasso</th>
+            </tr>
+          </thead>
+          <tbody id="conversioniTable">
+            <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">Clicca ↻ per caricare i dati</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: ORDINI
+═══════════════════════════════════════ -->
+<div class="view" id="view-ordini">
+  <div style="padding:32px;max-width:960px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:12px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600">Ordini</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="ordiniFilter" onchange="loadOrdini()" class="form-input" style="width:auto;padding:8px 12px;font-size:13px">
+          <option value="tutti">Tutti</option>
+          <option value="pagato">In attesa ritiro</option>
+          <option value="consegnato">Consegnati</option>
+        </select>
+        <button class="btn btn-primary" onclick="exportOrdiniExcel()" style="font-size:12px;padding:9px 18px">📥 Scarica Excel</button>
+      </div>
+    </div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:24px">Tutti gli ordini online con stato pagamento</div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Ordini oggi</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statOggi">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">In attesa ritiro</div>
+        <div style="font-size:28px;font-weight:600;color:var(--gold)" id="statAttesa">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Incasso totale</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statIncasso">—</div>
+      </div>
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px">Questo mese</div>
+        <div style="font-size:28px;font-weight:600;color:var(--green)" id="statMese">—</div>
+      </div>
+    </div>
+
+    <!-- Tabella ordini -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div id="ordiniTable" style="font-size:13px">
+        <div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento ordini...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     VIEW: GIFT CARD
+═══════════════════════════════════════ -->
+<div class="view" id="view-calendario">
+  <div style="padding:32px;max-width:620px;margin:0 auto">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600">Calendario e-commerce</div>
+    <div style="color:var(--text-muted);font-size:13px;margin:4px 0 20px;line-height:1.5">Tocca un giorno per segnarlo <b style="color:var(--red)">chiuso</b>; toccalo di nuovo per riaprirlo. Si salva da solo. Nei giorni chiusi sul sito non si può ordinare e i clienti vedono la data di riapertura.</div>
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <button class="btn btn-ghost btn-sm" onclick="calCambiaMese(-1)" aria-label="Mese precedente">‹</button>
+        <div id="calTitolo" style="font-weight:600;font-size:17px;text-transform:capitalize"></div>
+        <button class="btn btn-ghost btn-sm" onclick="calCambiaMese(1)" aria-label="Mese successivo">›</button>
+      </div>
+      <div id="calGriglia" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px"></div>
+    </div>
+    <div id="calProssime" style="margin-top:18px;font-size:14px"></div>
+  </div>
+</div>
+
+<div class="view" id="view-giftcard">
+  <div style="padding:32px;max-width:960px;margin:0 auto">
+
+    <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--green);margin-bottom:6px">Gift Card</div>
+    <div style="color:var(--text-muted);font-size:14px;margin-bottom:28px">Genera e gestisci le gift card GREED</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px">
+
+      <!-- Genera nuova gift card -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Genera nuova gift card</div>
+
+        <div class="form-group">
+          <label class="form-label">Valore</label>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px" id="gcValoriBtn">
+            <button onclick="selezionaValore(15)" class="btn btn-ghost" id="gcBtn15">€15</button>
+            <button onclick="selezionaValore(25)" class="btn btn-ghost" id="gcBtn25">€25</button>
+            <button onclick="selezionaValore(50)" class="btn btn-ghost" id="gcBtn50">€50</button>
+          </div>
+          <input type="number" class="form-input" id="gcValore" placeholder="Importo personalizzato €" min="5" step="5" oninput="deselezionaBottoni()">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Nome destinatario</label>
+          <input type="text" class="form-input" id="gcNome" placeholder="Mario Rossi">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Telefono destinatario</label>
+          <input type="tel" class="form-input" id="gcTelefono" placeholder="+39 333 123 4567">
+        </div>
+
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Note (opzionale)</label>
+          <input type="text" class="form-input" id="gcNote" placeholder="Es: Regalo compleanno da Luigi">
+        </div>
+
+        <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">
+          Scadenza: <strong id="gcScadenzaLabel">31 dicembre 2026</strong> · Il codice viene inviato via WhatsApp
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;margin-top:16px;margin-bottom:8px">
+          <label style="font-size:12px;color:var(--text-muted);white-space:nowrap">📱 Numero test:</label>
+          <input type="tel" id="gcNumeroTest" class="form-input" value="+393476236679" style="font-size:13px;padding:8px 12px">
+        </div>
+        <button class="btn btn-ghost" onclick="testGeneraGiftCard()" id="btnTestGC" style="width:100%;border-color:#d4a800;color:#1a2e1c;margin-bottom:8px">🧪 Test su di me</button>
+        <button class="btn btn-primary" onclick="generaGiftCard()" id="btnGeneraGC" style="width:100%;padding:12px">
+          🎁 Genera e invia Gift Card
+        </button>
+      </div>
+
+      <!-- Riscatta gift card -->
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:18px">Riscatta gift card in cassa</div>
+
+        <div class="form-group">
+          <label class="form-label">Codice gift card</label>
+          <input type="text" class="form-input" id="gcCodiceRiscatto" placeholder="GREED-GIFT-XXXX" style="font-family:monospace;font-size:16px;letter-spacing:2px" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <button class="btn btn-secondary" onclick="verificaGiftCard()" style="width:100%;margin-bottom:16px">
+          🔍 Verifica codice
+        </button>
+
+        <div id="gcVerificaResult" style="display:none;background:var(--cream);border-radius:10px;padding:16px">
+          <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:8px">Gift Card trovata</div>
+          <div id="gcVerificaInfo"></div>
+          <button class="btn btn-primary" onclick="riscattaGiftCard()" id="btnRiscatta" style="width:100%;margin-top:14px">
+            ✓ Segna come utilizzata
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista gift card -->
+    <div style="background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-muted)">Gift card emesse</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadGiftCards()">↻ Aggiorna</button>
+      </div>
+      <div id="gcList" style="max-height:400px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento...</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="view" id="view-eventi">
+  <div class="table-section">
+
+    <!-- Header evento attivo -->
+    <div style="background:var(--cream);border:1.5px solid var(--green);border-radius:14px;padding:20px 24px;margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px">Evento attivo</div>
+          <div id="eventoNomeDisplay" style="font-size:22px;font-weight:700;color:var(--green)">Degustazione Vellutà al Tiramisù</div>
+          <div id="eventoInfoDisplay" style="font-size:13px;color:var(--text-muted);margin-top:2px">Domenica 20 luglio 2026 · ore 18:00 · Frascati</div>
+        </div>
+        <button class="btn btn-secondary" onclick="openModalEvento()" style="white-space:nowrap">✏️ Modifica evento</button>
+      </div>
+    </div>
+
+    <!-- Filtro destinatari + invio -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px">
+      <div style="font-weight:600;margin-bottom:14px;font-size:15px">📨 Invia inviti WhatsApp</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn btn-ghost btn-sm filtro-evt active" onclick="setFiltroEvento('tutti',this)">Tutti gli iscritti</button>
+        <button class="btn btn-ghost btn-sm filtro-evt" onclick="setFiltroEvento('attivi',this)">Solo attivi</button>
+        <button class="btn btn-ghost btn-sm filtro-evt" onclick="setFiltroEvento('dormienti',this)">Solo dormienti</button>
+        <button class="btn btn-ghost btn-sm filtro-evt" onclick="setFiltroEvento('champion',this)">Champion & Fedeli</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <label style="font-size:12px;color:var(--text-muted);white-space:nowrap">📱 Numero test:</label>
+        <input type="tel" id="eventoNumeroTest" class="form-input" placeholder="+39 347 623 6679" value="+393476236679" style="width:200px;font-size:13px;padding:8px 12px">
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:4px">Orario invio</label>
+          <input type="datetime-local" id="eventoOrarioInvio" class="form-input" style="width:auto;font-size:13px;padding:8px 12px">
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:16px">oppure</div>
+        <button class="btn btn-ghost btn-sm" onclick="setOrarioSubito()" style="margin-top:14px">Invia subito</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div id="eventoDestinatariCount" style="font-size:13px;color:var(--text-muted)">Caricamento...</div>
+        <button class="btn btn-ghost" onclick="testInvioEvento()" id="btnTestEvento" style="border-color:#d4a800;color:#1a2e1c">🧪 Test su di me</button>
+        <button class="btn btn-primary" onclick="inviaInvitiEvento()" id="btnInviaEvento">Pianifica invio →</button>
+      </div>
+    </div>
+
+    <!-- Stats live -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px" id="eventoStats">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--green)" id="statPresenti">0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Presenti</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--amber)" id="statInvitati">0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Invitati</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--blue,#1565c0)" id="statMedPunti">0</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Media punti</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center">
+        <div style="font-size:28px;font-weight:700;color:var(--purple,#6a1e6a)" id="statConv">0%</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Tasso presenza</div>
+      </div>
+    </div>
+
+    <!-- Lista presenti -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-weight:600;font-size:15px">Lista presenti</div>
+      <button class="btn btn-ghost btn-sm" onclick="esportaPresenti()">⬇ Esporta CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Cliente</th>
+          <th>Ora arrivo</th>
+          <th>Livello</th>
+          <th>Punti</th>
+          <th>Visite</th>
+          <th>Segmento</th>
+        </tr></thead>
+        <tbody id="eventoPresentiTable"><tr><td colspan="6"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Nessuna presenza ancora</div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal modifica evento -->
+<div class="modal-overlay" id="modalEvento">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="closeModal('modalEvento')">×</button>
+    <h2 style="margin:0 0 20px">Modifica evento</h2>
+    <div class="form-group">
+      <label class="form-label">Nome evento</label>
+      <input class="form-input" id="eventoNomeInput" placeholder="es. Degustazione Vellutà al Tiramisù">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Data</label>
+      <input class="form-input" type="date" id="eventoDataInput">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ora</label>
+      <input class="form-input" type="time" id="eventoOraInput">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Luogo</label>
+      <input class="form-input" id="eventoLuogoInput" placeholder="es. Frascati, Piazza Roma 16">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Template WhatsApp (nome)</label>
+      <input class="form-input" id="eventoTemplateInput" placeholder="es. greed_evento_esclusivo">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="closeModal('modalEvento')">Annulla</button>
+      <button class="btn btn-primary" onclick="salvaEvento()">Salva evento</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

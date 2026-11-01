@@ -1,0 +1,3522 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, doc, addDoc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, limit, where, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBwAZb_A3IjPv7iL0cLhVnWO-Cuw_DD5g4",
+  authDomain: "club-greed.firebaseapp.com",
+  projectId: "club-greed",
+  storageBucket: "club-greed.firebasestorage.app",
+  messagingSenderId: "704669833762",
+  appId: "1:704669833762:web:917f4c7b104bc8ad39087b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+// Ogni chiamata alle funzioni GREED porta con sé l'accesso del CRM (il server lo verifica)
+const _fetchOriginale = window.fetch.bind(window);
+window.fetch = async (url, opt = {}) => {
+  if (/\.run\.app|cloudfunctions\.net/.test(String(url)) && auth.currentUser) {
+    const token = await auth.currentUser.getIdToken();
+    opt = { ...opt, headers: { ...(opt.headers || {}), Authorization: 'Bearer ' + token } };
+  }
+  return _fetchOriginale(url, opt);
+};
+
+// ── ACCESSO ─────────────────────────────────────────────────────────────
+// Dario vede tutto. L'account dello staff (Tablet al banco) vede solo il banco:
+// Cassa, Clienti, QR check-in, Ordini, Gift card. Le regole di Firebase fanno il resto lato server.
+const EMAIL_DARIO = 'gelateriagreed@gmail.com';
+const EMAIL_STAFF_BANCO = 'team.greedfrascati@gmail.com';
+const VISTE_STAFF = ['cassa', 'clienti', 'checkin', 'ordini', 'giftcard'];
+window.RUOLO = null;   // 'admin' | 'staff'
+
+window.loginGoogle = async function() {
+  const err = document.getElementById('crm-google-err');
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    if (![EMAIL_DARIO, EMAIL_STAFF_BANCO].includes(result.user.email)) {
+      await signOut(auth);
+      if (err) { err.textContent = '❌ Account ' + result.user.email + ' non autorizzato.'; err.style.display = 'block'; }
+    }
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user' && err) { err.textContent = 'Errore: ' + e.message; err.style.display = 'block'; }
+  }
+};
+window._crmLoginGoogle = window.loginGoogle;
+window.logoutCRM = async function() { await signOut(auth); location.reload(); };
+
+function applicaRuolo(ruolo) {
+  window.RUOLO = ruolo;
+  document.body.classList.toggle('ruolo-staff', ruolo === 'staff');
+  document.querySelectorAll('#mainNav .nav-btn').forEach(b => {
+    const m = (b.getAttribute('onclick') || '').match(/showView\('([a-z]+)'\)/);
+    b.style.display = (ruolo === 'staff' && m && !VISTE_STAFF.includes(m[1])) ? 'none' : '';
+  });
+  const lbl = document.getElementById('crm-user-label');
+  if (lbl) lbl.textContent = ruolo === 'staff' ? 'Banco' : 'Dario';
+}
+
+onAuthStateChanged(auth, user => {
+  const schermo = document.getElementById('pin-screen');
+  if (user && [EMAIL_DARIO, EMAIL_STAFF_BANCO].includes(user.email)) {
+    if (schermo) schermo.style.display = 'none';
+    const ruolo = user.email === EMAIL_DARIO ? 'admin' : 'staff';
+    applicaRuolo(ruolo);
+    if (ruolo === 'staff') showView('cassa'); else loadDashboard();
+    avviaNotificheOrdini();
+  } else {
+    if (user) signOut(auth);
+    if (schermo) schermo.style.display = 'flex';
+  }
+});
+
+// -- UTILS --
+window.db = db;
+window.collection = collection;
+window.doc = doc;
+window.setDoc = setDoc;
+window.addDoc = addDoc;
+window.getDoc = getDoc;
+window.getDocs = getDocs;
+window.updateDoc = updateDoc;
+window.query = query;
+window.orderBy = orderBy;
+window.limit = limit;
+window.where = where;
+window.serverTimestamp = serverTimestamp;
+
+window.deleteDoc = deleteDoc;
+window.allClienti = [];
+window.currentEditId = null;
+window.currentCassaCliente = null;
+
+function getLivello(punti) {
+  if (punti >= 500) return { nome: 'Custode del Gusto', moltiplicatore: 4, badge: 'badge-custode', next: null, nextPunti: null };
+  if (punti >= 200) return { nome: 'Ambasciatore', moltiplicatore: 3, badge: 'badge-ambasciatore', next: 'Custode del Gusto', nextPunti: 500 - punti };
+  return { nome: 'Esploratore', moltiplicatore: 2, badge: 'badge-esploratore', next: 'Ambasciatore', nextPunti: 200 - punti };
+}
+// Livello sempre da puntiStorici (mai scende)
+function getLivelloCliente(c) {
+  return getLivello(c.puntiStorici || c.punti || 0);
+}
+window.getLivelloCliente = getLivelloCliente;
+
+window.filtraClientiPerLivello = function(livello) {
+  // Apre vista clienti
+  showView('clienti');
+  // Attendi caricamento dati
+  setTimeout(() => {
+    if (!window.allClienti || !window.allClienti.length) {
+      setTimeout(() => filtraClientiPerLivello(livello), 300);
+      return;
+    }
+    let filtered, label;
+    if (livello === 'esploratore') {
+      filtered = window.allClienti.filter(c => (c.punti||0) < 200);
+      label = 'Esploratori (0-199 punti)';
+    } else if (livello === 'ambasciatore') {
+      filtered = window.allClienti.filter(c => (c.punti||0) >= 200 && (c.punti||0) < 500);
+      label = 'Ambasciatori (200-499 punti)';
+    } else if (livello === 'custode') {
+      filtered = window.allClienti.filter(c => (c.punti||0) >= 500);
+      label = 'Custodi del Gusto (500+ punti)';
+    } else {
+      filtered = window.allClienti;
+      label = 'Tutti i clienti';
+    }
+    // Aggiorna input di ricerca con etichetta
+    const inp = document.getElementById('searchInput');
+    if (inp) { inp.value = ''; inp.placeholder = '🎯 Filtro attivo: ' + label + ' (' + filtered.length + ')'; }
+    // Mostra banner reset
+    let banner = document.getElementById('livelloFilterBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'livelloFilterBanner';
+      banner.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;padding:10px 14px;margin:10px 0;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#856404';
+      const v = document.getElementById('view-clienti');
+      const ts = v && v.querySelector('.table-section');
+      if (ts) v.insertBefore(banner, ts);
+    }
+    banner.innerHTML = '<span><b>Filtro:</b> ' + label + ' — ' + filtered.length + ' clienti</span>' +
+      '<button onclick="resetFiltroLivello()" style="background:#856404;color:#fff;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px">✕ Rimuovi filtro</button>';
+    renderClienti(filtered);
+  }, 150);
+}
+
+
+window.quickSearch = function(q) {
+  const drop = document.getElementById('quickSearchDrop');
+  if (!q || q.length < 2) { drop.innerHTML = ''; drop.style.display = 'none'; return; }
+  drop.style.display = 'block';
+  const qLow = q.toLowerCase();
+  const results = (window.allClienti || []).filter(c => {
+    const nome = ((c.nome||'') + ' ' + (c.cognome||'')).toLowerCase();
+    const tel = (c.telefono||'').replace(/\s/g,'');
+    const email = (c.email||'').toLowerCase();
+    return nome.includes(qLow) || tel.includes(q) || email.includes(qLow);
+  }).slice(0, 8);
+
+  if (!results.length) {
+    drop.innerHTML = '<div style="padding:12px 16px;color:rgba(255,255,255,.5);font-size:13px">Nessun cliente trovato</div>';
+    return;
+  }
+
+  drop.innerHTML = results.map(c => {
+    const lv = getLivelloCliente(c);
+    const nome = (c.nome||'') + ' ' + (c.cognome||'');
+    const badgeColor = lv.badge === 'badge-custode' ? '#d4a800' : lv.badge === 'badge-ambasciatore' ? '#6fcf97' : 'rgba(255,255,255,.4)';
+    return `<div onclick="quickSearchApri('${c.id}')" style="padding:10px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background=''">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nome.trim()}</div>
+        <div style="color:rgba(255,255,255,.5);font-size:11px">${c.telefono||''} · <span style="color:${badgeColor}">${lv.nome}</span> · ${c.puntiStorici||c.punti||0} pt storici</div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+window.quickSearchApri = function(id) {
+  document.getElementById('quickSearchInput').value = '';
+  document.getElementById('quickSearchDrop').style.display = 'none';
+  const cliente = (window.allClienti||[]).find(c => c.id === id);
+  if (!cliente) return;
+  // Apre la scheda cliente in un overlay senza cambiare pagina
+  const lv = getLivelloCliente(cliente);
+  const colLv = lv.badge === 'badge-custode' ? '#d4a800' : lv.badge === 'badge-ambasciatore' ? '#6fcf97' : '#888';
+  const overlay = document.createElement('div');
+  overlay.id = 'quickClienteOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:28px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+        <div style="width:48px;height:48px;border-radius:50%;background:#1a2e1c;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff">${(cliente.nome||'?')[0].toUpperCase()}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700;color:#1a2e1c">${(cliente.nome||'')} ${(cliente.cognome||'')}</div>
+          <div style="font-size:13px;color:#666">${cliente.email||''} · ${cliente.telefono||''}</div>
+        </div>
+        <button onclick="document.getElementById('quickClienteOverlay').remove()" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:#f8f6f0;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:#999;margin-bottom:4px">PUNTI SPENDIBILI</div>
+          <div style="font-size:28px;font-weight:700;color:#1a2e1c">${cliente.punti||0}</div>
+        </div>
+        <div style="background:#f8f6f0;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:#999;margin-bottom:4px">PUNTI STORICI</div>
+          <div style="font-size:28px;font-weight:700;color:#d4a800">${cliente.puntiStorici||cliente.punti||0}</div>
+        </div>
+        <div style="background:#f8f6f0;border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:10px;color:#999;margin-bottom:4px">LIVELLO</div>
+          <div style="font-size:13px;font-weight:700;color:${colLv}">${lv.nome}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('quickClienteOverlay').remove();showView('cassa');setTimeout(()=>apriClienteCassa(window.allClienti.find(c=>c.id==='${cliente.id}')),300)" 
+          style="flex:1;background:#1a2e1c;color:#fff;border:none;border-radius:8px;padding:10px;cursor:pointer;font-size:13px;font-weight:600">💳 Apri in Cassa</button>
+        <button onclick="document.getElementById('quickClienteOverlay').remove();showView('clienti');setTimeout(()=>apriSchedaCliente('${cliente.id}'),300)"
+          style="flex:1;background:#f0ece0;color:#1a2e1c;border:none;border-radius:8px;padding:10px;cursor:pointer;font-size:13px;font-weight:600">👤 Scheda completa</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+};
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#quickSearchInput') && !e.target.closest('#quickSearchDrop')) {
+    const drop = document.getElementById('quickSearchDrop');
+    if (drop) drop.style.display = 'none';
+  }
+});
+
+
+
+function formatDate(ts) {
+  if (!ts) return '-';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function puntiBar(punti) {
+  const max = punti >= 500 ? 650 : punti >= 200 ? 500 : 200;
+  const pct = Math.min(100, Math.round((punti / max) * 100));
+  return `<div class="punti-bar-wrap"><div class="punti-bar"><div class="punti-bar-fill" style="width:${pct}%"></div></div><span class="punti-num">${punti}</span></div>`;
+}
+
+// -- TOAST --
+window.showToast = function(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// -- VIEWS --
+window.showView = function(name) {
+  if (window.RUOLO === 'staff' && !VISTE_STAFF.includes(name)) { showToast('Sezione riservata a Dario', 'error'); return; }
+  if (name === 'giftcard') { setTimeout(function(){ if(typeof loadGiftCards==='function') loadGiftCards(); }, 200); }
+  if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
+  if (name === 'calendario') { setTimeout(function(){ if(typeof loadCalendario==='function') loadCalendario(); }, 50); }
+  if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
+  if (name === 'campagne') { setTimeout(function(){ if(typeof caricaProgrammate==='function') caricaProgrammate(); if(typeof caricaRisultatiCampagne==='function') caricaRisultatiCampagne(); if(typeof caricaPassaparola==='function') caricaPassaparola(); }, 250); }
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().includes(name === 'checkin' ? 'check' : name === 'iscrizione' ? 'form' : name)) b.classList.add('active');
+  });
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'clienti') loadClienti();
+  if (name === 'checkin') loadCheckin();
+  if (name === 'cassa') loadClienti();
+}
+
+// -- LOAD DASHBOARD --
+function getRFM(c) {
+  const ora = Date.now();
+  const ultimo = c.ultimoAcquisto?.seconds ? c.ultimoAcquisto.seconds * 1000 : null;
+  const freq = c.numeroAcquisti || 0;
+  const spesa = c.totaleSpeso || 0;
+  // Mai attivato: iscritto ma senza alcun acquisto tracciato — NON è un cliente perso
+  if (freq === 0 && !ultimo) return { label: 'Mai attivato', color: '#546e7a', bg: '#eceff1', icon: '🆕' };
+  const giorniInattivo = ultimo ? Math.floor((ora - ultimo) / 86400000) : 999;
+  if (giorniInattivo <= 30 && freq >= 3 && spesa >= 30) return { label: 'Champion', color: '#2d6a2d', bg: '#e8f5e9', icon: '🏆' };
+  if (giorniInattivo <= 45 && freq >= 2) return { label: 'Fedele', color: '#1565c0', bg: '#e3f2fd', icon: '⭐' };
+  if (giorniInattivo <= 30 && freq === 1) return { label: 'Nuovo', color: '#6a1e6a', bg: '#f3e5f5', icon: '🌱' };
+  if (giorniInattivo > 30 && giorniInattivo <= 60 && freq >= 2) return { label: 'A Rischio', color: '#e65100', bg: '#fff3e0', icon: '⚠️' };
+  if (giorniInattivo > 60) return { label: 'Perso', color: '#b71c1c', bg: '#ffebee', icon: '💤' };
+  return { label: 'Potenziale', color: '#827717', bg: '#f9fbe7', icon: '💡' };
+}
+
+async function loadDashboard() {
+  try {
+    const snap = await getDocs(collection(db, 'clienti'));
+    const clienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    window.allClienti = clienti;
+
+    const totali = clienti.length;
+    const esploratori = clienti.filter(c => (c.puntiStorici||c.punti||0) < 200).length;
+    const ambas = clienti.filter(c => (c.puntiStorici||c.punti||0) >= 200 && (c.puntiStorici||c.punti||0) < 500).length;
+    const custodi = clienti.filter(c => (c.puntiStorici||c.punti||0) >= 500).length;
+    const puntiTot = clienti.reduce((s, c) => s + (c.puntiStorici||c.punti||0), 0);
+
+    document.getElementById('statTotali').textContent = totali;
+    document.getElementById('statEsploratori').textContent = esploratori;
+    document.getElementById('statAmbasciatori').textContent = ambas;
+    document.getElementById('statCustodi').textContent = custodi;
+    document.getElementById('statPunti').textContent = puntiTot;
+
+    // ── RFM Segmentation ──
+    const segmenti = { Champion:[], Fedele:[], Nuovo:[], 'A Rischio':[], Perso:[], Potenziale:[], 'Mai attivato':[] };
+    clienti.forEach(c => { const r = getRFM(c); if(segmenti[r.label]) segmenti[r.label].push(c); });
+
+    const rfmEl = document.getElementById('rfmSection');
+    if (rfmEl) {
+      rfmEl.innerHTML = Object.entries(segmenti).map(([label, lista]) => {
+        const info = { Champion:{color:'#2d6a2d',bg:'#e8f5e9',icon:'🏆'}, Fedele:{color:'#1565c0',bg:'#e3f2fd',icon:'⭐'}, Nuovo:{color:'#6a1e6a',bg:'#f3e5f5',icon:'🌱'}, 'A Rischio':{color:'#e65100',bg:'#fff3e0',icon:'⚠️'}, Perso:{color:'#b71c1c',bg:'#ffebee',icon:'💤'}, Potenziale:{color:'#827717',bg:'#f9fbe7',icon:'💡'}, 'Mai attivato':{color:'#546e7a',bg:'#eceff1',icon:'🆕'} }[label];
+        return `<div style="background:${info.bg};border-radius:12px;padding:16px 20px;cursor:pointer;border:1.5px solid ${info.color}22" onclick="filtraRFM('${label}')">
+          <div style="font-size:22px;margin-bottom:4px">${info.icon}</div>
+          <div style="font-weight:700;color:${info.color};font-size:15px">${label}</div>
+          <div style="font-size:28px;font-weight:800;color:${info.color}">${lista.length}</div>
+          <div style="font-size:11px;color:${info.color};opacity:0.8">clienti</div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Tabella ultimi iscritti ──
+    const recenti = [...clienti].sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0)).slice(0,5);
+    const tbody = document.getElementById('dashboardTable');
+    if (!recenti.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon"></div><div class="empty-text">Nessun cliente ancora</div></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = recenti.map(c => {
+      const lv = getLivelloCliente(c);
+      const rfm = getRFM(c);
+      return `<tr>
+        <td><strong>${c.nome} ${c.cognome}</strong><br><span style="font-size:12px;color:var(--text-muted)">${c.email}</span></td>
+        <td><span class="badge ${lv.badge}">${lv.nome}</span></td>
+        <td>${puntiBar(c.punti||0)}</td>
+        <td><span style="background:${rfm.bg};color:${rfm.color};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600">${rfm.icon} ${rfm.label}</span></td>
+        <td style="font-size:13px;color:var(--text-muted)">${formatDate(c.createdAt)}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    console.error(e);
+    showToast('Errore caricamento dati', 'error');
+  }
+}
+
+window.filtraRFM = function(label) {
+  const filtrati = window.allClienti.filter(c => getRFM(c).label === label);
+  showView('clienti');
+  setTimeout(() => renderClienti(filtrati), 200);
+  showToast(`${filtrati.length} clienti segmento "${label}"`);
+}
+
+
+window.loadCodiciPromo = async function() {
+  const tbody = document.getElementById('codiciPromoTable');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>`;
+  try {
+    const snap = await getDocs(query(collection(db, 'codiciPromo'), orderBy('createdAt', 'desc'), limit(100)));
+    const totali = snap.size;
+    const usati = snap.docs.filter(d => d.data().usato).length;
+    const tasso = totali > 0 ? ((usati/totali)*100).toFixed(1) : '0.0';
+
+    document.getElementById('statCodiciTotali').textContent = totali;
+    document.getElementById('statCodiciUsati').textContent = usati;
+    document.getElementById('statCodiciTasso').textContent = tasso + '%';
+
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">Nessun codice promo inviato</td></tr>`;
+      return;
+    }
+
+    const ora = new Date();
+    tbody.innerHTML = snap.docs.map(d => {
+      const p = d.data();
+      const scadenza = p.scadenzaAt instanceof Object && p.scadenzaAt.toDate
+        ? p.scadenzaAt.toDate() : (p.scadenzaAt ? new Date(p.scadenzaAt) : null);
+      const scaduto = scadenza && scadenza < ora;
+      const scadenzaStr = scadenza ? scadenza.toLocaleString('it-IT', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+
+      let statoHtml;
+      if (p.usato) statoHtml = `<span style="color:var(--success);font-weight:700">✅ Usato</span>`;
+      else if (scaduto) statoHtml = `<span style="color:var(--text-muted)">⏱ Scaduto</span>`;
+      else statoHtml = `<span style="color:var(--yellow-dark);font-weight:600">⏳ In attesa</span>`;
+
+      return `<tr>
+        <td><strong>${p.nomeCliente||'—'}</strong><br><span style="font-size:11px;color:var(--text-muted)">${p.telefono||''}</span></td>
+        <td><code style="background:var(--cream);padding:3px 8px;border-radius:6px;font-size:12px;letter-spacing:1px">${p.codice||'—'}</code></td>
+        <td style="font-weight:700;color:var(--green)">${p.sconto||30}%</td>
+        <td style="font-size:12px;color:var(--text-muted)">${scadenzaStr}</td>
+        <td>${statoHtml}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red);text-align:center">Errore: ${e.message}</td></tr>`;
+    console.error(e);
+  }
+};
+
+window.loadConversioni = async function() {
+  const tbody = document.getElementById('conversioniTable');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spinner"></div> Caricamento...</div></td></tr>`;
+  try {
+    const trenta = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const snap = await getDocs(query(collection(db, 'campagne'), where('ultimoInvio', '>=', trenta)));
+    if (snap.empty) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">Nessuna campagna negli ultimi 30 giorni</td></tr>`;
+      return;
+    }
+    const righe = snap.docs.map(d => {
+      const c = d.data();
+      const inviati = c.totaleInvii || 0;
+      const conv = c.totaleConversioni || 0;
+      const tasso = inviati > 0 ? ((conv/inviati)*100).toFixed(1) : '0.0';
+      const colore = parseFloat(tasso) >= 15 ? '#2d6a2d' : parseFloat(tasso) >= 5 ? '#e65100' : '#b71c1c';
+      const data = c.ultimoInvio?.toDate ? c.ultimoInvio.toDate().toLocaleDateString('it-IT') : '—';
+      return `<tr>
+        <td><strong>${c.template||d.id}</strong></td>
+        <td style="font-size:13px;color:var(--text-muted)">${data}</td>
+        <td>${inviati}</td>
+        <td>${conv}</td>
+        <td><span style="font-weight:700;color:${colore}">${tasso}%</span></td>
+      </tr>`;
+    }).join('');
+    tbody.innerHTML = righe;
+  } catch(e) { tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red);text-align:center">Errore caricamento</td></tr>`; console.error(e); }
+}
+
+// -- LOAD CLIENTI --
+async function loadClienti() {
+  try {
+    const snap = await getDocs(collection(db, 'clienti'));
+    window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderClienti(window.allClienti);
+  } catch(e) {
+    showToast('Errore caricamento clienti', 'error');
+  }
+}
+
+function renderClienti(clienti) {
+  const tbody = document.getElementById('clientiTable');
+  if (!clienti.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon"></div><div class="empty-text">Nessun cliente trovato</div></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = clienti.map(c => {
+    const lv = getLivelloCliente(c);
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:15px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+          <div><strong>${c.nome} ${c.cognome}</strong></div>
+        </div>
+      </td>
+      <td><span style="font-size:13px">${c.email}</span><br><span style="font-size:12px;color:var(--text-muted)">${c.telefono||''}</span></td>
+      <td><span class="badge ${lv.badge}">${lv.nome}</span></td>
+      <td>${puntiBar(c.punti||0)}</td>
+      <td style="font-size:12px;color:var(--text-muted)">${formatDate(c.createdAt)}</td>
+      <td>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-secondary btn-sm" onclick="openPunti('${c.id}')">+ Punti</button>
+          <button class="btn btn-ghost btn-sm" onclick="openQrCliente('${c.id}')">QR</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.reinviaBenvenuto('${c.id}')" title="Reinvia su WhatsApp il benvenuto con il QR personale">📲</button>
+          <button class="btn btn-ghost btn-sm" onclick="openStorico('${c.id}')">📋</button>
+          <button class="btn btn-ghost btn-sm" onclick="openModifica('${c.id}')">✏️</button>
+          ${window.RUOLO === 'admin' ? `<button class="btn btn-danger btn-sm" onclick="window.eliminaCliente('${c.id}','${c.nome} ${c.cognome}')" title="Elimina cliente">🗑️</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// -- REINVIA BENVENUTO CON QR -- (messaggio di servizio: parte anche senza consenso marketing)
+window.reinviaBenvenuto = async function(id) {
+  const c = (window.allClienti || []).find(x => x.id === id) || (await getDoc(doc(db, 'clienti', id))).data();
+  if (!c) return;
+  if (!c.telefono) { alert('Questo cliente non ha un numero di telefono.'); return; }
+  if (!confirm(`Reinviare a ${c.nome || ''} ${c.cognome || ''} (${c.telefono}) il WhatsApp di benvenuto con il suo QR personale?`)) return;
+  try {
+    const res = await fetch(N8N_CAMPAGNA_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: 'benvenuto_club_greed', telefono: c.telefono, nome: c.nome || '',
+        immagineUrl: `https://quickchart.io/qr?text=${encodeURIComponent('GRD-' + id)}&size=200` })
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.error) throw new Error(j.error || ('errore ' + res.status));
+    alert(`✅ Benvenuto con QR inviato a ${c.nome || 'cliente'}.`);
+  } catch (e) { alert('❌ Invio non riuscito: ' + e.message); }
+};
+
+// -- ELIMINA CLIENTE --
+window.eliminaCliente = async function(id, nomeCompleto) {
+  if (!(await verificaPinTitolare(`PIN titolare per eliminare "${nomeCompleto}":`))) return;
+  const conferma = confirm(`Eliminare definitivamente "${nomeCompleto}" dal Club Greed?\n\nQuesta operazione non può essere annullata.`);
+  if (!conferma) return;
+  try {
+    await deleteDoc(doc(db, 'clienti', id));
+    window.allClienti = window.allClienti.filter(c => c.id !== id);
+    renderClienti(window.allClienti);
+    // aggiorna stats dashboard se visibile
+    const dash = document.getElementById('view-dashboard');
+    if (dash && dash.classList.contains('active')) loadDashboard();
+    // aggiorna contatori live
+    const totali = window.allClienti.length;
+    const esploratori = window.allClienti.filter(c => (c.puntiStorici||c.punti||0) < 200).length;
+    const ambas = window.allClienti.filter(c => (c.punti||0) >= 200 && (c.punti||0) < 500).length;
+    const custodi = window.allClienti.filter(c => (c.puntiStorici||c.punti||0) >= 500).length;
+    const puntiTot = window.allClienti.reduce((s,c) => s + (c.puntiStorici||c.punti||0), 0);
+    const el = id => document.getElementById(id);
+    if (el('statTotali')) el('statTotali').textContent = totali;
+    if (el('statEsploratori')) el('statEsploratori').textContent = esploratori;
+    if (el('statAmbasciatori')) el('statAmbasciatori').textContent = ambas;
+    if (el('statCustodi')) el('statCustodi').textContent = window.allClienti.filter(c=>(c.puntiStorici||c.punti||0)>=500).length;
+    if (el('statPunti')) el('statPunti').textContent = puntiTot;
+    showToast(`"${nomeCompleto}" eliminato dal Club v`);
+  } catch(e) {
+    console.error(e);
+    showToast('Errore durante l\'eliminazione', 'error');
+  }
+}
+
+window.filterClienti = function() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = window.allClienti.filter(c =>
+    `${c.nome} ${c.cognome} ${c.email}`.toLowerCase().includes(q)
+  );
+  renderClienti(filtered);
+}
+
+// -- MODALS --
+window.openModal = function(id) { document.getElementById(id).classList.add('open'); }
+window.closeModal = function(id) { document.getElementById(id).classList.remove('open'); }
+
+window.openNuovoCliente = function() {
+  currentEditId = null;
+  document.getElementById('modalClienteTitle').textContent = 'Nuovo Cliente';
+  document.getElementById('btnSalvaCliente').textContent = 'Salva cliente';
+  ['mNome','mCognome','mEmail','mTel','mNascita'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mPunti').value = '0';
+  ['mPrivacy','mMarketing','mSms'].forEach(id => document.getElementById(id).checked = false);
+  openModal('modalCliente');
+}
+
+window.openModifica = function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  currentEditId = id;
+  document.getElementById('modalClienteTitle').textContent = 'Modifica Cliente';
+  document.getElementById('btnSalvaCliente').textContent = 'Aggiorna cliente';
+  document.getElementById('mNome').value = c.nome||'';
+  document.getElementById('mCognome').value = c.cognome||'';
+  document.getElementById('mEmail').value = c.email||'';
+  document.getElementById('mTel').value = c.telefono||'';
+  document.getElementById('mNascita').value = c.dataNascita||'';
+  document.getElementById('mPunti').value = c.punti||0;
+  document.getElementById('mPrivacy').checked = c.privacy||false;
+  document.getElementById('mMarketing').checked = c.marketing||false;
+  document.getElementById('mSms').checked = c.sms||false;
+  openModal('modalCliente');
+}
+
+window.salvaCliente = async function() {
+  const nome = document.getElementById('mNome').value.trim();
+  const cognome = document.getElementById('mCognome').value.trim();
+  const email = document.getElementById('mEmail').value.trim();
+  if (!nome || !cognome || !email) { showToast('Nome, cognome ed email sono obbligatori', 'error'); return; }
+
+  const data = {
+    nome, cognome, email,
+    telefono: document.getElementById('mTel').value.trim(),
+    dataNascita: document.getElementById('mNascita').value,
+    privacy: document.getElementById('mPrivacy').checked,
+    marketing: document.getElementById('mMarketing').checked,
+    sms: document.getElementById('mSms').checked,
+  };
+  // I punti vengono aggiunti solo alla creazione — mai sovrascritti in modifica
+  if (!currentEditId) data.punti = 0;
+
+  try {
+    const btn = document.getElementById('btnSalvaCliente');
+    btn.textContent = 'Salvataggio...'; btn.disabled = true;
+
+    if (currentEditId) {
+      await updateDoc(doc(db, 'clienti', currentEditId), data);
+      showToast('Cliente aggiornato v');
+    } else {
+      data.createdAt = serverTimestamp();
+      data.qrCode = 'GRD-' + Date.now();
+      await addDoc(collection(db, 'clienti'), data);
+      showToast('Cliente aggiunto v');
+    }
+    closeModal('modalCliente');
+    loadClienti();
+    btn.textContent = currentEditId ? 'Aggiorna cliente' : 'Salva cliente';
+    btn.disabled = false;
+  } catch(e) {
+    showToast('Errore nel salvataggio', 'error');
+    document.getElementById('btnSalvaCliente').textContent = 'Salva cliente';
+    document.getElementById('btnSalvaCliente').disabled = false;
+  }
+}
+
+// -- STORICO PUNTI --
+window.openStorico = async function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('storicoNome').textContent = `${c.nome} ${c.cognome||''}`;
+  document.getElementById('storicoTotPunti').textContent = c.punti||0;
+  document.getElementById('storicoList').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px">Caricamento...</div>';
+  openModal('modalStorico');
+
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'clienti', id, 'storico'),
+      orderBy('data', 'desc')
+    ));
+    const movimenti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (!movimenti.length) {
+      document.getElementById('storicoList').innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:20px">Nessun movimento registrato ancora.<br><span style="font-size:12px">I movimenti vengono registrati da ora in avanti.</span></div>';
+      return;
+    }
+
+    const tipoIcon = { acquisto: '🛒', checkin: '✓', social: '📸', ordine: '📦', bonus: '🎁', manuale: '✏️' };
+    const tipoLabel = { acquisto: 'Acquisto', checkin: 'Check-in', social: 'Premio social', ordine: 'Ordine online', bonus: 'Bonus', manuale: 'Manuale' };
+
+    document.getElementById('storicoList').innerHTML = movimenti.map(m => {
+      const data = m.data?.toDate ? m.data.toDate().toLocaleString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+      const icon = tipoIcon[m.tipo] || '•';
+      const label = tipoLabel[m.tipo] || m.tipo;
+      const importo = m.totale ? ` · €${m.totale.toFixed(2)}` : '';
+      return `<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--cream);border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:20px;flex-shrink:0">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:500;font-size:14px">${label}${importo}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.note||''} · ${data}</div>
+        </div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--green);flex-shrink:0">+${m.punti}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('storicoList').innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Errore caricamento storico</div>';
+    console.error(e);
+  }
+};
+window.openQrCliente = async function(id) {
+  window.currentQRClienteId = id;
+  const c = window.allClienti.find(x => x.id === id) || (await getDoc(doc(db, 'clienti', id))).data();
+  if (!c) return;
+  const lv = getLivelloCliente(c);
+  document.getElementById('qrName').textContent = `${c.nome} ${c.cognome}`;
+  document.getElementById('qrLevel').textContent = lv.nome;
+  document.getElementById('qrPoints').textContent = c.punti||0;
+  const qrData = JSON.stringify({ id: id, qr: c.qrCode || id, nome: c.nome });
+  const qrEl = document.getElementById('qrCanvas');
+  qrEl.innerHTML = '';
+  new QRCode(qrEl, { text: qrData, width: 200, height: 200, colorDark: '#1a2e1c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.H });
+  openModal('modalQr');
+}
+
+// -- GESTIONE PUNTI --
+let currentPuntiId = null;
+window.openPunti = function(id) {
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  currentPuntiId = id;
+  const lv = getLivelloCliente(c);
+  document.getElementById('modalPuntiAttuali').textContent = c.punti||0;
+  document.getElementById('modalLivelloAttuale').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+  document.getElementById('importoAcquisto').value = '';
+  document.getElementById('puntiDaAggiungere').value = '';
+  openModal('modalPunti');
+}
+
+window.aggiornaCalcoloPunti = function() {
+  const importo = parseFloat(document.getElementById('importoAcquisto').value)||0;
+  const c = window.allClienti.find(x => x.id === currentPuntiId);
+  if (!c) return;
+  const lv = getLivelloCliente(c);
+  document.getElementById('puntiDaAggiungere').value = Math.round(importo * lv.moltiplicatore);
+}
+
+window.syncPuntiManuali = function() {}
+
+window.riscattaPremio = async function(nomePremio, costoP) {
+  const c = window.allClienti.find(x => x.id === currentPuntiId);
+  if (!c) return;
+  const puntiAttuali = c.punti || 0;
+  if (puntiAttuali < costoP) {
+    showToast(`Punti insufficienti! Servono ${costoP} punti, il cliente ne ha ${puntiAttuali}`, 'error');
+    return;
+  }
+  const ok = confirm(`Riscattare "${nomePremio}" per ${costoP} punti?\n\nPunti attuali: ${puntiAttuali}\nPunti dopo: ${puntiAttuali - costoP}`);
+  if (!ok) return;
+  const nuovi = puntiAttuali - costoP;
+  try {
+    await updateDoc(doc(db, 'clienti', currentPuntiId), { punti: nuovi });
+    await addDoc(collection(db, 'clienti', currentPuntiId, 'storico'), {
+      tipo: 'premio',
+      punti: -costoP,
+      premio: nomePremio,
+      data: serverTimestamp(),
+      note: `Premio riscattato: ${nomePremio}`
+    });
+    showToast(`✅ Premio "${nomePremio}" riscattato! -${costoP} punti`);
+    document.getElementById('modalPuntiAttuali').textContent = nuovi;
+    closeModal('modalPunti');
+    loadClienti();
+  } catch(e) {
+    showToast('Errore riscatto premio', 'error');
+  }
+}
+
+window.confermaPunti = async function() {
+  const puntiAdd = parseInt(document.getElementById('puntiDaAggiungere').value)||0;
+  if (!puntiAdd || puntiAdd <= 0) { showToast('Inserisci un importo valido', 'error'); return; }
+  const c = window.allClienti.find(x => x.id === currentPuntiId);
+  const nuovi = (c.punti||0) + puntiAdd;
+  try {
+    await updateDoc(doc(db, 'clienti', currentPuntiId), { punti: nuovi });
+    // Registra storico
+    await addDoc(collection(db, 'clienti', currentPuntiId, 'storico'), {
+      tipo: 'acquisto',
+      punti: puntiAdd,
+      totale: parseFloat(document.getElementById('importoAcquisto').value)||0,
+      data: serverTimestamp(),
+      note: 'Aggiunto da CRM'
+    });
+    showToast(`+${puntiAdd} punti aggiunti a ${c.nome} v`);
+    closeModal('modalPunti');
+    loadClienti();
+  } catch(e) {
+    showToast('Errore aggiornamento punti', 'error');
+  }
+}
+
+// -- CASSA --
+window.cercaClienteCassa = async function() {
+  let q = document.getElementById('cassaSearch').value.trim();
+  if (!q) return;
+  // Se il QR contiene JSON estrai l'id
+  try {
+    const parsed = JSON.parse(q);
+    if (parsed.id) { selezionaClienteCassa(parsed.id); document.getElementById('cassaSearch').value = ''; return; }
+  } catch(e) {}
+  // Gestisce QR formato GRD-<ID>
+  let searchId = q;
+  if (q.toLowerCase().startsWith('grd-')) searchId = q.slice(4);
+  const qLow = q.toLowerCase();
+
+  // Prima cerca in cache locale
+  let risultati = window.allClienti.filter(c =>
+    (c.nome+' '+c.cognome+' '+(c.email||'')+' '+(c.qrCode||'')+' '+c.id+' GRD-'+c.id).toLowerCase().includes(qLow)
+    || c.id.toLowerCase().includes(searchId.toLowerCase())
+  ).slice(0, 4);
+
+  // Se non trova nulla ricarica tutto da Firestore e riprova
+  if (!risultati.length) {
+    try {
+      const snap = await getDocs(collection(db, 'clienti'));
+      window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      risultati = window.allClienti.filter(c =>
+        (c.nome+' '+c.cognome+' '+(c.email||'')+' '+(c.telefono||'')+' '+(c.qrCode||'')+' '+c.id+' GRD-'+c.id).toLowerCase().includes(qLow)
+        || c.id.toLowerCase().includes(searchId.toLowerCase())
+      ).slice(0, 4);
+    } catch(e) { console.error(e); }
+  }
+
+  const div = document.getElementById('cassaResults');
+  if (!risultati.length) {
+    div.innerHTML = `<div style="color:var(--text-muted);font-size:13px">Nessun cliente trovato</div>`;
+    return;
+  }
+  div.innerHTML = risultati.map(c => `
+    <div onclick="selezionaClienteCassa('${c.id}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--white);border:1.5px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+      <div>
+        <div style="font-weight:600;font-size:14px">${c.nome} ${c.cognome}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${c.email||''} · ${c.punti||0} punti</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+window.selezionaClienteCassa = async function(id) {
+  window.currentCassaCliente = id;
+  document.getElementById('cassaResults').innerHTML = '';
+  document.getElementById('cassaSearch').value = '';
+  document.getElementById('cassaImporto').value = '';
+  document.getElementById('cassaPuntiCalc').value = '';
+  // Leggi sempre dati freschi da Firestore
+  try {
+    const snap = await getDoc(doc(db, 'clienti', id));
+    if (!snap.exists()) { showToast('Cliente non trovato', 'error'); return; }
+    const c = { id: snap.id, ...snap.data() };
+    // Aggiorna anche la cache locale
+    const idx = window.allClienti.findIndex(x => x.id === id);
+    if (idx >= 0) window.allClienti[idx] = c; else window.allClienti.push(c);
+    const puntiDisponibili = c.punti || 0;
+    const puntiStorici = c.puntiStorici || puntiDisponibili;
+    const lv = getLivello(puntiStorici); // livello basato su storici
+    document.getElementById('foundAvatar').textContent = (c.nome||'?')[0].toUpperCase();
+    document.getElementById('foundName').textContent = `${c.nome} ${c.cognome}`;
+    document.getElementById('foundMeta').textContent = `${c.email} · ${c.telefono||''}`;
+    document.getElementById('foundPunti').textContent = puntiDisponibili;
+    document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+    document.getElementById('clienteFound').classList.add('visible');
+    // Aggiorna sezione premi
+    aggiornaSezionePremi(puntiDisponibili, puntiStorici);
+    mostraCodiceAmicoCassa(c);
+  } catch(e) { showToast('Errore caricamento cliente', 'error'); }
+}
+
+window.calcolaPunti = function() {
+  const importo = parseFloat(document.getElementById('cassaImporto').value)||0;
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  if (!c) return;
+  // Acquisto con sconto di primo acquisto: niente punti
+  if (window._scontoCassa && window._scontoCassa.cliente === currentCassaCliente) { document.getElementById('cassaPuntiCalc').value = 0; return; }
+  const lv = getLivelloCliente(c);
+  document.getElementById('cassaPuntiCalc').value = Math.round(importo * lv.moltiplicatore);
+}
+
+window.aggiungiPuntiCassa = async function() {
+  const scontato = !!(window._scontoCassa && window._scontoCassa.cliente === currentCassaCliente);
+  const puntiAdd = scontato ? 0 : (parseInt(document.getElementById('cassaPuntiCalc').value)||0);
+  const importo = parseFloat(document.getElementById('cassaImporto').value)||0;
+  if (!importo || (!puntiAdd && !scontato)) { showToast('Inserisci un importo', 'error'); return; }
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  try {
+    const res = await fetch('https://aggiornapunticliente-u3jmxuuypq-ey.a.run.app', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clienteId: currentCassaCliente, puntiAggiunti: puntiAdd, importo: importo, scontato })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore server');
+    const nuovi = data.puntiTotali;
+    document.getElementById('foundPunti').textContent = nuovi;
+    const lv = getLivello(nuovi);
+    document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+    document.getElementById('cassaImporto').value = '';
+    document.getElementById('cassaPuntiCalc').value = '';
+    const ci = window.allClienti.find(x => x.id === currentCassaCliente);
+    if (ci) ci.punti = nuovi;
+    if (data.scontato) {
+      window._scontoCassa = null;
+      document.getElementById('cassaAmicoBox').style.display = 'none';
+      showToast(`Acquisto di ${c.nome} registrato — con sconto, nessun punto ✓`);
+    } else showToast(`+${data.puntiAggiunti ?? puntiAdd} punti aggiunti a ${c.nome} — WhatsApp inviato ✓`);
+  } catch(e) { showToast('Errore', 'error'); console.error(e); }
+}
+
+window.premiaSocial = async function(piattaforma, punti) {
+  if (!currentCassaCliente) return;
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  if (!c) return;
+  const nuovi = (c.punti||0) + punti;
+  const label = { google: 'Google', tripadvisor: 'TripAdvisor', instagram: 'Story Instagram', facebook: 'Story Facebook', tiktok: 'Story TikTok' };
+  try {
+    await updateDoc(doc(db, 'clienti', currentCassaCliente), { punti: nuovi });
+    await addDoc(collection(db, 'clienti', currentCassaCliente, 'storico'), {
+      tipo: 'social',
+      punti: punti,
+      piattaforma: piattaforma,
+      data: serverTimestamp(),
+      note: `Premio ${label[piattaforma]||piattaforma}`
+    });
+    document.getElementById('foundPunti').textContent = nuovi;
+    const lv = getLivello(nuovi);
+    document.getElementById('foundLevel').innerHTML = `<span class="badge ${lv.badge}">${lv.nome}</span>`;
+    const ci = window.allClienti.find(x => x.id === currentCassaCliente);
+    if (ci) ci.punti = nuovi;
+    showToast(`+${punti} punti ${label[piattaforma]} a ${c.nome} ✓`);
+  } catch(e) { showToast('Errore assegnazione punti', 'error'); }
+};
+
+window.aggiungiCheckinCassa = async function() {
+  const c = window.allClienti.find(x => x.id === currentCassaCliente);
+  if (!c) return;
+  try {
+    // Passa dal server: aggiorna punti e livello, registra il check-in e manda il WhatsApp dei punti
+    const res = await fetch('https://aggiornapunticliente-u3jmxuuypq-ey.a.run.app', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ clienteId: currentCassaCliente, puntiAggiunti: 5, tipo: 'checkin' })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore server');
+    const nuovi = data.puntiTotali;
+    document.getElementById('foundPunti').textContent = nuovi;
+    const ci = window.allClienti.find(x => x.id === currentCassaCliente);
+    if (ci) ci.punti = nuovi;
+    showToast(`Check-in: +5 punti a ${c.nome} — WhatsApp inviato ✓`);
+  } catch(e) { showToast('Errore check-in: ' + e.message, 'error'); console.error(e); }
+}
+
+window.resetCassa = function() {
+  currentCassaCliente = null;
+  document.getElementById('clienteFound').classList.remove('visible');
+  document.getElementById('cassaSearch').value = '';
+  document.getElementById('cassaResults').innerHTML = '';
+}
+
+// -- CHECKIN QR GIORNALIERO --
+async function loadCheckin() {
+  const oggi = new Date();
+  const dateStr = oggi.toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('checkinDate').textContent = dateStr;
+  const _p = n => String(n).padStart(2,'0'); const dayCode = oggi.getFullYear() + _p(oggi.getMonth()+1) + _p(oggi.getDate());
+  const qrData = 'https://greedgelateria.github.io/checkin/?code=GREED-CHECKIN-' + dayCode;
+  const container = document.getElementById('checkinQrCanvas');
+  container.innerHTML = ''; // svuota se già generato
+  try {
+    new QRCode(container, {
+      text: qrData,
+      width: 220,
+      height: 220,
+      colorDark: '#1a2e1c',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  } catch(err) {
+    console.error('QR error:', err);
+    container.innerHTML = '<div style="padding:20px;font-size:11px;word-break:break-all;color:#666">' + qrData + '</div>';
+  }
+
+  // Listener realtime check-in di oggi
+  const codiceOggi = 'GREED-CHECKIN-' + dayCode;
+  if (window._checkinUnsubscribe) { window._checkinUnsubscribe(); window._checkinUnsubscribe = null; }
+  const qCheckin = query(
+    collection(db, 'checkins'),
+    where('codice', '==', codiceOggi)
+  );
+  window._checkinUnsubscribe = onSnapshot(qCheckin, (snap) => {
+    const tbody = document.getElementById('checkinTable');
+    if (!tbody) return;
+    if (snap.empty) {
+      tbody.innerHTML = '<tr><td colspan="3"><div class="empty"><div class="empty-icon">\u2615</div><div class="empty-text">Nessun check-in oggi</div></div></td></tr>';
+    } else {
+      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      docs.sort((a, b) => {
+        const ta = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : 0;
+        const tb = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : 0;
+        return tb - ta;
+      });
+      tbody.innerHTML = docs.map(r => {
+        const ts = r.timestamp ? (r.timestamp.toDate ? r.timestamp.toDate() : new Date(r.timestamp)) : null;
+        const ora = ts ? ts.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '--';
+        return '<tr><td>' + (r.nome || '--') + '</td><td>' + ora + '</td><td>+' + (r.puntiAssegnati || 5) + '</td></tr>';
+      }).join('');
+    }
+  }, (err) => {
+    console.error('[CHECKIN] Errore:', err.message);
+  });
+
+  // Carica statistiche annuali
+  loadStatistichePresenze();
+}
+
+// -- REGISTRAZIONE PUBBLICA --
+window.registraCliente = async function() {
+  const nome = document.getElementById('regNome').value.trim();
+  const cognome = document.getElementById('regCognome').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const telefono = document.getElementById('regTel').value.trim();
+  const privacy = document.getElementById('regPrivacy').checked;
+
+  if (!nome || !cognome) { showToast('Nome e cognome sono obbligatori', 'error'); return; }
+  if (!telefono) { showToast('Il numero di telefono è obbligatorio', 'error'); return; }
+  if (!privacy) { showToast('Devi accettare la privacy per iscriverti', 'error'); return; }
+
+  const data = {
+    nome, cognome, email, telefono,
+    dataNascita: document.getElementById('regNascita').value,
+    punti: 0,
+    privacy: true,
+    marketing: document.getElementById('regMarketing').checked,
+    sms: document.getElementById('regSms').checked,
+    createdAt: serverTimestamp(),
+    qrCode: 'GRD-' + Date.now(),
+  };
+
+  try {
+    const btn = document.querySelector('#iscrizioneForm button');
+    btn.textContent = 'Iscrizione in corso...'; btn.disabled = true;
+    await addDoc(collection(db, 'clienti'), data);
+    document.getElementById('iscrizioneForm').style.display = 'none';
+    document.getElementById('successText').innerHTML = `Ciao <strong>${nome}</strong>! Sei ufficialmente un <strong>Esploratore</strong> del Club Greed.<br><br>Riceverai a breve un messaggio WhatsApp con il tuo QR personale. Ti aspettiamo in gelateria!<br><br><span style="font-size:12px;color:var(--text-muted)">Scrivi <strong>BONUS</strong> su WhatsApp per ricevere 20 punti regalo! 🎁</span>`;
+    document.getElementById('iscrizioneSuccess').classList.add('visible');
+  } catch(e) {
+    showToast('Errore nella registrazione', 'error');
+    const btn = document.querySelector('#iscrizioneForm button');
+    btn.textContent = 'Iscriviti al Club Greed →'; btn.disabled = false;
+  }
+}
+
+window.resetForm = function() {
+  document.getElementById('iscrizioneForm').style.display = 'block';
+  document.getElementById('iscrizioneForm').querySelector('button').textContent = 'Iscriviti al Club Greed ->';
+  document.getElementById('iscrizioneForm').querySelector('button').disabled = false;
+  document.getElementById('iscrizioneSuccess').classList.remove('visible');
+  ['regNome','regCognome','regEmail','regTel','regNascita'].forEach(id => document.getElementById(id).value = '');
+  ['regPrivacy','regMarketing','regSms'].forEach(id => document.getElementById(id).checked = false);
+}
+
+// -- INIT --
+async function init() {
+  await loadDashboard();
+  // Pre-carica clienti per la cassa
+  const snap = await getDocs(collection(db, 'clienti'));
+  window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+init();
+
+/* -- QR SCANNER FOTOCAMERA (Cassa) -- */
+window._scannerStream = null;
+window._scannerRAF = null;
+window._scannerCanvas = document.createElement('canvas');
+
+window.avviaScanner = function() {
+  document.getElementById('qrStartArea').style.display = 'none';
+  document.getElementById('qrScanArea').style.display = 'block';
+  var video = document.getElementById('qrVideo');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(function(stream) {
+      window._scannerStream = stream;
+      video.srcObject = stream;
+      video.play();
+      video.addEventListener('loadedmetadata', function() {
+        window._scannerRAF = requestAnimationFrame(window._scanFrame);
+      });
+    })
+    .catch(function(err) {
+      fermaScanner();
+      alert('Fotocamera non disponibile: ' + err.message);
+    });
+};
+
+window._scanFrame = function() {
+  var video = document.getElementById('qrVideo');
+  if (!video || video.readyState < 2) {
+    window._scannerRAF = requestAnimationFrame(window._scanFrame);
+    return;
+  }
+  var canvas = window._scannerCanvas;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  var code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  if (code && code.data) {
+    var raw = code.data.trim();
+    fermaScanner();
+
+    // QR ordine: contiene ORD-
+    if (raw.indexOf('ORD-') !== -1) {
+      var ordMatch = raw.match(/(ORD-[0-9]+)/);
+      var ordineId = ordMatch ? ordMatch[1] : raw;
+      mostraDettaglioOrdine(ordineId);
+      return;
+    }
+
+    // QR personale cliente: estrai GRD-xxx da URL se necessario
+    var qr = raw;
+    var urlMatch = raw.match(/[?&]qr=(GRD-[^&]+)/);
+    if (urlMatch) qr = urlMatch[1];
+
+    // Cerca per qrCode, per ID documento, o per GRD-<ID>
+    var idDaQr = qr.startsWith('GRD-') ? qr.slice(4) : qr;
+    var cliente = window.allClienti && window.allClienti.find(function(c) {
+      return c.qrCode === qr || c.id === qr || c.id === idDaQr;
+    });
+    if (cliente) {
+      selezionaClienteCassa(cliente.id);
+    } else {
+      // Non trovato in cache — cerca su Firestore per qrCode
+      (async function() {
+        try {
+          // Prova per qrCode
+          let snap = await getDocs(query(collection(db, 'clienti'), where('qrCode','==', qr), limit(1)));
+          if (snap.empty && idDaQr !== qr) {
+            // Prova per ID documento
+            const docSnap = await getDoc(doc(db, 'clienti', idDaQr));
+            if (docSnap.exists()) {
+              await selezionaClienteCassa(idDaQr);
+              return;
+            }
+          }
+          if (!snap.empty) {
+            await selezionaClienteCassa(snap.docs[0].id);
+          } else {
+            document.getElementById('cassaSearch').value = qr;
+            cercaClienteCassa();
+            document.getElementById('qrStartArea').style.display = 'block';
+            showToast('Cliente non trovato — ricerca manuale', 'error');
+          }
+        } catch(e) {
+          document.getElementById('cassaSearch').value = qr;
+          cercaClienteCassa();
+          document.getElementById('qrStartArea').style.display = 'block';
+        }
+      })();
+    }
+    return;
+  }
+  window._scannerRAF = requestAnimationFrame(window._scanFrame);
+};
+
+window.fermaScanner = function() {
+  if (window._scannerRAF) { cancelAnimationFrame(window._scannerRAF); window._scannerRAF = null; }
+  if (window._scannerStream) { window._scannerStream.getTracks().forEach(function(t){ t.stop(); }); window._scannerStream = null; }
+  var video = document.getElementById('qrVideo');
+  if (video) { video.srcObject = null; }
+  document.getElementById('qrScanArea').style.display = 'none';
+  document.getElementById('qrStartArea').style.display = 'block';
+};
+
+
+/* -- GESTIONE ORDINI QR -- */
+window._ordineCorrente = null;
+
+window.mostraDettaglioOrdine = async function(ordineId) {
+  try {
+    const snap = await getDocs(query(collection(db, 'ordini'), where('ordineId','==',ordineId), limit(1)));
+    if (snap.empty) {
+      showToast('Ordine non trovato: ' + ordineId, 'error');
+      return;
+    }
+    const ordine = snap.docs[0].data();
+    const docId = snap.docs[0].id;
+    window._ordineCorrente = { docId, ordine };
+
+    document.getElementById('modalOrdineId').textContent = ordineId;
+    
+    const stato = ordine.stato === 'consegnato' 
+      ? '<span style="color:var(--green)">v Già consegnato</span>'
+      : '<span style="color:var(--gold)"> In attesa di ritiro</span>';
+    document.getElementById('modalOrdineStato').innerHTML = stato;
+
+    let html = `<div style="background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:600">${ordine.nome} ${ordine.cognome||''}</div>
+      <div style="font-size:13px;color:var(--text-muted)"> ${ordine.telefono||'-'}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">EUR ${ordine.totale?.toFixed(2)||'-'}</div>
+    </div>`;
+
+    if (ordine.carrello && ordine.carrello.length) {
+      ordine.carrello.forEach((item, i) => {
+        html += `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+          <div style="font-weight:600;margin-bottom:6px">${item.vaschetta}</div>
+          <div style="font-size:13px"> ${item.gusti?.join(', ')||'-'}</div>
+          ${item.scorta ? `<div style="font-size:12px;color:#c8860a;margin-top:4px">* Scorta: ${item.scorta}</div>` : ''}
+          ${item.panna ? `<div style="font-size:12px;color:var(--text-muted)">+ Panna EUR${item.pannaCosto?.toFixed(2)||'-'}</div>` : ''}
+          ${item.miniconi ? `<div style="font-size:12px;color:var(--text-muted)">+ Kit 9 miniconi EUR1,50</div>` : ''}
+          ${item.cono ? `<div style="font-size:12px;color:var(--text-muted)">+ ${item.cono}</div>` : ''}
+          ${item.note ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px"> ${item.note}</div>` : ''}
+        </div>`;
+      });
+    }
+
+    document.getElementById('modalOrdineBody').innerHTML = html;
+    document.getElementById('btnConsegna').style.display = ordine.stato === 'consegnato' ? 'none' : 'block';
+    document.getElementById('ordineModal').style.display = 'flex';
+  } catch(e) {
+    showToast('Errore caricamento ordine', 'error');
+    console.error(e);
+  }
+};
+
+window.consegnaOrdine = async function() {
+  if (!window._ordineCorrente) return;
+  try {
+    await updateDoc(doc(db, 'ordini', window._ordineCorrente.docId), { stato: 'consegnato' });
+    showToast('Ordine consegnato v');
+    chiudiOrdineModal();
+  } catch(e) {
+    showToast('Errore', 'error');
+  }
+};
+
+window.chiudiOrdineModal = function() {
+  document.getElementById('ordineModal').style.display = 'none';
+  window._ordineCorrente = null;
+};
+
+
+/* -- VISTA ORDINI -- */
+window._ordiniCache = [];
+
+window.showView = window.showView || function(){};
+const _origShowView = window.showView;
+
+window.loadOrdini = async function() {
+  const filtro = document.getElementById('ordiniFilter')?.value || 'tutti';
+  const tableDiv = document.getElementById('ordiniTable');
+  if(tableDiv) tableDiv.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">Caricamento...</div>';
+
+  try {
+    let q;
+    if(filtro === 'tutti') {
+      q = query(collection(db, 'ordini'), orderBy('createdAt','desc'), limit(200));
+    } else {
+      q = query(collection(db, 'ordini'), where('stato','==',filtro), orderBy('createdAt','desc'), limit(200));
+    }
+    const snap = await getDocs(q);
+    window._ordiniCache = snap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    renderOrdiniTable(window._ordiniCache);
+    aggiornaStatOrdini(window._ordiniCache);
+  } catch(e) {
+    if(tableDiv) tableDiv.innerHTML = '<div style="padding:24px;color:var(--red)">Errore caricamento ordini.</div>';
+    console.error(e);
+  }
+};
+
+function aggiornaStatOrdini(ordini) {
+  const oggi = new Date().toLocaleDateString('it-IT');
+  const ordiniOggi = ordini.filter(o => {
+    const d = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleDateString('it-IT') : '';
+    return d === oggi;
+  });
+  const attesa = ordini.filter(o => o.stato === 'pagato');
+  const incasso = ordini.filter(o => o.stato === 'consegnato').reduce((s,o) => s+(o.totale||0), 0);
+  const meseCorrente = new Date().getMonth();
+  const incassoMese = ordini.filter(o => {
+    const d = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+    return d && d.getMonth() === meseCorrente && o.stato === 'consegnato';
+  }).reduce((s,o) => s+(o.totale||0), 0);
+
+  document.getElementById('statOggi').textContent = ordiniOggi.length;
+  document.getElementById('statAttesa').textContent = attesa.length;
+  document.getElementById('statIncasso').textContent = 'EUR ' + incasso.toFixed(2);
+  document.getElementById('statMese').textContent = 'EUR ' + incassoMese.toFixed(2);
+}
+
+function renderOrdiniTable(ordini) {
+  const div = document.getElementById('ordiniTable');
+  if(!ordini.length) {
+    div.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">Nessun ordine trovato.</div>';
+    return;
+  }
+
+  let html = `<table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="background:var(--cream);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted)">
+        <th style="padding:12px 16px;text-align:left">Ordine</th>
+        <th style="padding:12px 16px;text-align:left">Cliente</th>
+        <th style="padding:12px 16px;text-align:left">Telefono</th>
+        <th style="padding:12px 16px;text-align:left">Data</th>
+        <th style="padding:12px 16px;text-align:right">Totale</th>
+        <th style="padding:12px 16px;text-align:center">Stato</th>
+        <th style="padding:12px 16px;text-align:center">Azioni</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  ordini.forEach(o => {
+    const data = o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString('it-IT') : '-';
+    const statoColor = o.stato === 'consegnato' ? 'var(--green)' : 'var(--gold)';
+    const statoLabel = o.stato === 'consegnato' ? 'v Consegnato' : ' Attesa ritiro';
+    const gusti = o.carrello?.map(i => i.gusti?.join(', ')).join(' | ') || '-';
+
+    html += `<tr style="border-top:1px solid var(--border);transition:background .15s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+      <td style="padding:12px 16px;font-family:'Cormorant Garamond',serif;font-weight:600;color:var(--green)">${o.ordineId||'-'}</td>
+      <td style="padding:12px 16px"><div style="font-weight:500">${o.nome||''} ${o.cognome||''}</div><div style="font-size:11px;color:var(--text-muted)">${gusti}</div></td>
+      <td style="padding:12px 16px;color:var(--text-muted)">${o.telefono||'-'}</td>
+      <td style="padding:12px 16px;color:var(--text-muted);font-size:12px">${data}</td>
+      <td style="padding:12px 16px;text-align:right;font-weight:600">EUR ${(o.totale||0).toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:center"><span style="font-size:11px;font-weight:600;color:${statoColor}">${statoLabel}</span></td>
+      <td style="padding:12px 16px;text-align:center">
+        <button onclick="apriDettaglioOrdineAdmin('${o.docId}')" style="background:none;border:1px solid var(--border);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">Dettaglio</button>
+        <button onclick="eliminaOrdine('${o.docId}','${o.ordineId||o.docId}')" style="background:none;border:1px solid #f5c6c2;color:var(--red);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:4px">🗑</button>
+      </td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  div.innerHTML = html;
+}
+
+const PIN_TITOLARE_HASH = '11dd79d45f528e98c462a214f811bb50a6b32452f6c6acead7c9f2cf2917a3a5';
+async function verificaPinTitolare(msg) {
+  const pin = prompt(msg); if (pin === null) return false;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('greed-crm|' + pin.trim()));
+  const hex = [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  if (hex !== PIN_TITOLARE_HASH) { showToast('PIN errato — operazione annullata', 'error'); return false; }
+  return true;
+}
+window.eliminaOrdine = async function(docId, ordineId) {
+  if (!(await verificaPinTitolare(`PIN titolare per eliminare l'ordine "${ordineId}":`))) return;
+  const conferma = confirm(`Eliminare definitivamente l'ordine "${ordineId}"?\n\nQuesta operazione non può essere annullata.`);
+  if (!conferma) return;
+  try {
+    await deleteDoc(doc(db, 'ordini', docId));
+    window._ordiniCache = window._ordiniCache.filter(o => o.docId !== docId);
+    renderOrdiniTable(window._ordiniCache);
+    aggiornaStatOrdini(window._ordiniCache);
+    showToast(`Ordine ${ordineId} eliminato ✓`);
+  } catch(e) {
+    showToast('Errore eliminazione ordine', 'error');
+  }
+};
+
+window.apriDettaglioOrdineAdmin = function(docId) {
+  const o = window._ordiniCache.find(x => x.docId === docId);
+  if(!o) return;
+  window._ordineCorrente = { docId, ordine: o };
+
+  document.getElementById('modalOrdineId').textContent = o.ordineId || docId;
+  const stato = o.stato === 'consegnato'
+    ? '<span style="color:var(--green)">v Già consegnato</span>'
+    : '<span style="color:var(--gold)"> In attesa di ritiro</span>';
+  document.getElementById('modalOrdineStato').innerHTML = stato;
+
+  let html = `<div style="background:var(--cream);border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:600">${o.nome} ${o.cognome||''}</div>
+    <div style="font-size:13px;color:var(--text-muted)"> ${o.telefono||'-'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:4px">EUR ${(o.totale||0).toFixed(2)}</div>
+  </div>`;
+
+  if(o.carrello?.length) {
+    o.carrello.forEach(item => {
+      html += `<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div style="font-weight:600;margin-bottom:6px">${item.vaschetta}</div>
+        <div style="font-size:13px"> ${item.gusti?.join(', ')||'-'}</div>
+        ${item.scorta ? `<div style="font-size:12px;color:#c8860a;margin-top:4px">* Scorta: ${item.scorta}</div>` : ''}
+        ${item.panna ? `<div style="font-size:12px;color:var(--text-muted)">+ Panna EUR${item.pannaCosto?.toFixed(2)||'-'}</div>` : ''}
+        ${item.miniconi ? `<div style="font-size:12px;color:var(--text-muted)">+ Kit 9 miniconi EUR1,50</div>` : ''}
+        ${item.cono ? `<div style="font-size:12px;color:var(--text-muted)">+ ${item.cono}</div>` : ''}
+        ${item.note ? `<div style="font-size:12px;color:var(--text-muted);margin-top:4px"> ${item.note}</div>` : ''}
+      </div>`;
+    });
+  }
+
+  document.getElementById('modalOrdineBody').innerHTML = html;
+  document.getElementById('btnConsegna').style.display = o.stato === 'consegnato' ? 'none' : 'block';
+  document.getElementById('ordineModal').style.display = 'flex';
+};
+
+/* ─────────────────────────────────────────
+   CALENDARIO E-COMMERCE — giorni di chiusura (config/calendario.chiusure)
+───────────────────────────────────────── */
+let calChiusure = new Set();
+const calMese = new Date(); calMese.setDate(1);
+const calISO = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const calDaISO = s => { const [y,m,g] = s.split('-').map(Number); return new Date(y, m-1, g); };
+
+async function loadCalendario() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'calendario'));
+    calChiusure = new Set((snap.exists() && snap.data().chiusure) || []);
+  } catch(e) { console.error(e); showToast('Calendario non caricato: ' + e.message, 'error'); }
+  renderCalendario();
+}
+
+window.calCambiaMese = function(n) { calMese.setMonth(calMese.getMonth() + n); renderCalendario(); };
+
+window.calToggleGiorno = async function(iso) {
+  const prima = new Set(calChiusure);
+  if (calChiusure.has(iso)) calChiusure.delete(iso); else calChiusure.add(iso);
+  renderCalendario();
+  try {
+    const oggi = calISO(new Date());
+    const lista = [...calChiusure].filter(x => x >= oggi).sort(); // i giorni passati non servono più
+    await setDoc(doc(db, 'config', 'calendario'), { chiusure: lista, aggiornato: serverTimestamp() });
+    calChiusure = new Set(lista);
+    showToast(prima.has(iso) ? 'Giorno riaperto ✓' : 'Giorno segnato chiuso ✓');
+  } catch(e) {
+    calChiusure = prima; renderCalendario();
+    showToast('Non salvato: ' + e.message, 'error');
+  }
+};
+
+function renderCalendario() {
+  const tit = document.getElementById('calTitolo'), gr = document.getElementById('calGriglia');
+  if (!tit || !gr) return;
+  tit.textContent = calMese.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+  const oggi = calISO(new Date());
+  let h = ['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].map(g => `<div style="text-align:center;font-size:11px;color:var(--text-muted);font-weight:600;padding:4px 0">${g}</div>`).join('');
+  const primo = (calMese.getDay() + 6) % 7; // lunedì = 0
+  for (let i = 0; i < primo; i++) h += '<div></div>';
+  const giorni = new Date(calMese.getFullYear(), calMese.getMonth() + 1, 0).getDate();
+  for (let g = 1; g <= giorni; g++) {
+    const iso = calISO(new Date(calMese.getFullYear(), calMese.getMonth(), g));
+    const passato = iso < oggi, chiuso = calChiusure.has(iso);
+    const stile = passato ? 'background:transparent;color:#bbb;border:1px solid transparent;cursor:default'
+      : chiuso ? 'background:var(--red);color:#fff;border:1px solid var(--red);cursor:pointer'
+      : 'background:#fff;color:inherit;border:1px solid var(--border);cursor:pointer';
+    const bordoOggi = iso === oggi ? ';box-shadow:0 0 0 2px var(--green)' : '';
+    h += `<button type="button" ${passato ? 'disabled' : `onclick="calToggleGiorno('${iso}')"`} aria-pressed="${chiuso}" aria-label="${g}${chiuso ? ' chiuso' : ''}" style="${stile}${bordoOggi};border-radius:9px;padding:12px 0;font-size:15px;font-weight:600;font-family:inherit">${g}</button>`;
+  }
+  gr.innerHTML = h;
+  const prossime = [...calChiusure].filter(x => x >= oggi).sort();
+  document.getElementById('calProssime').innerHTML = prossime.length
+    ? '<b>Prossime chiusure:</b> ' + prossime.map(x => calDaISO(x).toLocaleDateString('it-IT', { weekday:'short', day:'numeric', month:'short' })).join(' · ')
+    : '<span style="color:var(--text-muted)">Nessuna chiusura in programma: si può ordinare tutti i giorni.</span>';
+}
+
+/* ─────────────────────────────────────────
+   ORA FURBA
+───────────────────────────────────────── */
+let ofAttiva = false;
+
+async function loadOraFurba() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'oraFurba'));
+    if (snap.exists()) {
+      const d = snap.data();
+      ofAttiva = d.attiva !== false;
+      document.getElementById('ofMaxOrdini').value = d.maxOrdini || 10;
+      document.getElementById('ofOrdiniOggi').textContent = d.ordiniOggi || 0;
+      aggiornaToggleOF();
+    }
+  } catch(e) { console.error(e); }
+}
+
+function aggiornaToggleOF() {
+  const toggle = document.getElementById('ofToggle');
+  const dot = document.getElementById('ofToggleDot');
+  const label = document.getElementById('ofToggleLabel');
+  if (ofAttiva) {
+    toggle.style.background = 'var(--green)';
+    dot.style.left = '25px';
+    label.textContent = 'Attiva';
+    label.style.color = 'var(--green)';
+  } else {
+    toggle.style.background = 'var(--border)';
+    dot.style.left = '3px';
+    label.textContent = 'Disattiva';
+    label.style.color = 'var(--text-muted)';
+  }
+}
+
+window.toggleOraFurba = function() {
+  ofAttiva = !ofAttiva;
+  aggiornaToggleOF();
+};
+
+window.salvaOraFurba = async function() {
+  const maxOrdini = parseInt(document.getElementById('ofMaxOrdini').value) || 10;
+  try {
+    await updateDoc(doc(db, 'config', 'oraFurba'), { attiva: ofAttiva, maxOrdini });
+    showToast('Ora Furba aggiornata ✓');
+  } catch(e) {
+    showToast('Errore salvataggio', 'error');
+  }
+};
+
+window.resetOrdiniOggi = async function() {
+  const conferma = confirm('Azzerare il contatore ordini oggi?');
+  if (!conferma) return;
+  try {
+    await updateDoc(doc(db, 'config', 'oraFurba'), { ordiniOggi: 0 });
+    document.getElementById('ofOrdiniOggi').textContent = '0';
+    showToast('Contatore azzerato ✓');
+  } catch(e) {
+    showToast('Errore', 'error');
+  }
+};
+
+/* ─────────────────────────────────────────
+   CAMPAGNE WHATSAPP
+───────────────────────────────────────── */
+const N8N_CAMPAGNA_URL = 'https://inviacampagna-u3jmxuuypq-ey.a.run.app';
+let campClientiSelezionati = new Set();
+let campClientiFiltrati = [];
+
+// Configurazione campagne: template Meta, descrizione, campi, testo preview
+const CAMP_CONFIG = {
+  ora_furba: {
+    template: 'greed_ora_furba',
+    desc: 'Promozione Ora Furba — ricorda ai clienti che ogni mattina lun-ven dalle 10 alle 11 possono ordinare con il 20% di sconto.',
+    bottone: true,
+    campi: [],
+    preview: (v, nome) => `⏰ Ciao ${nome}, scopri l'*ORA FURBA* da Gelateria GREED!\n\nOgni mattina dal lunedì al venerdì, dalle 10:00 alle 11:00, puoi ordinare la tua vaschetta di gelato artigianale con il 20% di sconto 🍨\n\n📦 Slot limitati ogni giorno — chi prima arriva, meglio alloggia!\n\n➡️ Ordina su:\ngreedgelateria.github.io\n\n🕕 Ritiro in gelateria a partire dalle 18:00\n\nGelateria GREED — Piazza Roma 16, Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_ora_furba',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl
+    })
+  },
+  passaparola: {
+    template: 'greed_referral',
+    desc: 'Passaparola — ogni cliente riceve il suo link personale. L\'amico che si iscrive da lì ha il 25% sul primo acquisto entro 30 giorni (online o al banco); chi invita riceve 50 punti quando l\'amico compra.',
+    bottone: true,
+    campi: [],
+    preview: (v, nome) => `Ciao ${nome}! 🎁\n\nHai un amico goloso? Presentalo al Club GREED!\n\n👉 Inoltragli il tuo link personale per iscriversi: greedgelateria.github.io/i-gusti/?invito=XXXXXX\n\nIl tuo amico riceve 25% di sconto sul primo ordine.\nTu guadagni 50 punti extra appena fa il primo acquisto: un passo in più verso il livello superiore.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_referral',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: '{LINK}', var3: '25%', var4: '50'   // {LINK}: il server mette il link personale di ogni cliente
+    })
+  },
+  ora_furba_dormienti: {
+    template: 'greed_ora_furba_speciale',
+    desc: 'Riattivazione inattivi — sconto personale 30% con codice univoco. Ogni cliente riceve un codice usa-e-getta valido 24h, solo vaschette.',
+    bottone: true,
+    richiedeImmagine: false,
+    generaCodice: true,
+    campi: [
+      { id: 'c_orario', label: 'Giorno e fascia oraria ({{2}})', tipo: 'text', placeholder: 'domani, dalle 11:00 alle 16:00' },
+      { id: 'c_sconto', label: 'Sconto ({{3}})', tipo: 'text', placeholder: '30%' },
+    ],
+    preview: (v, nome, codice) => `Ciao ${nome}, ti mancava GREED? 🍦\n\nSolo per te, ${v.c_orario||'...'}: ordina su gelateriagreed.it/i-gusti e ottieni il ${v.c_sconto||'...'} di sconto su tutta la tua vaschetta di gelato artigianale.\n\nUsa il codice ${codice||'GREED-NOME-XXXX'} al checkout. Solo per te. Non fartela scappare 🍨`,
+    payload: (c, v, imgUrl, codice) => ({
+      template: 'greed_ora_furba_speciale',
+      telefono: tel(c), nome: c.nome,
+      var2: v.c_orario, var3: v.c_sconto, var4: codice
+    })
+  },
+  reminder_bonus: {
+    template: 'greed_reminder_bonus',
+    desc: 'Reminder BONUS — inviato solo a chi non ha ancora riscattato il bonus di benvenuto.',
+    bottone: false,
+    soloSenzaBonus: true,
+    campi: [],
+    preview: (v, nome) => `Ciao ${nome}! 🎁\n\nHai un regalo che ti aspetta nel Club GREED.\n\nScrivi *BONUS* in questa chat e ricevi subito *20 punti* da usare in gelateria!\n\n— GREED Gelateria Naturale · Frascati 🍦`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_reminder_bonus',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl || 'https://greedgelateria.github.io/assets/img/punti-banner.jpg'
+    })
+  },
+  promo_flash: {
+    template: 'greed_promo_flash',
+    desc: 'Offerta flash con sconto o gusto in esclusiva. Invia a tutti o per livello.',
+    bottone: true,
+    campi: [
+      { id: 'c_testo',    label: 'Testo offerta ({{2}})', tipo: 'textarea', placeholder: 'Vaschetta Media con sconto 20% solo oggi!' },
+      { id: 'c_scadenza', label: 'Valida fino a ({{3}})',  tipo: 'text',     placeholder: 'domenica 30 marzo' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 🍦\n\n${v.c_testo||'...'}\n\nOfferta valida fino a ${v.c_scadenza||'...'}.\nNon perdere questa occasione — solo per i membri del Club Greed.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_promo_flash',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_testo, var3: v.c_scadenza
+    })
+  },
+
+  recensione_social: {
+    template: 'greed_recensione_social',
+    desc: 'Chiedi una story su Instagram o Facebook in cambio di punti.',
+    bottone: false,
+    campi: [
+      { id: 'c_punti', label: 'Punti in regalo ({{2}})', tipo: 'text', placeholder: '10' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 📸\n\nPubblica una story su Instagram o Facebook taggando @greedavididigelato e guadagni ${v.c_punti||'...'} punti extra!\n\nMostraci il tuo gelato preferito.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_recensione_social',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_punti
+    })
+  },
+  compleanno: {
+    template: 'greed_compleanno',
+    desc: 'Auguri personalizzati con regalo. Filtra automaticamente i compleanni del mese.',
+    bottone: true,
+    campi: [
+      { id: 'c_regalo', label: 'Regalo ({{2}})', tipo: 'text', placeholder: 'una vaschetta piccola in omaggio' },
+    ],
+    preview: (v, nome) => `Tanti auguri ${nome}! 🎂🍦\n\nIl Club Greed ti fa un regalo: ${v.c_regalo||'...'}.\n\nValido tutta la settimana del tuo compleanno — vieni a trovarci a Piazza Roma 16, Frascati.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_compleanno',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_regalo
+    })
+  },
+
+  evento: {
+    template: 'greed_appuntamento',
+    desc: 'Invito evento — invia a tutti i soci Club GREED con anti-blocco Meta integrato.',
+    bottone: false,
+    richiedeImmagine: false,
+    campi: [
+      { id: 'c_dettagli', label: 'Data, ora e luogo ({{2}})', tipo: 'text', placeholder: 'venerdì 25 luglio, dalle 18:00 alle 20:00 – Frascati, Piazza Roma 16' },
+    ],
+    preview: (v, nome) => `Ciao ${nome},\n\ndomani ti aspettiamo in gelateria per qualcosa che non hai mai assaggiato.\n\n🆕 Anteprima esclusiva — solo per i soci Club GREED\nPresentiamo Vellutà al Tiramisù: il nostro nuovo dessert al cucchiaio, un tiramisù espresso come non l'hai mai vissuto.\n\n🎁 Degustazione gratuita\n📅 ${v.c_dettagli||'...'}\n\nPosti limitati. Solo per te — Club GREED.`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_appuntamento',
+      telefono: tel(c), nome: c.nome,
+      var2: v.c_dettagli
+    })
+  },
+  delivery_lancio: {
+    template: 'greed_delivery_lancio',
+    desc: 'Annuncio lancio delivery — invia a tutti gli iscritti. Nessuna immagine richiesta.',
+    bottone: false,
+    richiedeImmagine: false,
+    campi: [],
+    preview: (v, nome) => `🚀 Ciao ${nome}, una novità per te!\n\nDa oggi puoi ordinare il gelato GREED direttamente a casa tua.\n\n🎁 Con ogni consegna ti regaliamo una vaschetta piccola di panna fresca — sempre.\n\n🕓 Ordina entro le 16:00\n🛵 Consegna dalle 19:00 alle 20:00\n⚠️ Solo 10 consegne al giorno — prenota il tuo posto prima che finiscano.\n\n👉 greedgelateria.github.io/i-gusti`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_delivery_lancio',
+      telefono: tel(c), nome: c.nome,
+      var1: c.nome || 'amico'
+    })
+  },
+
+  riattivazione: {
+    template: 'greed_riattivazione',
+    desc: 'Per clienti inattivi da 1-2 mesi. Offri una gratificazione per farli tornare.',
+    bottone: true,
+    campi: [
+      { id: 'c_regalo', label: 'Gratificazione ({{2}})', tipo: 'text', placeholder: 'una vaschetta di panna gratis con il tuo prossimo ordine' },
+      { id: 'c_scad',   label: 'Valido fino a ({{3}})',  tipo: 'text', placeholder: 'domenica 13 aprile' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}, ci manchi! 🍦\n\nÈ un po' che non ti vediamo da GREED — e vogliamo che tu torni con un sorriso.\n\nPer te: ${v.c_regalo||'...'}\n\nValido fino a ${v.c_scad||'...'}. Ti aspettiamo a Piazza Roma 16, Frascati.\n\n— GREED Gelateria Naturale`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_riattivazione',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_regalo, var3: v.c_scad
+    })
+  },
+  festa_papa: {
+    template: 'greed_festa_papa',
+    desc: 'Campagna Festa del Papà — 19 marzo.',
+    bottone: true,
+    campi: [
+      { id: 'c_offerta', label: 'Offerta speciale ({{2}})', tipo: 'textarea', placeholder: 'Vaschetta Grande per tutta la famiglia a prezzo speciale!' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 👨‍👧\n\nFesta del Papà si festeggia con il gelato migliore di Frascati 🍦\n\n${v.c_offerta||'...'}\n\nValido il 19 marzo — vieni a trovarci con la tua famiglia a Piazza Roma 16.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_festa_papa',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_offerta
+    })
+  },
+  festa_mamma: {
+    template: 'greed_festa_mamma_2',
+    desc: 'Campagna Festa della Mamma — seconda domenica di maggio.',
+    bottone: true,
+    campi: [
+      { id: 'c_offerta', label: 'Offerta speciale ({{2}})', tipo: 'textarea', placeholder: 'Porta la tua mamma e ricevi una vaschetta di panna in omaggio!' },
+    ],
+    preview: (v, nome) => `Ciao ${nome}! 💐\n\nLa mamma merita il meglio — e noi abbiamo il gelato perfetto per lei 🍦\n\n${v.c_offerta||'...'}\n\nTi aspettiamo a Piazza Roma 16, Frascati.\n\n— GREED Gelateria Naturale · Frascati`,
+    payload: (c, v, imgUrl) => ({
+      template: 'greed_festa_mamma_2',
+      telefono: tel(c), nome: c.nome,
+      immagineUrl: imgUrl,
+      var2: v.c_offerta
+    })
+  }
+};
+
+function tel(c) {
+  return (c.telefono||'').startsWith('+') ? c.telefono : `+39${c.telefono}`;
+}
+
+window.aggiornaCampCount = function() {
+  if (!window.allClienti || !window.allClienti.length) {
+    getDocs(collection(db, 'clienti')).then(snap => {
+      window.allClienti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderCampClienti(window.allClienti);
+    });
+  } else {
+    renderCampClienti(window.allClienti);
+  }
+};
+
+window.campagnaTipoChanged = function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  document.getElementById('campTipoDesc').textContent = cfg ? cfg.desc : '';
+
+  if (!cfg) {
+    document.getElementById('campContenutoWrap').style.display = 'none';
+    document.getElementById('campDestinatariWrap').style.display = 'none';
+    return;
+  }
+
+  // Mostra sezione contenuto
+  document.getElementById('campContenutoWrap').style.display = 'block';
+  document.getElementById('campDestinatariWrap').style.display = 'block';
+
+  // Reset immagine
+  document.getElementById('campImmagineUrl').value = '';
+  document.getElementById('campImgPreviewWrap').style.display = 'none';
+  document.getElementById('campImgPlaceholder').style.display = 'block';
+  document.getElementById('campImgStatus').textContent = '';
+  document.getElementById('campImgGroup').style.display = cfg.richiedeImmagine === false ? 'none' : 'block';
+
+  // Genera campi dinamici
+  let html = '';
+  cfg.campi.forEach(f => {
+    html += `<div class="form-group">
+      <label class="form-label">${f.label}</label>`;
+    if (f.tipo === 'textarea') {
+      html += `<textarea class="form-input" id="${f.id}" rows="3" placeholder="${f.placeholder}" oninput="aggiornaAnteprimaCamp()" style="resize:vertical;line-height:1.5"></textarea>`;
+    } else {
+      html += `<input type="text" class="form-input" id="${f.id}" placeholder="${f.placeholder}" oninput="aggiornaAnteprimaCamp()">`;
+    }
+    html += `</div>`;
+  });
+  document.getElementById('campCampiDinamici').innerHTML = html;
+  document.getElementById('campAnteprimaWrap').style.display = 'none';
+  document.getElementById('campAnteprimaTesto').textContent = '';
+
+  // Selezione automatica per tipo campagna
+  if (tipo === 'compleanno') {
+    setTimeout(() => selezionaCompleannoMese(), 300);
+  } else if (tipo === 'reminder_bonus') {
+    // Template con header immagine — imposta il banner bonus
+    document.getElementById('campImmagineUrl').value = 'https://greedgelateria.github.io/assets/img/punti-banner.jpg';
+    document.getElementById('campImgStatus').textContent = '✅ Banner BONUS (header template)';
+    setTimeout(() => {
+      // Filtra senza bonus + ordina per data iscrizione (più recenti prima)
+      const senzaBonus = (window.allClienti || [])
+        .filter(c => !c.bonusRiscattato && c.telefono)
+        .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+      window._reminderBonusLista = senzaBonus;
+
+      // Inserisci selettore "primi N" sopra la lista (una sola volta)
+      if (!document.getElementById('reminderLimitWrap')) {
+        const badge = document.getElementById('campBadge');
+        const wrap = document.createElement('div');
+        wrap.id = 'reminderLimitWrap';
+        wrap.style.cssText = 'background:#eceff1;border:1px solid #546e7a33;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:14px';
+        wrap.innerHTML = `
+          <div style="font-weight:600;color:#37474f;margin-bottom:8px">🧪 Invio di test — proteggi il quality rating WhatsApp</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span>Invia solo ai primi</span>
+            <select id="reminderLimit" onchange="applicaLimiteReminder()" style="padding:6px 12px;border-radius:6px;border:1px solid #546e7a55;font-family:inherit;font-size:14px;background:#fff;cursor:pointer">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+              <option value="0">Tutti</option>
+            </select>
+            <span>contatti più recenti</span>
+          </div>
+          <div style="font-size:12px;color:#546e7a;margin-top:8px">Ordinati dal più recente. Parti dai primi 50 per testare la risposta, poi scala se converte.</div>`;
+        if (badge && badge.parentNode) badge.parentNode.insertBefore(wrap, badge);
+      }
+      applicaLimiteReminder();
+    }, 300);
+  } else {
+    renderCampClienti(window.allClienti || []);
+  }
+};
+
+window.applicaLimiteReminder = function() {
+  const lista = window._reminderBonusLista || [];
+  const limite = parseInt(document.getElementById('reminderLimit')?.value || 50);
+  const selezionati = limite > 0 ? lista.slice(0, limite) : lista;
+  campClientiSelezionati.clear();
+  selezionati.forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(lista);
+  const totale = lista.length;
+  const nSel = selezionati.length;
+  document.getElementById('campBadge').textContent = `${nSel} di ${totale} selezionati per l'invio (senza bonus, con telefono)`;
+}
+
+window.aggiornaAnteprimaCamp = function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) return;
+  const v = {};
+  cfg.campi.forEach(f => { v[f.id] = (document.getElementById(f.id)||{}).value || ''; });
+  const testo = cfg.preview(v, 'Mario');
+  document.getElementById('campAnteprimaTesto').textContent = testo;
+  document.getElementById('campAnteprimaWrap').style.display = 'block';
+};
+
+// ── UPLOAD IMMAGINE FIREBASE STORAGE ──
+window.campHandleFile = async function(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('Immagine troppo grande (max 5MB)', 'error'); return; }
+
+  document.getElementById('campImgPlaceholder').style.display = 'none';
+  document.getElementById('campImgPreviewWrap').style.display = 'none';
+  document.getElementById('campImgUploading').style.display = 'block';
+  document.getElementById('campImgStatus').textContent = '';
+  document.getElementById('campImmagineUrl').value = '';
+
+  try {
+    const { getStorage, ref, uploadBytes, getDownloadURL } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js');
+    const storage = getStorage();
+    const fileName = `campagne/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._]/g,'_')}`;
+    const storageRef = ref(storage, fileName);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    document.getElementById('campImmagineUrl').value = url;
+
+    // mostra preview
+    const img = document.getElementById('campImgPreview');
+    img.src = URL.createObjectURL(file);
+    document.getElementById('campImgUploading').style.display = 'none';
+    document.getElementById('campImgPreviewWrap').style.display = 'block';
+    document.getElementById('campImgStatus').innerHTML = '<span style="color:var(--success)">Immagine caricata</span>';
+  } catch(e) {
+    document.getElementById('campImgUploading').style.display = 'none';
+    document.getElementById('campImgPlaceholder').style.display = 'block';
+    console.error(e);
+    if (e.code === 'storage/unauthorized') {
+      document.getElementById('campImgStatus').innerHTML = '<span style="color:var(--red)">Storage non abilitato — vedi istruzioni sotto</span>';
+      showToast('Abilita Firebase Storage prima', 'error');
+    } else {
+      document.getElementById('campImgStatus').innerHTML = `<span style="color:var(--red)">Errore upload: ${e.message}</span>`;
+    }
+  }
+};
+
+window.campHandleDrop = function(e) {
+  e.preventDefault();
+  document.getElementById('campImgUploadArea').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) campHandleFile(file);
+};
+
+// ── CLIENTI ──
+function renderCampClienti(lista) {
+  campClientiFiltrati = lista;
+  const div = document.getElementById('campClientiList');
+  if (!lista.length) {
+    div.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Nessun cliente trovato</div>';
+    aggiornaBadgeCamp(); return;
+  }
+  div.innerHTML = lista.map(c => {
+    const checked = campClientiSelezionati.has(c.id) ? 'checked' : '';
+    const lv = getLivelloCliente(c);
+    const tel2 = c.telefono
+      ? `<span style="color:var(--text-muted);font-size:11px">${c.telefono}</span>`
+      : '<span style="color:var(--red);font-size:11px">Nessun telefono</span>';
+    return `<label style="display:flex;align-items:center;gap:14px;padding:11px 20px;border-bottom:1px solid var(--cream-dark);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background=''">
+      <input type="checkbox" ${checked} ${!c.telefono?'disabled title="Telefono mancante"':''} onchange="toggleCampCliente('${c.id}',this.checked)" style="width:16px;height:16px;accent-color:var(--green);flex-shrink:0;cursor:${c.telefono?'pointer':'not-allowed'}">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--green);color:var(--yellow);font-family:'Cormorant Garamond',serif;font-size:14px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0">${(c.nome||'?')[0].toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:14px">${c.nome} ${c.cognome||''}</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:2px">${tel2}</div>
+      </div>
+      <span class="badge ${lv.badge}" style="font-size:10px;flex-shrink:0">${lv.nome}</span>
+    </label>`;
+  }).join('');
+  aggiornaBadgeCamp();
+}
+
+window.toggleCampCliente = function(id, checked) {
+  if (checked) campClientiSelezionati.add(id);
+  else campClientiSelezionati.delete(id);
+  aggiornaBadgeCamp();
+};
+
+window.selezionaTuttiCamp = function() {
+  // Solo chi ha dato il consenso marketing (GDPR + regole Meta)
+  campClientiFiltrati.filter(c => c.telefono && c.marketing === true).forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(campClientiFiltrati);
+};
+
+window.deselezionaTuttiCamp = function() {
+  campClientiSelezionati.clear();
+  renderCampClienti(campClientiFiltrati);
+};
+
+window.selezionaLivelloCamp = function(livello) {
+  const tutti = window.allClienti || [];
+  campClientiSelezionati.clear();
+  tutti.filter(c => {
+    const p = c.punti||0;
+    const ps = c.puntiStorici || c.punti || 0;
+    if (livello === 'esploratore') return ps < 200 && c.telefono;
+    if (livello === 'ambasciatore') return ps >= 200 && ps < 500 && c.telefono;
+    if (livello === 'custode') return ps >= 500 && c.telefono;
+    return false;
+  }).forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(tutti);
+};
+
+window.selezionaSegmentoCamp = function(label) {
+  const tutti = window.allClienti || [];
+  campClientiSelezionati.clear();
+  tutti.filter(c => getRFM(c).label === label && c.telefono).forEach(c => campClientiSelezionati.add(c.id));
+  renderCampClienti(tutti);
+  showToast(`Selezionati ${campClientiSelezionati.size} clienti — segmento "${label}"`);
+};
+
+window.selezionaCompleannoMese = function() {
+  const tutti = window.allClienti || [];
+  const meseOggi = new Date().getMonth() + 1;
+  campClientiSelezionati.clear();
+  tutti.filter(c => {
+    if (!c.dataNascita || !c.telefono) return false;
+    const sep = c.dataNascita.includes('-') ? '-' : '/';
+    const p = c.dataNascita.split(sep);
+    const mese = sep === '-' ? parseInt(p[1]) : parseInt(p[1]);
+    return mese === meseOggi;
+  }).forEach(c => campClientiSelezionati.add(c.id));;
+  renderCampClienti(tutti);
+  showToast(`Selezionati ${campClientiSelezionati.size} compleanni di questo mese`);
+};
+
+window.filtraCampClienti = function() {
+  const q = document.getElementById('campSearch').value.toLowerCase();
+  renderCampClienti((window.allClienti||[]).filter(c =>
+    `${c.nome} ${c.cognome} ${c.email} ${c.telefono||''}`.toLowerCase().includes(q)
+  ));
+};
+
+function aggiornaBadgeCamp() {
+  const n = campClientiSelezionati.size;
+  document.getElementById('campBadge').textContent = n === 0
+    ? 'Nessun cliente selezionato'
+    : `${n} client${n===1?'e':'i'} selezionat${n===1?'o':'i'}`;
+}
+
+window.resetCampagna = function() {
+  document.getElementById('campTipo').value = '';
+  document.getElementById('campTipoDesc').textContent = '';
+  document.getElementById('campContenutoWrap').style.display = 'none';
+  document.getElementById('campDestinatariWrap').style.display = 'none';
+  document.getElementById('campProgressWrap').style.display = 'none';
+  document.getElementById('campImmagineUrl').value = '';
+  document.getElementById('campImgPreviewWrap').style.display = 'none';
+  document.getElementById('campImgPlaceholder').style.display = 'block';
+  document.getElementById('campImgStatus').textContent = '';
+  document.getElementById('campCampiDinamici').innerHTML = '';
+  document.getElementById('campAnteprimaWrap').style.display = 'none';
+  campClientiSelezionati.clear();
+  campClientiFiltrati = [];
+  document.getElementById('campBadge').textContent = 'Nessun cliente selezionato';
+  document.getElementById('btnInviaCamp').disabled = false;
+  document.getElementById('btnInviaCamp').textContent = '📤 Invia campagna';
+};
+
+
+function _generaCodicePromo(nome) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let suffix = '';
+  for (let i = 0; i < 4; i++) suffix += chars[Math.floor(Math.random() * chars.length)];
+  const nomeClean = (nome||'GREED').toUpperCase().replace(/[^A-Z]/g,'').substring(0,6);
+  return 'GREED-' + nomeClean + '-' + suffix;
+}
+
+const DORMIENTI_URL = 'https://europe-west3-club-greed.cloudfunctions.net/inviaCampagnaDormienti';
+const DELIVERY_URL  = 'https://europe-west3-club-greed.cloudfunctions.net/inviaCampagnaDelivery';
+
+window.testInviaCampagna = async function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) { showToast('Seleziona un tipo di campagna', 'error'); return; }
+  const imgUrl = document.getElementById('campImmagineUrl').value.trim();
+  if (cfg.richiedeImmagine !== false && !imgUrl) { showToast("Carica l'immagine intestazione", 'error'); return; }
+  const numeroTest = (document.getElementById('campNumeroTest').value || '+393476236679').replace(/\s/g,'');
+  if (!confirm('Inviare messaggio TEST a ' + numeroTest + '?')) return;
+  const btn = document.getElementById('btnTestCamp');
+  btn.disabled = true; btn.textContent = 'Invio...';
+  try {
+    // Campagne con Function dedicata
+    if (tipo === 'ora_furba_dormienti') {
+      const v = {};
+      cfg.campi.forEach(f => { v[f.id] = (document.getElementById(f.id)||{}).value?.trim() || ''; });
+      if (!v.c_orario || !v.c_sconto) {
+        alert('⚠️ Compila prima "Giorno e fascia oraria" e "Sconto" nel form.');
+        btn.disabled = false; btn.textContent = '🧪 Test su di me'; return;
+      }
+      // Validazione data lato client (doppia rete — la Function ricontrolla)
+      const errData = _validaData(v.c_orario);
+      if (errData) {
+        alert('❌ Data non valida: ' + errData + '\n\nCorreggi il campo prima di rifare il test.');
+        btn.disabled = false; btn.textContent = '🧪 Test su di me'; return;
+      }
+      const res = await fetch(DORMIENTI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testNumero: numeroTest, finestraOrdine: v.c_orario, percentuale: v.c_sconto })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        window._testDormientiConfermato = { finestraOrdine: v.c_orario, percentuale: v.c_sconto, timestamp: Date.now() };
+        alert('✅ Test inviato a ' + numeroTest + '.\n\n⚠️ VERIFICA su WhatsApp che il messaggio sia CORRETTO.\nSolo dopo aver verificato, potrai cliccare "Invia campagna".');
+      }
+      else alert('❌ Errore: ' + (data.error || 'HTTP ' + res.status));
+    } else if (tipo === 'delivery_lancio') {
+      const res = await fetch(DELIVERY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testNumero: numeroTest })
+      });
+      if (res.ok) alert('✅ Messaggio test delivery inviato a ' + numeroTest + '!\nControlla il tuo WhatsApp.');
+      else alert('❌ Errore HTTP ' + res.status);
+    } else {
+      const v = {};
+      cfg.campi.forEach(f => { v[f.id] = (document.getElementById(f.id)||{}).value?.trim() || 'Test'; });
+      const clienteFinto = { id: 'test', nome: 'Test', cognome: '', telefono: numeroTest, punti: 0, puntiStorici: 0, numeroAcquisti: 0 };
+      const codiceTest = cfg.generaCodice ? _generaCodicePromo('Test') : null;
+      const payload = cfg.payload(clienteFinto, v, imgUrl, codiceTest);
+      const res = await fetch(N8N_CAMPAGNA_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (res.ok) alert('✅ Messaggio test inviato a ' + numeroTest + '!\nControlla il tuo WhatsApp.');
+      else alert('❌ Errore HTTP ' + res.status);
+    }
+  } catch(e) { alert('❌ Errore: ' + e.message); }
+  btn.disabled = false; btn.textContent = '🧪 Test su di me';
+};
+
+window.inviaCampagna = async function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) { showToast('Seleziona un tipo di campagna', 'error'); return; }
+
+  // Campagna dormienti: loop nel BROWSER — un messaggio per volta, pausa controllata
+  if (tipo === 'ora_furba_dormienti') {
+    // 1) KILL SWITCH: controlla stato PRIMA di iniziare
+    if (await _killSwitchAttivo()) {
+      alert('🛑 INVII BLOCCATI\n\nIl kill switch è attivo. Nessun invio può partire.\nRiabilita gli invii dal pulsante verde in cima alla pagina.');
+      return;
+    }
+    const v = {};
+    cfg.campi.forEach(f => { v[f.id] = (document.getElementById(f.id)||{}).value?.trim() || ''; });
+    if (!v.c_orario || !v.c_sconto) { showToast('Compila giorno/fascia oraria e sconto', 'error'); return; }
+
+    // 2) Validazione data: blocca se contiene date passate
+    const errData = _validaData(v.c_orario);
+    if (errData) {
+      alert('❌ INVIO BLOCCATO\n\nData non valida: ' + errData + '\n\nCorreggi il campo "Giorno e fascia oraria".');
+      return;
+    }
+
+    // 3) VERIFICA TEST CONFERMATO: obbligatorio prima dell'invio reale
+    const test = window._testDormientiConfermato;
+    if (!test || test.finestraOrdine !== v.c_orario || test.percentuale !== v.c_sconto) {
+      alert('⚠️ TEST OBBLIGATORIO\n\nPrima di inviare ai destinatari devi:\n1. Cliccare "🧪 Test su di me"\n2. Verificare su WhatsApp che il messaggio sia corretto\n3. Solo dopo cliccare "Invia campagna"\n\nSe hai modificato i campi dopo il test, ripeti il test.');
+      return;
+    }
+    if (Date.now() - test.timestamp > 10 * 60 * 1000) {
+      window._testDormientiConfermato = null;
+      alert('⏱ TEST SCADUTO\n\nSono passati più di 10 minuti dal test.\nRifai il test prima di inviare.');
+      return;
+    }
+
+    // Filtra dormienti (stesso criterio Firebase: freq=0 e nessun ultimoAcquisto)
+    const dormienti = (window.allClienti||[]).filter(c => {
+      return c.telefono && c.sms !== false &&
+        (c.numeroAcquisti||0) === 0 && !c.ultimoAcquisto;
+    });
+
+    if (!dormienti.length) { showToast('Nessun cliente "Mai attivato" trovato', 'error'); return; }
+
+    // 4) DOPPIA CONFERMA con anteprima esatta del messaggio
+    const ok = confirm(`⚠️ CONFERMA INVIO CAMPAGNA DORMIENTI\n\n✅ Test verificato con questi parametri:\n📅 Finestra: ${v.c_orario}\n💰 Sconto: ${v.c_sconto}\n\n✉️ Destinatari: ${dormienti.length} clienti mai attivati\n⏱ Tempo stimato: ~${Math.ceil(dormienti.length*2/60)} minuti\n\nNON chiudere il browser durante l'invio.\n\nProcedere?`);
+    if (!ok) return;
+    const ok2 = confirm(`ULTIMA CONFERMA\n\nStai per inviare ${dormienti.length} messaggi WhatsApp REALI a clienti veri.\n\nSei ASSOLUTAMENTE SICURO?`);
+    if (!ok2) return;
+
+    const btn = document.getElementById('btnInviaCamp');
+    const campagnaId = `dormienti_${Date.now()}`;
+    btn.disabled = true;
+    let inviati = 0, errori = 0;
+
+    const wrap = document.getElementById('campProgressWrap');
+    const count = document.getElementById('campProgressCount');
+    const label = document.getElementById('campProgressLabel');
+    if (wrap) wrap.style.display = 'block';
+
+    // Blocchi: 50 messaggi poi pausa 5 minuti
+    const BLOCCO = 50;
+    const PAUSA_BLOCCO = 5 * 60 * 1000;
+    const PAUSA_MSG = 2000;
+
+    for (let i = 0; i < dormienti.length; i++) {
+      const c = dormienti[i];
+      if (count) count.textContent = `${i+1} / ${dormienti.length}`;
+      if (label) label.textContent = `Invio a ${c.nome||''}...`;
+      btn.textContent = `Invio ${i+1}/${dormienti.length}...`;
+
+      try {
+        const res = await fetch(DORMIENTI_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            telefono: c.telefono,
+            nome: c.nome || 'amico',
+            clienteId: c.id,
+            campagnaId,
+            finestraOrdine: v.c_orario,
+            percentuale: v.c_sconto
+          })
+        });
+        if (res.ok) inviati++;
+        else { errori++; console.warn(`Errore invio ${c.nome}:`, res.status); }
+      } catch(e) {
+        errori++;
+        console.error(`Errore invio ${c.nome}:`, e.message);
+      }
+
+      // Pausa anti-blocco
+      if (i < dormienti.length - 1) {
+        if ((i+1) % BLOCCO === 0) {
+          btn.textContent = `⏸ Pausa 5 min (blocco ${Math.ceil((i+1)/BLOCCO)})...`;
+          if (label) label.textContent = `Pausa anti-blocco Meta — ripresa tra 5 minuti`;
+          await new Promise(r => setTimeout(r, PAUSA_BLOCCO));
+        } else {
+          await new Promise(r => setTimeout(r, PAUSA_MSG));
+        }
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = '📤 Invia campagna';
+    if (wrap) wrap.style.display = 'none';
+    showToast(`✅ Campagna completata: ${inviati} inviati, ${errori} errori`);
+    return;
+  }
+
+  // Campagna delivery lancio: chiama Function dedicata
+  if (tipo === 'delivery_lancio') {
+    const totale = (window.allClienti||[]).filter(c => c.telefono && c.sms !== false).length;
+    const ok = confirm(`🛵 Inviare campagna LANCIO DELIVERY a tutti i clienti Club GREED?
+
+✉️ Destinatari stimati: ${totale} clienti con telefono
+⏱ Tempo stimato: ~${Math.ceil(totale*1.2/60)} minuti
+
+NON chiudere il browser durante l'invio.`);
+    if (!ok) return;
+
+    const btn = document.getElementById('btnInviaCamp');
+    btn.disabled = true;
+    btn.textContent = '🛵 Invio in corso...';
+
+    try {
+      const res = await fetch(DELIVERY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(`✅ Delivery lancio completato: ${data.inviati} inviati, ${data.errori} errori`);
+      } else {
+        showToast('❌ Errore: ' + (data.error || res.status), 'error');
+      }
+    } catch(e) {
+      showToast('❌ Errore: ' + e.message, 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = '📤 Invia campagna';
+    return;
+  }
+
+  const imgUrl = document.getElementById('campImmagineUrl').value.trim();
+  if (cfg.richiedeImmagine !== false && !imgUrl) { showToast('Carica l\'immagine intestazione', 'error'); return; }
+
+  const v = {};
+  let campiOk = true;
+  cfg.campi.forEach(f => {
+    const val = (document.getElementById(f.id)||{}).value?.trim() || '';
+    v[f.id] = val;
+    if (!val) campiOk = false;
+  });
+  if (!campiOk) { showToast('Compila tutti i campi del messaggio', 'error'); return; }
+  if (campClientiSelezionati.size === 0) { showToast('Seleziona almeno un cliente', 'error'); return; }
+
+  // Le campagne promozionali partono solo verso chi ha il consenso marketing
+  const selezionati = (window.allClienti||[]).filter(c => campClientiSelezionati.has(c.id) && c.telefono);
+  const destinatari = selezionati.filter(c => c.marketing === true);
+  const esclusi = selezionati.length - destinatari.length;
+  if (!destinatari.length) { showToast('Nessun destinatario con consenso marketing', 'error'); return; }
+  if (esclusi && !confirm(`${esclusi} client${esclusi===1?'e':'i'} selezionat${esclusi===1?'o':'i'} senza consenso marketing: non ricever${esclusi===1?'à':'anno'} il messaggio.`)) return;
+
+  const ok = confirm(`Inviare "${document.getElementById('campTipo').selectedOptions[0].text}" a ${destinatari.length} client${destinatari.length===1?'e':'i'}?\n\nQuesta operazione non è reversibile.`);
+  if (!ok) return;
+
+  const btn = document.getElementById('btnInviaCamp');
+  btn.disabled = true;
+  btn.textContent = 'Invio in corso...';
+
+  const wrap = document.getElementById('campProgressWrap');
+  const bar = document.getElementById('campProgressBar');
+  const count = document.getElementById('campProgressCount');
+  const label = document.getElementById('campProgressLabel');
+  const log = document.getElementById('campLogList');
+  wrap.style.display = 'block';
+  log.innerHTML = '';
+  bar.style.width = '0%';
+
+  let inviati = 0, errori = 0;
+  const bloccoSize = parseInt(document.getElementById('campBloccoSize').value) || 50;
+  const pausaMin = parseInt(document.getElementById('campPausaMin').value) || 5;
+  const pausaSec = parseInt(document.getElementById('campPausaSec').value) || 2;
+
+  // Genera ID univoco per questa campagna (per tracking conversioni)
+  const campagnaId = `${tipo}_${Date.now()}`;
+
+  for (let i = 0; i < destinatari.length; i++) {
+    const c = destinatari[i];
+    count.textContent = `${i+1} / ${destinatari.length}`;
+    label.textContent = `Invio a ${c.nome} ${c.cognome||''}...`;
+
+    try {
+      // Genera codice promo personale se la campagna lo richiede
+      let codicePersonale = null;
+      if (cfg.generaCodice) {
+        codicePersonale = _generaCodicePromo(c.nome);
+        const scadenzaAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+        await addDoc(collection(db, 'codiciPromo'), {
+          codice: codicePersonale,
+          clienteId: c.id,
+          telefono: tel(c),
+          nomeCliente: c.nome + ' ' + (c.cognome||''),
+          sconto: parseInt((v.c_sconto||'30').replace('%','')) || 30,
+          tipo: 'percentuale',
+          descrizione: 'Sconto riattivazione Club GREED',
+          campagnaId,
+          usato: false,
+          scadenzaAt,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      const payload = cfg.payload(c, v, imgUrl, codicePersonale);
+      payload.clienteId = c.id;
+      payload.campagnaId = campagnaId;
+      const res = await fetch(N8N_CAMPAGNA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        inviati++;
+        log.innerHTML += `<div style="color:var(--success)">✅ ${c.nome} ${c.cognome||''} (${tel(c)})</div>`;
+      } else {
+        errori++;
+        log.innerHTML += `<div style="color:var(--red)">❌ ${c.nome} ${c.cognome||''} — HTTP ${res.status}</div>`;
+      }
+    } catch(e) {
+      errori++;
+      log.innerHTML += `<div style="color:var(--red)">❌ ${c.nome} ${c.cognome||''} — errore di rete</div>`;
+    }
+
+    bar.style.width = `${Math.round(((i+1)/destinatari.length)*100)}%`;
+    log.scrollTop = log.scrollHeight;
+
+    // Pausa tra messaggi
+    if (i < destinatari.length - 1) {
+      // Pausa lunga tra blocchi
+      if ((i+1) % bloccoSize === 0) {
+        const pausaMs = pausaMin * 60 * 1000;
+        log.innerHTML += `<div style="color:var(--gold);font-weight:600">⏸ Pausa di ${pausaMin} min tra blocchi (${i+1}/${destinatari.length} inviati)...</div>`;
+        log.scrollTop = log.scrollHeight;
+        label.textContent = `⏸ Pausa di ${pausaMin} minuti...`;
+        await new Promise(r => setTimeout(r, pausaMs));
+      } else {
+        // Pausa normale tra messaggi
+        await new Promise(r => setTimeout(r, pausaSec * 1000));
+      }
+    }
+  }
+
+  label.textContent = `Completato: ${inviati} inviati${errori ? `, ${errori} errori` : ''}`;
+  count.textContent = `${destinatari.length} / ${destinatari.length}`;
+  btn.textContent = 'v Campagna inviata';
+  showToast(`Campagna completata: ${inviati} messaggi inviati`, errori ? 'error' : '');
+};
+
+/* ─────────────────────────────────────────
+   CAMPAGNE PROGRAMMATE — il server invia all'orario scelto
+───────────────────────────────────────── */
+const PROGRAMMA_URL = 'https://europe-west3-club-greed.cloudfunctions.net/programmaCampagna';
+const NON_PROGRAMMABILI = ['ora_furba_dormienti', 'delivery_lancio'];
+
+async function chiamaProgramma(dati) {
+  const res = await fetch(PROGRAMMA_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(dati) });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || ('HTTP ' + res.status));
+  return out;
+}
+
+window.programmaCampagna = async function() {
+  const tipo = document.getElementById('campTipo').value;
+  const cfg = CAMP_CONFIG[tipo];
+  if (!cfg) { showToast('Seleziona un tipo di campagna', 'error'); return; }
+  if (NON_PROGRAMMABILI.includes(tipo) || cfg.generaCodice) { alert('Questa campagna non si può programmare: va inviata subito dal pulsante "Invia campagna".'); return; }
+
+  const valQuando = document.getElementById('campQuando').value;
+  if (!valQuando) { showToast('Scegli giorno e ora dell\'invio', 'error'); return; }
+  const quando = new Date(valQuando);
+  if (isNaN(quando) || quando.getTime() < Date.now() + 60000) { showToast('Scegli un orario nel futuro', 'error'); return; }
+  const h = quando.getHours();
+  const fuoriFascia = !((h >= 9 && h < 14) || (h >= 16 && h < 20));
+
+  const imgUrl = document.getElementById('campImmagineUrl').value.trim();
+  if (cfg.richiedeImmagine !== false && !imgUrl) { showToast('Carica l\'immagine intestazione', 'error'); return; }
+  const v = {};
+  let campiOk = true;
+  cfg.campi.forEach(f => { const val = (document.getElementById(f.id)||{}).value?.trim() || ''; v[f.id] = val; if (!val) campiOk = false; });
+  if (!campiOk) { showToast('Compila tutti i campi del messaggio', 'error'); return; }
+  if (campClientiSelezionati.size === 0) { showToast('Seleziona almeno un cliente', 'error'); return; }
+
+  const selezionati = (window.allClienti||[]).filter(c => campClientiSelezionati.has(c.id) && c.telefono);
+  const destinatari = selezionati.filter(c => c.marketing === true);
+  const esclusi = selezionati.length - destinatari.length;
+  if (!destinatari.length) { showToast('Nessun destinatario con consenso marketing', 'error'); return; }
+
+  const blocco = parseInt(document.getElementById('campBloccoSize').value) || 50;
+  const pausaMin = parseInt(document.getElementById('campPausaMin').value) || 5;
+  const pausaSec = parseInt(document.getElementById('campPausaSec').value) || 2;
+  const etichetta = document.getElementById('campTipo').selectedOptions[0].text;
+  const quandoTesto = quando.toLocaleString('it-IT', { weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' });
+  const blocchi = Math.ceil(destinatari.length / blocco);
+  const durata = Math.ceil((destinatari.length * (pausaSec + 1) + (blocchi - 1) * pausaMin * 60) / 60);
+
+  if (!confirm(`📅 PROGRAMMARE L'INVIO?\n\n${etichetta}\n🕘 Partenza: ${quandoTesto}\n✉️ Destinatari: ${destinatari.length}${esclusi ? ` (${esclusi} esclus${esclusi===1?'o':'i'}: senza consenso marketing)` : ''}\n⏱ Durata stimata: circa ${durata} minut${durata===1?'o':'i'} (${blocchi} blocc${blocchi===1?'o':'hi'} da ${blocco}, pausa ${pausaMin} min)` +
+    (fuoriFascia ? `\n\n⚠️ Alle ${String(h).padStart(2,'0')}:${String(quando.getMinutes()).padStart(2,'0')} gli invii promozionali sono fermi: partirà alle ${h < 9 ? '9:00' : h < 16 ? '16:00' : '9:00 del giorno dopo'}.` : '') +
+    `\n\nHai fatto il test su di te?`)) return;
+
+  const btn = document.getElementById('btnProgrammaCamp');
+  btn.disabled = true; btn.textContent = 'Salvo…';
+  try {
+    const messaggi = destinatari.map(c => {
+      const p = cfg.payload(c, v, imgUrl, null);
+      return { clienteId: c.id, telefono: p.telefono, nome: p.nome, var2: p.var2, var3: p.var3, var4: p.var4 };
+    });
+    const tpl = cfg.payload(destinatari[0], v, imgUrl, null);
+    const out = await chiamaProgramma({ azione:'crea', tipo, etichetta, template: tpl.template || cfg.template, immagineUrl: tpl.immagineUrl || '',
+      quando: quando.getTime(), blocco, pausaMin, pausaSec, messaggi });
+    showToast(`📅 Programmata: ${out.totale} messaggi, ${quandoTesto}`);
+    document.getElementById('campQuando').value = '';
+    caricaProgrammate();
+  } catch(e) {
+    alert('❌ Programmazione non riuscita: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '📅 Programma';
+};
+
+const STATI_PROG = {
+  programmata: ['🕘 Programmata', 'var(--text-muted)'], in_invio: ['📤 In invio', 'var(--green)'], completata: ['✅ Completata', 'var(--green)'],
+  annullata: ['✖ Annullata', 'var(--text-muted)'], sospesa: ['⚠️ Sospesa', 'var(--red)']
+};
+
+async function caricaProgrammate() {
+  const box = document.getElementById('campProgrammateList');
+  if (!box) return;
+  try {
+    const { lista } = await chiamaProgramma({ azione:'elenco' });
+    if (!lista.length) { box.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">Nessuna campagna programmata.</div>'; return; }
+    box.innerHTML = lista.map(p => {
+      const [lab, col] = STATI_PROG[p.stato] || [p.stato, 'inherit'];
+      const q = new Date(p.quando).toLocaleString('it-IT', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+      const fatti = p.inviati + p.saltati + p.errori;
+      const annullabile = ['programmata','in_invio','sospesa'].includes(p.stato);
+      return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0;border-top:1px solid var(--cream-dark);font-size:13px">
+        <b style="color:${col};min-width:120px">${lab}</b>
+        <span style="flex:1;min-width:180px">${p.etichetta} · ${q}</span>
+        <span>${fatti}/${p.totale}${p.inviati !== fatti ? ` <span style="color:var(--text-muted)">(${p.inviati} inviati${p.saltati ? `, ${p.saltati} saltati` : ''}${p.errori ? `, ${p.errori} errori` : ''})</span>` : ''}</span>
+        ${annullabile ? `<button class="btn btn-ghost btn-sm" onclick="annullaProgrammata('${p.id}')">Annulla</button>` : ''}
+        ${p.motivo ? `<div style="width:100%;color:var(--red);font-size:12px">${p.motivo}</div>` : ''}
+      </div>`;
+    }).join('') + '<div style="text-align:right;margin-top:6px"><button class="btn btn-ghost btn-sm" onclick="caricaProgrammate()">↻ Aggiorna</button></div>';
+  } catch(e) {
+    box.innerHTML = `<div style="font-size:13px;color:var(--red)">Elenco non disponibile: ${e.message}</div>`;
+  }
+}
+window.caricaProgrammate = caricaProgrammate;
+
+window.annullaProgrammata = async function(id) {
+  if (!confirm('Annullare questa campagna programmata? I messaggi già partiti restano inviati.')) return;
+  try { await chiamaProgramma({ azione:'annulla', id }); showToast('Campagna annullata'); }
+  catch(e) { alert('❌ ' + e.message); }
+  caricaProgrammate();
+};
+
+/* ─────────────────────────────────────────
+   RISULTATI CAMPAGNE — invii, clienti convertiti, acquisti e incasso entro 7 giorni
+───────────────────────────────────────── */
+const COSTO_MSG_DEFAULT = 0.06;
+function costoMsg() {
+  let v = NaN;
+  try { v = parseFloat(localStorage.getItem('greed_costo_msg')); } catch(e) {}
+  return isFinite(v) && v >= 0 ? v : COSTO_MSG_DEFAULT;
+}
+window.salvaCostoMsg = function() {
+  const v = parseFloat(document.getElementById('misCosto').value);
+  if (isFinite(v) && v >= 0) { try { localStorage.setItem('greed_costo_msg', String(v)); } catch(e) {} }
+  caricaRisultatiCampagne();
+};
+function nomeCampagna(id, template) {
+  const tipo = String(id).replace(/_\d{10,}$/, '');
+  const opt = [...(document.getElementById('campTipo')?.options || [])].find(o => o.value === tipo);
+  if (opt) return opt.text;
+  if (tipo.startsWith('dormienti')) return '😴 Dormienti';
+  return template || tipo;
+}
+async function caricaRisultatiCampagne() {
+  const tab = document.getElementById('misTabella');
+  if (!tab) return;
+  const costoInput = document.getElementById('misCosto');
+  if (costoInput && document.activeElement !== costoInput) costoInput.value = costoMsg();
+  const euro = n => '€ ' + (Math.round((n || 0) * 100) / 100).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  try {
+    const snap = await getDocs(query(collection(db, 'campagne'), orderBy('ultimoInvio', 'desc'), limit(30)));
+    if (snap.empty) { tab.innerHTML = '<tr><td style="color:var(--text-muted)">Nessuna campagna inviata.</td></tr>'; return; }
+    const th = 'style="text-align:right;padding:6px 8px;border-bottom:2px solid var(--border);font-size:11px;color:var(--text-muted);white-space:nowrap"';
+    let h = `<thead><tr><th ${th.replace('right','left')}>Campagna</th><th ${th}>Inviata</th><th ${th}>Messaggi</th><th ${th}>Clienti tornati</th><th ${th}>Acquisti</th><th ${th}>Incasso</th><th ${th}>Costo</th><th ${th}>Resa</th></tr></thead><tbody>`;
+    const td = 'style="text-align:right;padding:7px 8px;border-bottom:1px solid var(--cream-dark);white-space:nowrap"';
+    snap.docs.forEach(d => {
+      const x = d.data();
+      const inviati = x.totaleInvii || 0, conv = x.totaleConversioni || 0;
+      const misurata = x.totaleIncasso !== undefined || x.totaleAcquisti !== undefined;
+      const costo = inviati * costoMsg();
+      const quando = x.ultimoInvio?.toDate ? x.ultimoInvio.toDate().toLocaleDateString('it-IT', { day:'numeric', month:'short' }) : '—';
+      const pct = inviati ? Math.round(conv / inviati * 1000) / 10 : 0;
+      const resa = costo > 0 && misurata ? Math.round((x.totaleIncasso || 0) / costo * 10) / 10 : null;
+      const coloreResa = resa === null ? 'inherit' : resa >= 1 ? 'var(--green)' : 'var(--red)';
+      h += `<tr><td style="padding:7px 8px;border-bottom:1px solid var(--cream-dark)">${nomeCampagna(d.id, x.template)}</td>
+        <td ${td}>${quando}</td><td ${td}>${inviati}</td>
+        <td ${td}>${conv} <span style="color:var(--text-muted)">(${String(pct).replace('.', ',')}%)</span></td>
+        <td ${td}>${misurata ? (x.totaleAcquisti || 0) : '—'}</td>
+        <td ${td}>${misurata ? euro(x.totaleIncasso) : '—'}</td>
+        <td ${td}>${euro(costo)}</td>
+        <td ${td.replace('white-space:nowrap', 'white-space:nowrap;font-weight:700;color:' + coloreResa)}>${resa === null ? '—' : String(resa).replace('.', ',') + '×'}</td></tr>`;
+    });
+    tab.innerHTML = h + '</tbody>';
+  } catch(e) {
+    tab.innerHTML = `<tr><td style="color:var(--red)">Risultati non disponibili: ${e.message}</td></tr>`;
+  }
+}
+window.caricaRisultatiCampagne = caricaRisultatiCampagne;
+
+/* ─────────────────────────────────────────
+   PASSAPAROLA — amici iscritti dal link, quanti hanno comprato, chi porta più amici
+───────────────────────────────────────── */
+function caricaPassaparola() {
+  const box = document.getElementById('refStats');
+  if (!box) return;
+  const tutti = window.allClienti || [];
+  const invitati = tutti.filter(c => c.invitatoDa);
+  const comprato = invitati.filter(c => c.premioInvitoDato === true);
+  const perId = Object.fromEntries(tutti.map(c => [c.id, c]));
+  const conteggio = {};
+  invitati.forEach(c => { const k = c.invitatoDa; conteggio[k] = conteggio[k] || { iscritti: 0, comprato: 0 }; conteggio[k].iscritti++; if (c.premioInvitoDato === true) conteggio[k].comprato++; });
+  const top = Object.entries(conteggio).sort((a, b) => b[1].comprato - a[1].comprato || b[1].iscritti - a[1].iscritti).slice(0, 5);
+  const kpi = (n, l) => `<div style="flex:1;min-width:120px;background:var(--cream);border-radius:10px;padding:10px 12px"><div style="font-size:22px;font-weight:700">${n}</div><div style="font-size:12px;color:var(--text-muted)">${l}</div></div>`;
+  let h = `<div style="display:flex;gap:10px;flex-wrap:wrap">${kpi(invitati.length, 'amici iscritti dal link')}${kpi(comprato.length, 'hanno fatto il primo acquisto')}${kpi(invitati.length ? Math.round(comprato.length / invitati.length * 100) + '%' : '—', 'amici diventati clienti')}${kpi(comprato.length * 50, 'punti dati a chi ha invitato')}</div>`;
+  if (top.length) h += '<div style="margin-top:12px;font-size:13px"><b>Chi porta più amici</b>' + top.map(([id, n]) => {
+    const c = perId[id];
+    return `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--cream-dark)"><span>${c ? (c.nome || '') + ' ' + (c.cognome || '') : 'Cliente rimosso'}</span><span>${n.iscritti} iscritt${n.iscritti === 1 ? 'o' : 'i'} · ${n.comprato} ${n.comprato === 1 ? 'ha' : 'hanno'} comprato</span></div>`;
+  }).join('') + '</div>';
+  box.innerHTML = h;
+}
+window.caricaPassaparola = caricaPassaparola;
+
+/* ─────────────────────────────────────────
+   GIFT CARD
+───────────────────────────────────────── */
+const N8N_GIFT_URL = 'https://inviacampagna-u3jmxuuypq-ey.a.run.app';
+let gcCorrenteId = null;
+
+function generaCodiceGC() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'GREED-GIFT-';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+window.selezionaValore = function(val) {
+  document.getElementById('gcValore').value = val;
+  ['15','25','50'].forEach(v => {
+    const btn = document.getElementById('gcBtn'+v);
+    btn.className = 'btn ' + (String(val) === v ? 'btn-secondary' : 'btn-ghost');
+  });
+};
+
+window.deselezionaBottoni = function() {
+  ['15','25','50'].forEach(v => document.getElementById('gcBtn'+v).className = 'btn btn-ghost');
+};
+
+window.testGeneraGiftCard = async function() {
+  const valore = parseFloat(document.getElementById('gcValore').value) || 15;
+  const nome = document.getElementById('gcNome').value.trim() || 'Test';
+  const numeroTest = (document.getElementById('gcNumeroTest').value || '+393476236679').replace(/\s/g,'');
+  if (!confirm('Inviare gift card TEST (€' + valore + ') a ' + numeroTest + '?')) return;
+  const btn = document.getElementById('btnTestGC');
+  btn.disabled = true; btn.textContent = 'Invio...';
+  try {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let codice = 'GREED-GIFT-TEST-';
+    for (let i = 0; i < 4; i++) codice += chars[Math.floor(Math.random() * chars.length)];
+    const res = await fetch(N8N_GIFT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template: 'greed_gift_card', telefono: numeroTest, nome, var2: '€' + valore, var3: codice, var4: '31 dicembre 2026' })
+    });
+    if (res.ok) alert('✅ Gift card test inviata a ' + numeroTest + '!\nCodice: ' + codice);
+    else alert('❌ Errore HTTP ' + res.status);
+  } catch(e) { alert('❌ Errore: ' + e.message); }
+  btn.disabled = false; btn.textContent = '🧪 Test su di me';
+};
+
+window.generaGiftCard = async function() {
+  const valore = parseFloat(document.getElementById('gcValore').value);
+  const nome = document.getElementById('gcNome').value.trim();
+  const telefono = document.getElementById('gcTelefono').value.trim();
+  const note = document.getElementById('gcNote').value.trim();
+
+  if (!valore || valore < 5) { showToast('Inserisci un valore valido', 'error'); return; }
+  if (!nome) { showToast('Inserisci il nome del destinatario', 'error'); return; }
+  if (!telefono) { showToast('Inserisci il telefono del destinatario', 'error'); return; }
+
+  const btn = document.getElementById('btnGeneraGC');
+  btn.disabled = true; btn.textContent = 'Generazione...';
+
+  // Aggiorna label scadenza
+  const annoLabel = document.getElementById('gcScadenzaLabel');
+  if (annoLabel) annoLabel.textContent = `31 dicembre ${new Date().getFullYear()}`;
+
+  const codice = generaCodiceGC();
+  const annoCorrente = new Date().getFullYear();
+  const scadenza = `31 dicembre ${annoCorrente}`;
+  const tel = telefono.startsWith('+') ? telefono : `+39${telefono}`;
+
+  try {
+    // Salva su Firestore
+    await addDoc(collection(db, 'giftcard'), {
+      codice, valore, nome, telefono: tel, note,
+      scadenza, annoScadenza: annoCorrente,
+      stato: 'attiva',
+      createdAt: serverTimestamp()
+    });
+
+    // Invia WhatsApp via Firebase Function
+    await fetch(N8N_GIFT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        template: 'greed_gift_card',
+        telefono: tel,
+        nome: nome.split(' ')[0],
+        immagineUrl: 'https://firebasestorage.googleapis.com/v0/b/club-greed.firebasestorage.app/o/campagne%2Fgift_card_default.jpg?alt=media',
+        var2: `€${valore}`,
+        var3: codice,
+        var4: scadenza
+      })
+    });
+
+    showToast(`Gift Card ${codice} generata e inviata ✓`);
+    document.getElementById('gcNome').value = '';
+    document.getElementById('gcTelefono').value = '';
+    document.getElementById('gcNote').value = '';
+    document.getElementById('gcValore').value = '';
+    deselezionaBottoni();
+    loadGiftCards();
+  } catch(e) {
+    console.error(e);
+    showToast('Errore generazione gift card', 'error');
+  }
+
+  btn.disabled = false; btn.textContent = '🎁 Genera e invia Gift Card';
+};
+
+window.verificaGiftCard = async function() {
+  const codice = document.getElementById('gcCodiceRiscatto').value.trim().toUpperCase();
+  if (!codice) { showToast('Inserisci un codice', 'error'); return; }
+
+  try {
+    const snap = await getDocs(query(collection(db, 'giftcard'), where('codice', '==', codice)));
+    if (snap.empty) { showToast('Codice non trovato', 'error'); return; }
+
+    const gc = snap.docs[0];
+    const data = gc.data();
+    gcCorrenteId = gc.id;
+
+    const annoOggi = new Date().getFullYear();
+    const scaduta = data.annoScadenza < annoOggi;
+    const usata = data.stato === 'utilizzata';
+
+    let info = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:600;font-size:16px">${data.nome}</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--green)">€${data.valore}</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted)">Codice: <strong>${data.codice}</strong></div>
+    <div style="font-size:12px;color:var(--text-muted)">Scadenza: ${data.scadenza}</div>`;
+
+    if (usata) {
+      info += `<div style="margin-top:8px;color:var(--red);font-weight:600;font-size:13px">✗ Già utilizzata</div>`;
+      document.getElementById('btnRiscatta').style.display = 'none';
+    } else if (scaduta) {
+      info += `<div style="margin-top:8px;color:var(--red);font-weight:600;font-size:13px">✗ Scaduta</div>`;
+      document.getElementById('btnRiscatta').style.display = 'none';
+    } else {
+      info += `<div style="margin-top:8px;color:var(--success);font-weight:600;font-size:13px">✓ Valida</div>`;
+      document.getElementById('btnRiscatta').style.display = 'block';
+    }
+
+    document.getElementById('gcVerificaInfo').innerHTML = info;
+    document.getElementById('gcVerificaResult').style.display = 'block';
+  } catch(e) {
+    showToast('Errore verifica', 'error');
+  }
+};
+
+window.riscattaGiftCard = async function() {
+  if (!gcCorrenteId) return;
+  try {
+    await updateDoc(doc(db, 'giftcard', gcCorrenteId), {
+      stato: 'utilizzata',
+      utilizzataAt: serverTimestamp()
+    });
+    showToast('Gift Card riscattata ✓');
+    document.getElementById('gcCodiceRiscatto').value = '';
+    document.getElementById('gcVerificaResult').style.display = 'none';
+    gcCorrenteId = null;
+    loadGiftCards();
+  } catch(e) {
+    showToast('Errore riscatto', 'error');
+  }
+};
+
+window.loadGiftCards = async function() {
+  const div = document.getElementById('gcList');
+  div.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Caricamento...</div>';
+  try {
+    const snap = await getDocs(query(collection(db, 'giftcard'), orderBy('createdAt', 'desc'), limit(100)));
+    const cards = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!cards.length) {
+      div.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted)">Nessuna gift card emessa</div>';
+      return;
+    }
+    div.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:var(--cream);font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-muted)">
+        <th style="padding:10px 16px;text-align:left">Codice</th>
+        <th style="padding:10px 16px;text-align:left">Destinatario</th>
+        <th style="padding:10px 16px;text-align:left">Telefono</th>
+        <th style="padding:10px 16px;text-align:right">Valore</th>
+        <th style="padding:10px 16px;text-align:center">Scadenza</th>
+        <th style="padding:10px 16px;text-align:center">Stato</th>
+      </tr></thead>
+      <tbody>${cards.map(gc => {
+        const statoColor = gc.stato === 'utilizzata' ? 'var(--text-muted)' : 'var(--success)';
+        const statoLabel = gc.stato === 'utilizzata' ? '✗ Usata' : '✓ Attiva';
+        return `<tr style="border-top:1px solid var(--border)">
+          <td style="padding:10px 16px;font-family:monospace;font-size:13px;font-weight:600;color:var(--green)">${gc.codice}</td>
+          <td style="padding:10px 16px;font-size:13px">${gc.nome}</td>
+          <td style="padding:10px 16px;font-size:12px;color:var(--text-muted)">${gc.telefono||'-'}</td>
+          <td style="padding:10px 16px;text-align:right;font-weight:700;font-family:'Cormorant Garamond',serif;font-size:18px">€${gc.valore}</td>
+          <td style="padding:10px 16px;text-align:center;font-size:12px;color:var(--text-muted)">${gc.scadenza}</td>
+          <td style="padding:10px 16px;text-align:center;font-size:12px;font-weight:600;color:${statoColor}">${statoLabel}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    div.innerHTML = '<div style="padding:24px;text-align:center;color:var(--red)">Errore caricamento</div>';
+  }
+};
+
+/* -- EXPORT EXCEL 3 FOGLI -- */
+window.exportOrdiniExcel = async function() {
+  const ordini = window._ordiniCache;
+  if (!ordini.length) { showToast('Nessun ordine da esportare', 'error'); return; }
+
+  // Carica SheetJS
+  if (!window.XLSX) {
+    await new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  const XLSX = window.XLSX;
+
+  function rigaOrdine(o, metodo) {
+    const data = o.createdAt?.toDate ? o.createdAt.toDate() : null;
+    const dataStr = data ? data.toLocaleDateString('it-IT') : '-';
+    const oraStr = data ? data.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) : '-';
+    const gusti = o.carrello?.map(i => i.gusti?.join('+') + (i.scorta?' [scorta:'+i.scorta+']':'')).join(' | ') || '-';
+    return {
+      'ID Ordine': o.ordineId || '-',
+      'Data': dataStr,
+      'Ora': oraStr,
+      'Nome': (o.nome||'') + ' ' + (o.cognome||''),
+      'Telefono': o.telefono || '-',
+      'Email': o.email || '-',
+      'Gusti': gusti,
+      'Totale (€)': parseFloat((o.totale||0).toFixed(2)),
+      'Promo': o.promo ? 'Sì' : 'No',
+      'Metodo': metodo,
+      'Stato': o.stato || '-'
+    };
+  }
+
+  const tuttiStripe = ordini.filter(o => !o.metodoPagamento || o.metodoPagamento === 'stripe' || o.stripeSessionId);
+  const tuttiPaypal = ordini.filter(o => o.metodoPagamento === 'paypal');
+
+  const foglio1 = ordini.map(o => rigaOrdine(o, o.metodoPagamento === 'paypal' ? 'PayPal' : 'Stripe'));
+  const foglio2 = tuttiStripe.map(o => rigaOrdine(o, 'Stripe'));
+  const foglio3 = tuttiPaypal.map(o => rigaOrdine(o, 'PayPal'));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(foglio1.length ? foglio1 : [{'Info':'Nessuna transazione'}]), 'Tutte le transazioni');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(foglio2.length ? foglio2 : [{'Info':'Nessuna transazione Stripe'}]), 'Stripe');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(foglio3.length ? foglio3 : [{'Info':'Nessuna transazione PayPal'}]), 'PayPal');
+
+  // Larghezze colonne
+  [foglio1, foglio2, foglio3].forEach((_, i) => {
+    const ws = wb.Sheets[wb.SheetNames[i]];
+    ws['!cols'] = [
+      {wch:18},{wch:12},{wch:8},{wch:22},{wch:16},{wch:28},{wch:40},{wch:10},{wch:8},{wch:10},{wch:14}
+    ];
+  });
+
+  const filename = `GREED_Transazioni_${new Date().toISOString().slice(0,10)}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast('Excel scaricato ✓');
+};
+
+
+// ══════════════════════════════════════════════════════════════
+// SEZIONE EVENTI — Firebase v9 modular SDK
+// ══════════════════════════════════════════════════════════════
+
+let _eventoCorrente = {
+  nome: 'Degustazione Vellutà al Tiramisù',
+  data: '2026-07-20',
+  ora: '18:00',
+  luogo: 'Frascati, Piazza Roma 16',
+  template: 'greed_appuntamento',
+  id: 'evt_20260720_' + Date.now()
+};
+let _eventoFiltro = 'tutti';
+let _eventoDestinatari = [];
+let _eventoPresentiUnsub = null;
+
+window.openModalEvento = function openModalEvento() {
+  document.getElementById('eventoNomeInput').value = _eventoCorrente.nome;
+  document.getElementById('eventoDataInput').value = _eventoCorrente.data;
+  document.getElementById('eventoOraInput').value = _eventoCorrente.ora;
+  document.getElementById('eventoLuogoInput').value = _eventoCorrente.luogo;
+  document.getElementById('eventoTemplateInput').value = _eventoCorrente.template;
+  openModal('modalEvento');
+}
+
+window.salvaEvento = function salvaEvento() {
+  _eventoCorrente.nome = document.getElementById('eventoNomeInput').value.trim() || _eventoCorrente.nome;
+  _eventoCorrente.data = document.getElementById('eventoDataInput').value || _eventoCorrente.data;
+  _eventoCorrente.ora = document.getElementById('eventoOraInput').value || _eventoCorrente.ora;
+  _eventoCorrente.luogo = document.getElementById('eventoLuogoInput').value.trim() || _eventoCorrente.luogo;
+  _eventoCorrente.template = document.getElementById('eventoTemplateInput').value.trim() || _eventoCorrente.template;
+  _eventoCorrente.id = 'evt_' + _eventoCorrente.data.replace(/-/g,'') + '_' + Date.now();
+
+  document.getElementById('eventoNomeDisplay').textContent = _eventoCorrente.nome;
+  const dataFmt = new Date(_eventoCorrente.data + 'T12:00:00').toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('eventoInfoDisplay').textContent = dataFmt + ' · ore ' + _eventoCorrente.ora + ' · ' + _eventoCorrente.luogo;
+
+  addDoc(collection(db, 'eventi'), {
+    ..._eventoCorrente,
+    createdAt: serverTimestamp()
+  }).catch(e => console.error('Errore salva evento:', e));
+
+  closeModal('modalEvento');
+  _caricaDestinatari();
+}
+
+window.setFiltroEvento = function setFiltroEvento(filtro, btn) {
+  _eventoFiltro = filtro;
+  document.querySelectorAll('.filtro-evt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _caricaDestinatari();
+}
+
+async function _caricaDestinatari() {
+  const countEl = document.getElementById('eventoDestinatariCount');
+  if (countEl) countEl.textContent = 'Caricamento...';
+  try {
+    const snap = await getDocs(collection(db, 'clienti'));
+    const ora = Date.now();
+    let lista = [];
+    snap.forEach(docSnap => {
+      const c = { id: docSnap.id, ...docSnap.data() };
+      if (!c.telefono) return;
+      const freq = c.numeroAcquisti || 0;
+      const ultimo = c.ultimoAcquisto?.seconds ? c.ultimoAcquisto.seconds * 1000 : null;
+      const giorniInattivo = ultimo ? Math.floor((ora - ultimo) / 86400000) : 999;
+      const rfm = typeof getRFM === 'function' ? getRFM(c) : { label: '-' };
+
+      if (_eventoFiltro === 'tutti') lista.push(c);
+      else if (_eventoFiltro === 'attivi' && giorniInattivo <= 60 && freq > 0) lista.push(c);
+      else if (_eventoFiltro === 'dormienti' && (freq === 0 || giorniInattivo > 60)) lista.push(c);
+      else if (_eventoFiltro === 'champion' && (rfm.label === 'Champion' || rfm.label === 'Fedele')) lista.push(c);
+    });
+    _eventoDestinatari = lista;
+    if (countEl) countEl.textContent = lista.length + ' destinatari selezionati';
+    document.getElementById('statInvitati').textContent = lista.length;
+  } catch(e) {
+    console.error('Errore carica destinatari:', e);
+    const countEl = document.getElementById('eventoDestinatariCount');
+    if (countEl) countEl.textContent = 'Errore caricamento';
+  }
+}
+
+window.setOrarioSubito = function() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  document.getElementById('eventoOrarioInvio').value = now.toISOString().slice(0,16);
+};
+
+
+window.testInvioEvento = async function testInvioEvento() {
+  const btn = document.getElementById('btnTestEvento');
+  const numeroTest = (document.getElementById('eventoNumeroTest').value || '+393476236679').replace(/\s/g,'');
+  if (!numeroTest) { alert('Inserisci un numero di test'); return; }
+  if (!confirm('Inviare messaggio di test a ' + numeroTest + '?')) return;
+  btn.disabled = true;
+  btn.textContent = 'Invio test...';
+  try {
+    const FUNCTION_URL = 'https://europe-west3-club-greed.cloudfunctions.net/inviaMessaggiEvento';
+    const res = await fetch(FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        eventoId: _eventoCorrente.id, 
+        testNumero: numeroTest,
+        eventoData: _eventoCorrente
+      })
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || 'Errore server');
+    alert('✅ Messaggio test inviato a ' + numeroTest + '!\nControlla il tuo WhatsApp.');
+  } catch(e) {
+    alert('❌ Errore: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '🧪 Test su di me';
+};
+
+window.inviaInvitiEvento = async function inviaInvitiEvento() {
+  const btn = document.getElementById('btnInviaEvento');
+  if (!_eventoDestinatari.length) { alert('Nessun destinatario selezionato'); return; }
+
+  const orarioInput = document.getElementById('eventoOrarioInvio').value;
+  if (!orarioInput) { alert('Seleziona un orario di invio oppure clicca "Invia subito"'); return; }
+
+  const orarioPianificato = new Date(orarioInput);
+  const ora = new Date();
+  const minutiDiff = Math.round((orarioPianificato - ora) / 60000);
+
+  let messaggio = 'Inviare inviti a ' + _eventoDestinatari.length + ' clienti';
+  if (minutiDiff > 1) {
+    messaggio += '\nInvio pianificato tra ' + minutiDiff + ' minuti (' + orarioPianificato.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) + ')';
+  } else {
+    messaggio += '\nInvio immediato';
+  }
+  if (!confirm(messaggio + '?')) return;
+
+  // Se è pianificato nel futuro, aspetta
+  if (minutiDiff > 1) {
+    btn.disabled = true;
+    btn.textContent = 'In attesa... (' + orarioPianificato.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit'}) + ')';
+    const msAttesa = orarioPianificato - new Date();
+    await new Promise(r => setTimeout(r, msAttesa));
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Invio in corso...';
+
+  try {
+    // 1) Assicura che l'evento esista su Firestore con il filtro corrente
+    const eventoId = _eventoCorrente.id;
+    await setDoc(doc(db, 'eventi', eventoId), {
+      ..._eventoCorrente,
+      filtroDestinatari: _eventoFiltro,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    // 2) Chiama la Firebase Function che fa l'invio reale
+    const FUNCTION_URL = 'https://europe-west3-club-greed.cloudfunctions.net/inviaMessaggiEvento';
+    const res = await fetch(FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventoId })
+    });
+    const result = await res.json();
+
+    if (!res.ok) throw new Error(result.error || 'Errore server');
+
+    btn.disabled = false;
+    btn.textContent = 'Invia inviti →';
+    alert('✅ Messaggi inviati: ' + result.inviati +
+      (result.errori > 0 ? '\n⚠️ Errori: ' + result.errori : ''));
+
+  } catch(e) {
+    console.error('Errore inviaInvitiEvento:', e);
+    btn.disabled = false;
+    btn.textContent = 'Invia inviti →';
+    alert('❌ Errore durante l\'invio: ' + e.message);
+  }
+}
+
+function _avviaListenerPresenti() {
+  if (_eventoPresentiUnsub) _eventoPresentiUnsub();
+  const { Timestamp } = window._fbTimestamp || {};
+  try {
+    const dataInizio = new Date(_eventoCorrente.data + 'T00:00:00');
+    const dataFine = new Date(_eventoCorrente.data + 'T23:59:59');
+    
+    import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js').then(({ onSnapshot, query: q2, where: w2, collection: col2, Timestamp: TS }) => {
+      const qSnap = q2(col2(db, 'checkins'),
+        w2('timestamp', '>=', TS.fromDate(dataInizio)),
+        w2('timestamp', '<=', TS.fromDate(dataFine))
+      );
+      _eventoPresentiUnsub = onSnapshot(qSnap, snap => {
+        const tbody = document.getElementById('eventoPresentiTable');
+        if (!tbody) return;
+        if (snap.empty) {
+          tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="empty-icon">🎉</div><div class="empty-text">Nessuna presenza ancora</div></div></td></tr>';
+          document.getElementById('statPresenti').textContent = '0';
+          document.getElementById('statMedPunti').textContent = '0';
+          document.getElementById('statConv').textContent = '0%';
+          return;
+        }
+        let rows = ''; let totalePunti = 0; let count = 0;
+        snap.forEach(d => {
+          const ch = d.data();
+          const ora = ch.timestamp?.toDate ? ch.timestamp.toDate().toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }) : '--:--';
+          const livello = typeof getLivello === 'function' ? getLivello(ch.punti || 0) : { nome: '-', colore: '#999' };
+          totalePunti += ch.punti || 0; count++;
+          rows += '<tr><td><strong>' + (ch.nome||'') + ' ' + (ch.cognome||'') + '</strong></td>' +
+            '<td>' + ora + '</td>' +
+            '<td><span style="background:' + (livello.colore||'#eee') + '22;color:' + (livello.colore||'#666') + ';padding:2px 8px;border-radius:20px;font-size:12px">' + (livello.nome||'-') + '</span></td>' +
+            '<td>' + (ch.punti||0) + '</td>' +
+            '<td>' + (ch.numeroAcquisti||0) + '</td>' +
+            '<td><small>' + (ch.rfm||'-') + '</small></td></tr>';
+        });
+        tbody.innerHTML = rows;
+        document.getElementById('statPresenti').textContent = count;
+        document.getElementById('statMedPunti').textContent = count ? Math.round(totalePunti/count) : 0;
+        const conv = _eventoDestinatari.length ? Math.round(count/_eventoDestinatari.length*100) : 0;
+        document.getElementById('statConv').textContent = conv + '%';
+      });
+    });
+  } catch(e) { console.error('Errore listener presenti:', e); }
+}
+
+window.esportaPresenti = function esportaPresenti() {
+  const rows = document.querySelectorAll('#eventoPresentiTable tr');
+  if (!rows.length) return;
+  let csv = 'Nome,Ora arrivo,Livello,Punti,Visite,Segmento\n';
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (!cells.length) return;
+    const vals = Array.from(cells).map(c => '"' + c.innerText.replace(/\n.*/,'').trim() + '"');
+    csv += vals.join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'presenti_' + _eventoCorrente.id + '.csv';
+  a.click();
+}
+
+// Hook in showView
+const _origShowViewEventi = window.showView;
+window.showView = function(name) {
+  _origShowViewEventi(name);
+  if (name === 'eventi') {
+    // Aggiorna display evento
+    const dataFmt = new Date(_eventoCorrente.data + 'T12:00:00').toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    document.getElementById('eventoNomeDisplay').textContent = _eventoCorrente.nome;
+    document.getElementById('eventoInfoDisplay').textContent = dataFmt + ' · ore ' + _eventoCorrente.ora + ' · ' + _eventoCorrente.luogo;
+    _caricaDestinatari();
+    _avviaListenerPresenti();
+  }
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🛑 KILL SWITCH — funzioni frontend
+// ═══════════════════════════════════════════════════════════════════════════
+async function _killSwitchAttivo() {
+  try {
+    const snap = await getDoc(doc(db, 'config', 'system'));
+    if (!snap.exists()) return false;
+    return snap.data().invii_abilitati === false;
+  } catch(e) {
+    console.error('[KILL SWITCH] Errore lettura:', e.message);
+    // In caso di errore assumo bloccato per sicurezza
+    return true;
+  }
+}
+
+async function _aggiornaUIKillSwitch() {
+  const stato = document.getElementById('killSwitchStato');
+  const btnAttiva = document.getElementById('btnKillAttiva');
+  const btnDisattiva = document.getElementById('btnKillDisattiva');
+  const box = document.getElementById('killSwitchBox');
+  if (!stato || !btnAttiva || !btnDisattiva) return;
+  const bloccato = await _killSwitchAttivo();
+  if (bloccato) {
+    stato.innerHTML = '<span style="color:#c62828;font-weight:700">🛑 INVII BLOCCATI</span> — nessun messaggio partirà finché non riabiliti';
+    btnAttiva.style.display = 'none';
+    btnDisattiva.style.display = 'inline-block';
+    if (box) box.style.background = 'linear-gradient(135deg,#ffebee,#fff)';
+  } else {
+    stato.innerHTML = '<span style="color:#2e7d32;font-weight:700">✅ Invii abilitati</span> — clicca il pulsante rosso per bloccare tutto in emergenza';
+    btnAttiva.style.display = 'inline-block';
+    btnDisattiva.style.display = 'none';
+    if (box) box.style.background = 'linear-gradient(135deg,#fff5f5,#fff)';
+  }
+}
+
+window.attivaKillSwitch = async function() {
+  if (!confirm('🛑 BLOCCARE TUTTI GLI INVII?\n\nDopo il blocco:\n• Nessuna campagna può partire\n• Le Function schedulate (compleanni compresi) sono ferme\n• Il webhook Meta non processerà messaggi in uscita\n\nConfermare il blocco?')) return;
+  try {
+    await setDoc(doc(db, 'config', 'system'), {
+      invii_abilitati: false,
+      bloccato_il: serverTimestamp()
+    }, { merge: true });
+    alert('🛑 INVII BLOCCATI\n\nNessun messaggio partirà finché non riabiliti.');
+    _aggiornaUIKillSwitch();
+  } catch(e) {
+    alert('Errore: ' + e.message);
+  }
+};
+
+window.disattivaKillSwitch = async function() {
+  if (!confirm('✅ Riabilitare gli invii?\n\nDopo la riabilitazione le Function torneranno operative.')) return;
+  try {
+    await setDoc(doc(db, 'config', 'system'), {
+      invii_abilitati: true,
+      riabilitato_il: serverTimestamp()
+    }, { merge: true });
+    alert('✅ Invii riabilitati.');
+    _aggiornaUIKillSwitch();
+  } catch(e) {
+    alert('Errore: ' + e.message);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🗓 VALIDAZIONE DATE — frontend
+// Ritorna null se valido, altrimenti stringa con motivo del blocco
+// ═══════════════════════════════════════════════════════════════════════════
+function _validaData(testo) {
+  if (!testo || typeof testo !== 'string') return 'Testo mancante';
+  const t = testo.toLowerCase();
+  const ora = new Date();
+  const meseCorr = ora.getMonth();
+  const annoCorr = ora.getFullYear();
+  const giornoCorr = ora.getDate();
+  const mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+
+  // Blocco se contiene mese passato (a meno che non ci sia anche l'anno prossimo)
+  for (let i = 0; i < meseCorr; i++) {
+    if (t.includes(mesi[i])) {
+      if (t.includes(String(annoCorr + 1))) continue;
+      return `contiene "${mesi[i]}" che è un mese già passato`;
+    }
+  }
+
+  // Se cita il mese corrente, verifica che i giorni non siano passati
+  if (t.includes(mesi[meseCorr])) {
+    const idxMese = t.indexOf(mesi[meseCorr]);
+    const prima = t.substring(Math.max(0, idxMese - 60), idxMese);
+    const nums = prima.match(/\b(\d{1,2})\b/g) || [];
+    for (const n of nums) {
+      const g = parseInt(n, 10);
+      if (g >= 1 && g <= 31 && g < giornoCorr) {
+        return `contiene il giorno ${g} ${mesi[meseCorr]} che è già passato (oggi è il ${giornoCorr})`;
+      }
+    }
+  }
+
+  return null;
+}
+
+// Inizializzazione kill switch quando si entra nella view campagne
+(function() {
+  const origShowView = window.showView;
+  if (typeof origShowView === 'function') {
+    window.showView = function(name) {
+      const r = origShowView.apply(this, arguments);
+      if (name === 'campagne') {
+        setTimeout(_aggiornaUIKillSwitch, 200);
+      }
+      return r;
+    };
+  }
+  // Se la pagina si carica direttamente sulla view campagne
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(_aggiornaUIKillSwitch, 500);
+  });
+})();
+
+// ════════ BANCO (dal Tablet) ════════
+// Catalogo premi in cassa
+const CATALOGO_PREMI = [
+  { id: 'cono_piccolo',    nome: 'Cono / Coppetta piccola', emoji: '🍦', costo: 150 },
+  { id: 'vaschetta_500',   nome: 'Vaschetta gelato 500g',   emoji: '🍨', costo: 350 },
+  { id: 'vaschetta_750',   nome: 'Vaschetta gelato 750g',   emoji: '🍨', costo: 500 },
+  { id: 'vaschetta_1kg',   nome: 'Vaschetta gelato 1kg',    emoji: '🏆', costo: 650 },
+];
+
+function aggiornaSezionePremi(puntiDisponibili, puntiStorici) {
+  document.getElementById('premioStorici').textContent = puntiStorici;
+  document.getElementById('premioDisponibili').textContent = puntiDisponibili;
+  const cont = document.getElementById('premioBtns');
+  if (!cont) return;
+  cont.innerHTML = CATALOGO_PREMI.map(p => {
+    const raggiunto = puntiDisponibili >= p.costo;
+    return `<button
+      onclick="riscattaPremioCassa('${p.id}','${p.nome}',${p.costo})"
+      ${raggiunto ? '' : 'disabled'}
+      style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:8px;border:none;cursor:${raggiunto ? 'pointer' : 'not-allowed'};font-family:inherit;font-size:14px;font-weight:500;transition:all 0.2s;
+        background:${raggiunto ? 'var(--yellow)' : 'rgba(255,255,255,0.08)'};
+        color:${raggiunto ? 'var(--green)' : 'rgba(255,255,255,0.35)'}">
+      <span>${p.emoji} ${p.nome}</span>
+      <span style="font-weight:700">${p.costo} pt</span>
+    </button>`;
+  }).join('');
+}
+
+window.riscattaPremioCassa = async function(premioId, premioNome, costo) {
+  const id = window.currentCassaCliente;
+  if (!id) return;
+  const c = window.allClienti.find(x => x.id === id);
+  if (!c) return;
+  const puntiDisponibili = c.punti || 0;
+  if (puntiDisponibili < costo) { showToast('Punti insufficienti', 'error'); return; }
+
+  // Conferma
+  if (!confirm(`Riscatta "${premioNome}" per ${costo} punti?\n\nPunti disponibili: ${puntiDisponibili} → ${puntiDisponibili - costo}`)) return;
+
+  try {
+    const cRef = doc(db, 'clienti', id);
+    const nuoviPunti = puntiDisponibili - costo;
+    // Scala solo punti spendibili — puntiStorici invariati
+    await updateDoc(cRef, { punti: nuoviPunti });
+    // Salva storico ritiro
+    await addDoc(collection(db, 'clienti', id, 'storico'), {
+      tipo: 'premio',
+      premio: premioNome,
+      punti: -costo,
+      data: serverTimestamp(),
+      note: 'Premio riscattato in cassa'
+    });
+    // Aggiorna cache locale
+    c.punti = nuoviPunti;
+    const idx = window.allClienti.findIndex(x => x.id === id);
+    if (idx >= 0) window.allClienti[idx].punti = nuoviPunti;
+    // Aggiorna UI
+    document.getElementById('foundPunti').textContent = nuoviPunti;
+    const puntiStorici = c.puntiStorici || nuoviPunti;
+    aggiornaSezionePremi(nuoviPunti, puntiStorici);
+    showToast(`🎁 Premio riscattato: ${premioNome} (−${costo} pt)`);
+    console.log(`Premio: ${c.nome} → ${premioNome} (−${costo}pt) → saldo: ${nuoviPunti}`);
+  } catch(e) {
+    showToast('Errore riscatto: ' + e.message, 'error');
+  }
+}
+
+async function mostraCodiceAmicoCassa(c) {
+  const box = document.getElementById('cassaAmicoBox');
+  if (!box) return;
+  if (window._scontoCassa && window._scontoCassa.cliente !== c.id) window._scontoCassa = null;
+  box.style.display = 'none'; box.innerHTML = '';
+  const codice = c.codiceBenvenuto || c.codiceAmico;
+  if (!codice) return;
+  try {
+    const s = await getDoc(doc(db, 'codiciPromo', codice));
+    if (!s.exists() || window.currentCassaCliente !== c.id) return;
+    const x = s.data();
+    const scad = x.scadenza && typeof x.scadenza.toMillis === 'function' ? x.scadenza.toMillis() : 0;
+    if (x.usato === true || (scad && Date.now() > scad)) return;
+    const sconto = Number(x.sconto) || 0;
+    box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:6px">🎁 Sconto primo acquisto: −${sconto}%${scad ? ` <span style="font-weight:400;font-size:12px">(valido fino al ${new Date(scad).toLocaleDateString('it-IT')})</span>` : ''}</div>
+      <div style="font-size:13px;margin-bottom:10px">Scrivi sotto l'importo pieno, poi premi il pulsante: il tablet ti dice quanto far pagare.</div>
+      <button class="btn btn-primary" onclick="applicaCodiceAmicoCassa('${codice}', ${sconto})">Applica sconto primo acquisto −${sconto}%</button>`;
+    box.style.display = 'block';
+  } catch(e) { console.error('Codice amico:', e); }
+}
+
+window.applicaCodiceAmicoCassa = async function(codice, sconto) {
+  const inp = document.getElementById('cassaImporto');
+  const pieno = parseFloat(inp.value) || 0;
+  if (!pieno) { showToast("Scrivi prima l'importo pieno", 'error'); inp.focus(); return; }
+  const scontato = Math.round(pieno * (100 - sconto)) / 100;
+  const eur = n => n.toFixed(2).replace('.', ',');
+  if (!confirm(`Sconto primo acquisto −${sconto}%\n\nImporto pieno: € ${eur(pieno)}\nFai pagare: € ${eur(scontato)}\n\nConfermi? Il codice vale una volta sola.`)) return;
+  try {
+    await updateDoc(doc(db, 'codiciPromo', codice), { usato: true, usatoAt: serverTimestamp(), usatoCanale: 'banco' });
+    inp.value = scontato.toFixed(2);
+    window._scontoCassa = { cliente: currentCassaCliente, codice };   // acquisto scontato: niente punti
+    if (typeof calcolaPunti === 'function') calcolaPunti();
+    document.getElementById('cassaAmicoBox').innerHTML = `<b>✓ Sconto primo acquisto applicato.</b> Fai pagare <b>€ ${eur(scontato)}</b>, poi premi <b>Aggiungi</b> per registrare l'acquisto (con lo sconto non si guadagnano punti).`;
+    showToast('Sconto primo acquisto applicato ✓');
+  } catch(e) { showToast('Sconto non applicato: ' + e.message, 'error'); }
+};
+
+window.loadStatistichePresenze = async function() {
+  const anno = parseInt(document.getElementById('statsAnnoSelect')?.value || new Date().getFullYear());
+  // Aggiorna etichette anno
+  const elAnno = document.getElementById('statsAnno');
+  const elAnnoC = document.getElementById('statsAnnoCampione');
+  if (elAnno) elAnno.textContent = anno;
+  if (elAnnoC) elAnnoC.textContent = anno;
+
+  try {
+    // Estrae tutti i check-in dell'anno via codice (formato GREED-CHECKIN-YYYYMMDD)
+    const snap = await getDocs(collection(db, 'checkins'));
+    const prefisso = 'GREED-CHECKIN-' + anno;
+    const tutti = snap.docs
+      .map(d => d.data())
+      .filter(r => r.codice && r.codice.startsWith(prefisso));
+
+    if (tutti.length === 0) {
+      document.getElementById('statsTotaleAnno').textContent = '0';
+      document.getElementById('statsClientiUnici').textContent = '0';
+      document.getElementById('statsMediaGiorno').textContent = '0';
+      document.getElementById('statsMigliorGiornoValue').textContent = '—';
+      document.getElementById('statsMigliorGiornoData').textContent = 'nessun dato';
+      document.getElementById('campioneNome').textContent = 'Nessun check-in';
+      document.getElementById('campioneStats').textContent = "Non ci sono dati per l'anno selezionato";
+      document.getElementById('topFedeliTable').innerHTML = '<tr><td colspan="5"><div class="empty"><div class="empty-icon">☕</div><div class="empty-text">Nessun dato per ' + anno + '</div></div></td></tr>';
+      renderGraficoMensile([0,0,0,0,0,0,0,0,0,0,0,0]);
+      return;
+    }
+
+    // ── KPI base ──
+    const totale = tutti.length;
+    const clientiUnici = new Set(tutti.map(r => r.clienteId || r.nome).filter(Boolean)).size;
+
+    // Giorni unici nell'anno
+    const perGiorno = {};
+    tutti.forEach(r => {
+      const giorno = (r.codice || '').replace(prefisso, ''); // MMDD
+      if (giorno) perGiorno[giorno] = (perGiorno[giorno] || 0) + 1;
+    });
+    const giorniAttivi = Object.keys(perGiorno).length;
+    const media = giorniAttivi > 0 ? (totale / giorniAttivi) : 0;
+
+    // Miglior giorno
+    let migliorGiorno = null, migliorCount = 0;
+    Object.entries(perGiorno).forEach(([g, c]) => {
+      if (c > migliorCount) { migliorCount = c; migliorGiorno = g; }
+    });
+    let migliorGiornoStr = '—';
+    if (migliorGiorno) {
+      const mm = migliorGiorno.substring(0,2);
+      const dd = migliorGiorno.substring(2,4);
+      const dt = new Date(anno, parseInt(mm)-1, parseInt(dd));
+      migliorGiornoStr = dt.toLocaleDateString('it-IT', { day:'numeric', month:'long' });
+    }
+
+    document.getElementById('statsTotaleAnno').textContent = totale;
+    document.getElementById('statsClientiUnici').textContent = clientiUnici;
+    document.getElementById('statsMediaGiorno').textContent = media.toFixed(1);
+    document.getElementById('statsMigliorGiornoValue').textContent = migliorCount + ' check-in';
+    document.getElementById('statsMigliorGiornoData').textContent = migliorGiornoStr;
+
+    // ── Top fedeli ──
+    const perCliente = {};
+    tutti.forEach(r => {
+      const key = r.clienteId || ('nome:' + (r.nome||''));
+      if (!perCliente[key]) {
+        perCliente[key] = { nome: r.nome || 'Sconosciuto', clienteId: r.clienteId, count: 0, primo: null, ultimo: null };
+      }
+      perCliente[key].count++;
+      const ts = r.timestamp?.toDate ? r.timestamp.toDate() : (r.timestamp ? new Date(r.timestamp) : null);
+      if (ts) {
+        if (!perCliente[key].primo || ts < perCliente[key].primo) perCliente[key].primo = ts;
+        if (!perCliente[key].ultimo || ts > perCliente[key].ultimo) perCliente[key].ultimo = ts;
+      }
+    });
+    const top = Object.values(perCliente).sort((a,b) => b.count - a.count).slice(0,10);
+
+    // Campione (cliente più fedele) — in evidenza
+    if (top.length > 0) {
+      const c = top[0];
+      document.getElementById('campioneNome').textContent = c.nome;
+      const giornoMedio = c.count >= 2 ? (c.count / Math.max(1, giorniAttivi) * 100).toFixed(0) : null;
+      let txt = c.count + ' check-in';
+      if (c.primo && c.ultimo) {
+        const fmt = d => d.toLocaleDateString('it-IT', { day:'numeric', month:'short' });
+        txt += ' · dal ' + fmt(c.primo) + ' al ' + fmt(c.ultimo);
+      }
+      document.getElementById('campioneStats').textContent = txt;
+    }
+
+    // Tabella top 10
+    document.getElementById('topFedeliTable').innerHTML = top.map((c, i) => {
+      const medals = ['🥇','🥈','🥉'];
+      const pos = i < 3 ? medals[i] : (i+1);
+      const primo = c.primo ? c.primo.toLocaleDateString('it-IT', { day:'numeric', month:'short' }) : '—';
+      const ultimo = c.ultimo ? c.ultimo.toLocaleDateString('it-IT', { day:'numeric', month:'short' }) : '—';
+      return '<tr>' +
+        '<td style="font-size:18px;text-align:center">' + pos + '</td>' +
+        '<td><b>' + c.nome + '</b></td>' +
+        '<td><b style="color:var(--green)">' + c.count + '</b></td>' +
+        '<td style="color:var(--text-muted);font-size:13px">' + primo + '</td>' +
+        '<td style="color:var(--text-muted);font-size:13px">' + ultimo + '</td>' +
+        '</tr>';
+    }).join('');
+
+    // ── Grafico mensile ──
+    const perMese = [0,0,0,0,0,0,0,0,0,0,0,0];
+    Object.entries(perGiorno).forEach(([g, c]) => {
+      const mm = parseInt(g.substring(0,2)) - 1;
+      if (mm >= 0 && mm < 12) perMese[mm] += c;
+    });
+    renderGraficoMensile(perMese);
+
+  } catch(err) {
+    console.error('[STATS] Errore:', err);
+  }
+}
+
+function renderGraficoMensile(perMese) {
+  const max = Math.max(...perMese, 1);
+  const meseCorrente = new Date().getMonth();
+  const html = perMese.map((v, i) => {
+    const h = (v / max * 100);
+    const isCurrent = i === meseCorrente;
+    return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative">' +
+      (v > 0 ? '<div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:4px">' + v + '</div>' : '') +
+      '<div style="width:100%;background:' + (isCurrent ? 'var(--yellow)' : 'var(--green)') + ';height:' + h + '%;min-height:' + (v > 0 ? 4 : 0) + 'px;border-radius:6px 6px 0 0;transition:all 0.3s"></div>' +
+      '</div>';
+  }).join('');
+  const g = document.getElementById('graficoMensile');
+  if (g) g.innerHTML = html;
+}
+
+window.resetFiltroLivello = function() {
+  const b = document.getElementById('livelloFilterBanner');
+  if (b) b.remove();
+  const inp = document.getElementById('searchInput');
+  if (inp) inp.placeholder = 'Cerca per nome o email...';
+  renderClienti(window.allClienti || []);
+}
+
+// ─── NOTIFICA VOCALE NUOVI ORDINI ─────────────────────────────────────────
+
+// Sintesi vocale: ripete "È arrivato un nuovo ordine" finché non si tocca lo schermo
+let _vocePlaying = false;
+let _voceInterval = null;
+
+function _parla() {
+  try {
+    const u = new SpeechSynthesisUtterance('È arrivato un nuovo ordine');
+    u.lang = 'it-IT';
+    u.rate = 1;
+    u.pitch = 1;
+    u.volume = 1;
+    speechSynthesis.speak(u);
+  } catch(e) { console.log('Voce non disponibile:', e); }
+}
+
+function suonaNotifica() {
+  if (_vocePlaying) return;
+  _vocePlaying = true;
+  _parla();
+  // Ripete ogni 3.5s finché non si tocca lo schermo
+  _voceInterval = setInterval(() => {
+    if (!speechSynthesis.speaking) _parla();
+  }, 3500);
+}
+
+function fermaNotifica() {
+  _vocePlaying = false;
+  if (_voceInterval) { clearInterval(_voceInterval); _voceInterval = null; }
+  try { speechSynthesis.cancel(); } catch(e){}
+}
+
+// Il tocco sul banner ferma la voce (gestito dal banner stesso, non globale)
+// Nessun listener globale che possa interferire con i pulsanti
+
+// Lampeggio schermo verde — impossibile non notarlo
+function lampeggiaSchermo() {
+  let flash = document.getElementById('flashOrdine');
+  if (!flash) {
+    flash = document.createElement('div');
+    flash.id = 'flashOrdine';
+    flash.style.cssText = 'position:fixed;inset:0;z-index:99998;background:#A7C84B;pointer-events:none;opacity:0;transition:opacity 0.3s';
+    document.body.appendChild(flash);
+  }
+  let count = 0;
+  const blink = setInterval(() => {
+    flash.style.opacity = flash.style.opacity === '0.6' ? '0' : '0.6';
+    count++;
+    if (count >= 6) { clearInterval(blink); flash.style.opacity = '0'; }
+  }, 400);
+}
+
+// Pulsante permanente per sbloccare la voce (necessario per policy Chrome Android)
+function _creaPulsanteAudio() {
+  const btn = document.createElement('div');
+  btn.id = 'sbloccaAudioBtn';
+  btn.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:99999;background:#E0A028;color:#16241C;padding:16px 24px;border-radius:30px;font-size:16px;font-weight:800;box-shadow:0 4px 20px rgba(0,0,0,0.3);cursor:pointer';
+  btn.textContent = '🔔 Attiva notifiche vocali';
+  btn.onclick = () => {
+    // Sblocca la sintesi vocale con un primo speak dal gesto utente
+    try {
+      const u = new SpeechSynthesisUtterance('Notifiche vocali attive');
+      u.lang = 'it-IT';
+      speechSynthesis.speak(u);
+    } catch(e){}
+    btn.textContent = '✅ Notifiche attive';
+    btn.style.background = '#A7C84B';
+    setTimeout(() => { btn.style.opacity = '0'; setTimeout(()=>btn.remove(), 500); }, 2000);
+  };
+  document.body.appendChild(btn);
+}
+document.addEventListener('DOMContentLoaded', _creaPulsanteAudio);
+if (document.readyState !== 'loading') _creaPulsanteAudio();
+
+function mostraBannerOrdine(ordine) {
+  // Vibrazione — non richiede policy audio
+  if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 800]);
+
+  let banner = document.getElementById('nuovoOrdineBanner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'nuovoOrdineBanner';
+    banner.style.cssText = [
+      'position:fixed',
+      'top:0','left:0','right:0',
+      'z-index:99999',
+      'background:#A7C84B',
+      'color:#16241C',
+      'padding:28px 24px',
+      'font-size:22px',
+      'font-weight:900',
+      'text-align:center',
+      'cursor:pointer',
+      'box-shadow:0 6px 30px rgba(0,0,0,0.4)',
+      'transition:opacity 0.5s'
+    ].join(';');
+    document.body.appendChild(banner);
+  }
+  banner.style.opacity = '1';
+  const nomeCli = ordine.nome || ordine.nomeCliente || 'Cliente';
+  banner.innerHTML = `🛒 NUOVO ORDINE<br><span style="font-size:17px">${nomeCli} · €${(ordine.totale||0).toFixed(2)}</span><br><span style="font-size:13px;opacity:0.7">Tocca per confermare</span>`;
+
+  // Click: ferma la voce + va agli ordini + chiude
+  banner.onclick = () => {
+    fermaNotifica();
+    banner.style.opacity = '0';
+    setTimeout(() => banner.remove(), 500);
+    showView('ordini');
+  };
+
+  // Lampeggio banner stesso ogni 600ms
+  let vis = true;
+  const blinkInterval = setInterval(() => {
+    banner.style.background = vis ? '#A7C84B' : '#E0A028';
+    vis = !vis;
+  }, 600);
+  setTimeout(() => {
+    clearInterval(blinkInterval);
+    banner.style.background = '#A7C84B';
+    banner.style.opacity = '0';
+    setTimeout(() => { try { banner.remove(); } catch(e){} }, 500);
+  }, 30000);
+}
+
+// Avvia listener realtime ordini nuovi
+// Usa set di ID già visti invece del timestamp (serverTimestamp arriva null al primo snapshot)
+const _ordiniVisti = new Set();
+let _primoSnapshot = true;
+function _queryOrdini(){ return query(collection(db, 'ordini'), where('stato','==','pagato'), orderBy('createdAt','desc'), limit(20)); }
+function avviaNotificheOrdini() {
+  if (window._ordiniListener) return;
+  window._ordiniListener = onSnapshot(_queryOrdini(), (snap) => {
+  // Al primo snapshot registra tutti gli ordini esistenti SENZA notificare
+  if (_primoSnapshot) {
+    snap.docs.forEach(d => _ordiniVisti.add(d.id));
+    _primoSnapshot = false;
+    return;
+  }
+  snap.docChanges().forEach(change => {
+    if (change.type === 'added') {
+      const id = change.doc.id;
+      // Nuovo solo se non l'ho mai visto (indipendente dal timestamp)
+      if (!_ordiniVisti.has(id)) {
+        _ordiniVisti.add(id);
+        const o = change.doc.data();
+        suonaNotifica();
+        lampeggiaSchermo();
+        mostraBannerOrdine(o);
+        // Stampa automatica via USB se connesso, altrimenti Firestore
+        try {
+          const escPos = _buildEscPos(o);
+          _stampaUSB(escPos).then(ok => {
+            if (!ok) {
+              const fsPayload = { tipo: 'ordine', ordineId: o.ordineId || id,
+                nome: o.nome||'', cognome: o.cognome||'', telefono: o.telefono||'-',
+                metodoPagamento: o.metodoPagamento||'-', carrello: o.carrello||[], totale: o.totale||0 };
+              _stampaFirestore(fsPayload);
+            }
+          });
+        } catch(e) { console.log('Errore stampa auto:', e); }
+        // Aggiorna tabella se sei già nella sezione ordini
+        if (document.getElementById('view-ordini')?.classList.contains('active')) {
+          if (typeof loadOrdini === 'function') loadOrdini();
+        }
+      }
+    }
+  });
+});
+}
+
+
+// Ultimo controllo sull'apertura delle sezioni: vale anche dopo gli agganci di eventi e campagne
+(function() {
+  const base = window.showView;
+  window.showView = function(name) {
+    if (window.RUOLO === 'staff' && !VISTE_STAFF.includes(name)) { showToast('Sezione riservata a Dario', 'error'); return; }
+    return base.apply(this, arguments);
+  };
+})();
