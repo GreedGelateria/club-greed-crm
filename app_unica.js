@@ -3166,36 +3166,55 @@ async function mostraCodiceAmicoCassa(c) {
   if (!box) return;
   if (window._scontoCassa && window._scontoCassa.cliente !== c.id) window._scontoCassa = null;
   box.style.display = 'none'; box.innerHTML = '';
-  const codice = c.codiceBenvenuto || c.codiceAmico;
-  if (!codice) return;
-  try {
-    const s = await getDoc(doc(db, 'codiciPromo', codice));
-    if (!s.exists() || window.currentCassaCliente !== c.id) return;
-    const x = s.data();
-    const scad = x.scadenza && typeof x.scadenza.toMillis === 'function' ? x.scadenza.toMillis() : 0;
-    if (x.usato === true || (scad && Date.now() > scad)) return;
-    const sconto = Number(x.sconto) || 0;
-    box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:6px">🎁 Sconto primo acquisto: −${sconto}%${scad ? ` <span style="font-weight:400;font-size:12px">(valido fino al ${new Date(scad).toLocaleDateString('it-IT')})</span>` : ''}</div>
-      <div style="font-size:13px;margin-bottom:10px">Scrivi sotto l'importo pieno, poi premi il pulsante: il tablet ti dice quanto far pagare.</div>
-      <button class="btn btn-primary" onclick="applicaCodiceAmicoCassa('${codice}', ${sconto})">Applica sconto primo acquisto −${sconto}%</button>`;
-    box.style.display = 'block';
-  } catch(e) { console.error('Codice amico:', e); }
+  // Il primo codice valido: compleanno (solo oggi), poi primo acquisto
+  for (const codice of [c.codiceCompleanno, c.codiceBenvenuto, c.codiceAmico].filter(Boolean)) {
+    try {
+      const s = await getDoc(doc(db, 'codiciPromo', codice));
+      if (window.currentCassaCliente !== c.id) return;
+      if (!s.exists()) continue;
+      const x = s.data();
+      const scad = x.scadenza && typeof x.scadenza.toMillis === 'function' ? x.scadenza.toMillis() : 0;
+      if (x.usato === true || (scad && Date.now() > scad)) continue;
+      const sconto = Number(x.sconto) || 0;
+      if (x.tipo === 'compleanno') {
+        box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:6px">🎂 Buon compleanno! −${sconto}% sui SEMIFREDDI, solo oggi</div>
+          <div style="font-size:13px;margin-bottom:10px">Scrivi sotto l'importo totale, poi premi il pulsante: il tablet ti chiede quanto costano i semifreddi e calcola lo sconto solo su quelli.</div>
+          <button class="btn btn-primary" onclick="applicaCodiceAmicoCassa('${codice}', ${sconto}, 'semifreddi')">Applica −${sconto}% sui semifreddi</button>`;
+      } else {
+        box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:6px">🎁 Sconto primo acquisto: −${sconto}%${scad ? ` <span style="font-weight:400;font-size:12px">(valido fino al ${new Date(scad).toLocaleDateString('it-IT')})</span>` : ''}</div>
+          <div style="font-size:13px;margin-bottom:10px">Scrivi sotto l'importo pieno, poi premi il pulsante: il tablet ti dice quanto far pagare.</div>
+          <button class="btn btn-primary" onclick="applicaCodiceAmicoCassa('${codice}', ${sconto})">Applica sconto primo acquisto −${sconto}%</button>`;
+      }
+      box.style.display = 'block';
+      return;
+    } catch(e) { console.error('Codice sconto:', e); }
+  }
 }
 
-window.applicaCodiceAmicoCassa = async function(codice, sconto) {
+window.applicaCodiceAmicoCassa = async function(codice, sconto, ambito) {
   const inp = document.getElementById('cassaImporto');
   const pieno = parseFloat(inp.value) || 0;
-  if (!pieno) { showToast("Scrivi prima l'importo pieno", 'error'); inp.focus(); return; }
-  const scontato = Math.round(pieno * (100 - sconto)) / 100;
+  if (!pieno) { showToast("Scrivi prima l'importo totale", 'error'); inp.focus(); return; }
   const eur = n => n.toFixed(2).replace('.', ',');
-  if (!confirm(`Sconto primo acquisto −${sconto}%\n\nImporto pieno: € ${eur(pieno)}\nFai pagare: € ${eur(scontato)}\n\nConfermi? Il codice vale una volta sola.`)) return;
+  let base = pieno, titolo = 'Sconto primo acquisto';
+  if (ambito === 'semifreddi') {
+    titolo = 'Compleanno: sconto sui semifreddi';
+    const r = prompt(`Quanto costano i SEMIFREDDI in questo acquisto? (€)\nTotale dell'acquisto: € ${eur(pieno)}`, eur(pieno));
+    if (r === null) return;
+    base = parseFloat(String(r).replace(',', '.'));
+    if (!(base > 0) || base > pieno + 0.001) { showToast('Importo dei semifreddi non valido', 'error'); return; }
+  }
+  const scontoEuro = Math.round(base * sconto) / 100;
+  const scontato = Math.round((pieno - scontoEuro) * 100) / 100;
+  const dettaglio = ambito === 'semifreddi' ? `Semifreddi: € ${eur(base)} → sconto € ${eur(scontoEuro)}\n` : '';
+  if (!confirm(`${titolo} −${sconto}%\n\nImporto totale: € ${eur(pieno)}\n${dettaglio}Fai pagare: € ${eur(scontato)}\n\nConfermi? Il codice vale una volta sola.`)) return;
   try {
-    await updateDoc(doc(db, 'codiciPromo', codice), { usato: true, usatoAt: serverTimestamp(), usatoCanale: 'banco' });
+    await updateDoc(doc(db, 'codiciPromo', codice), { usato: true, usatoAt: serverTimestamp(), usatoCanale: 'banco', ...(ambito === 'semifreddi' ? { importoSemifreddi: base } : {}) });
     inp.value = scontato.toFixed(2);
     window._scontoCassa = { cliente: currentCassaCliente, codice };   // acquisto scontato: niente punti
     if (typeof calcolaPunti === 'function') calcolaPunti();
-    document.getElementById('cassaAmicoBox').innerHTML = `<b>✓ Sconto primo acquisto applicato.</b> Fai pagare <b>€ ${eur(scontato)}</b>, poi premi <b>Aggiungi</b> per registrare l'acquisto (con lo sconto non si guadagnano punti).`;
-    showToast('Sconto primo acquisto applicato ✓');
+    document.getElementById('cassaAmicoBox').innerHTML = `<b>✓ ${titolo} applicato.</b> Fai pagare <b>€ ${eur(scontato)}</b>, poi premi <b>Aggiungi</b> per registrare l'acquisto (con lo sconto non si guadagnano punti).`;
+    showToast(titolo + ' applicato ✓');
   } catch(e) { showToast('Sconto non applicato: ' + e.message, 'error'); }
 };
 
