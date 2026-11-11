@@ -1288,7 +1288,7 @@ function renderOrdiniTable(ordini) {
   div.innerHTML = html;
 }
 
-const PIN_TITOLARE_HASH = '11dd79d45f528e98c462a214f811bb50a6b32452f6c6acead7c9f2cf2917a3a5';
+const PIN_TITOLARE_HASH = 'b7f48a1d1f56da65a05ff3e22094c49acd792dcdf93e70dbdef7899b4618fcbd';   // PIN di Dario: 112233 (uguale al gestionale)
 async function verificaPinTitolare(msg) {
   const pin = prompt(msg); if (pin === null) return false;
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('greed-crm|' + pin.trim()));
