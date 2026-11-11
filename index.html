@@ -3,108 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Club Greed — CRM</title>
+<title>Club GREED — Banco e CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="style.css">
+<style>.stat-card[onclick]:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12);transition:all .2s}.stat-card[onclick]:active{transform:translateY(0)}</style>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-<script type="module">
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-const _a=initializeApp({apiKey:"AIzaSyBwAZb_A3IjPv7iL0cLhVnWO-Cuw_DD5g4",authDomain:"club-greed.firebaseapp.com",projectId:"club-greed"});
-const _auth=getAuth(_a),_gp=new GoogleAuthProvider(),ME="gelateriagreed@gmail.com";
-window._crmLoginGoogle=async function(){
-  const b=document.getElementById("crm-google-btn");
-  if(b){b.disabled=true;b.textContent="Accesso in corso…";}
-  try{
-    const r=await signInWithPopup(_auth,_gp);
-    if(r.user.email!==ME){await signOut(_auth);showGErr("Account non autorizzato. Usa "+ME);}
-  }catch(e){if(e.code!=="auth/popup-closed-by-user")showGErr("Errore: "+e.message);}
-  if(b){b.disabled=false;b.textContent="🔑 Accedi con Google";}
-};
-function showGErr(m){const e=document.getElementById("crm-google-err");if(e){e.textContent=m;e.style.display="block";}}
-onAuthStateChanged(_auth,user=>{
-  if(user&&user.email===ME){
-    document.getElementById("pin-screen").style.display="none";
-    if(typeof loadDashboard==="function")setTimeout(loadDashboard,300);
-  }
-});
-</script>
+
 </head>
 <body>
 
-<!-- PIN SCREEN -->
-<div id="pin-screen" style="
-  position:fixed;top:0;left:0;width:100%;height:100%;
-  background:#0a0a0a;z-index:99999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-family:'Outfit',sans-serif;
-">
+<!-- ACCESSO: solo account Google GREED (Dario: tutto · staff: banco) -->
+<div id="pin-screen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0a0a0a;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;">
   <div style="font-size:28px;font-weight:700;color:#c8a96e;letter-spacing:2px;margin-bottom:4px">GREED</div>
-  <div style="font-size:13px;color:#666;margin-bottom:40px">Club CRM — Accesso riservato</div>
-  <div id="pin-dots" style="display:flex;gap:14px;margin-bottom:28px"></div>
-  <div style="display:grid;grid-template-columns:repeat(3,70px);gap:10px;">
-    <button onclick="cp('1')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">1</button>
-    <button onclick="cp('2')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">2</button>
-    <button onclick="cp('3')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">3</button>
-    <button onclick="cp('4')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">4</button>
-    <button onclick="cp('5')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">5</button>
-    <button onclick="cp('6')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">6</button>
-    <button onclick="cp('7')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">7</button>
-    <button onclick="cp('8')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">8</button>
-    <button onclick="cp('9')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;">9</button>
-    <button onclick="cp('0')" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#fff;font-size:20px;font-weight:700;cursor:pointer;grid-column:2">0</button>
-    <button onclick="pdel()" style="height:70px;border-radius:12px;background:#1a1a1a;border:1px solid #333;color:#888;font-size:16px;cursor:pointer;">⌫</button>
-  </div>
-  <div id="pin-err" style="color:#c0392b;font-size:13px;margin-top:14px;min-height:18px;"></div>
-  <div style="margin-top:22px;text-align:center">
-    <div style="color:#888;font-size:11px;margin-bottom:10px;letter-spacing:.05em">OPPURE</div>
-    <button id="crm-google-btn" onclick="window._crmLoginGoogle()" style="background:#4285f4;color:#fff;border:none;padding:11px 26px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.03em">🔑 Accedi con Google</button>
-    <div id="crm-google-err" style="color:#c0392b;font-size:11px;margin-top:8px;display:none"></div>
-  </div>
+  <div style="font-size:13px;color:#888;margin-bottom:34px">Club GREED — Accesso riservato</div>
+  <button id="crm-google-btn" onclick="window.loginGoogle()" style="background:#4285f4;color:#fff;border:none;padding:14px 30px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">🔑 Accedi con Google</button>
+  <div id="crm-google-err" style="color:#c0392b;font-size:12px;margin-top:12px;display:none"></div>
+  <div style="color:#666;font-size:11px;margin-top:26px;text-align:center;line-height:1.6">Banco: account staff GREED · Dario: account personale</div>
 </div>
-
-<script>
-(function(){
-  const PIN = '0044';
-  let entered = '';
-  const SESSION_KEY = 'greed_crm_auth';
-
-  // Controlla se già autenticato in questa sessione
-  if(sessionStorage.getItem(SESSION_KEY) === 'ok'){
-    document.getElementById('pin-screen').style.display = 'none';
-    return;
-  }
-
-  function renderDots(){
-    document.getElementById('pin-dots').innerHTML =
-      Array(4).fill(0).map((_,i) =>
-        '<div style="width:14px;height:14px;border-radius:50%;border:2px solid '+(i<entered.length?'#c8a96e':'#444')+';background:'+(i<entered.length?'#c8a96e':'transparent')+'"></div>'
-      ).join('');
-  }
-  renderDots();
-
-  window.cp = function(d){
-    if(entered.length >= 4) return;
-    entered += d;
-    renderDots();
-    if(entered.length === 4){
-      if(entered === PIN){
-        sessionStorage.setItem(SESSION_KEY, 'ok');
-        document.getElementById('pin-screen').style.display = 'none';
-      } else {
-        document.getElementById('pin-err').textContent = 'PIN non corretto';
-        setTimeout(()=>{ entered=''; renderDots(); document.getElementById('pin-err').textContent=''; }, 700);
-      }
-    }
-  };
-  window.pdel = function(){ entered=entered.slice(0,-1); renderDots(); };
-})();
-</script>
 
 <!-- HEADER -->
 <header class="header">
-  <div class="header-logo">GREED <span>Club CRM</span></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <div class="header-logo">GREED <span>Club CRM</span></div>
+    <button id="btnConnettiUSB" onclick="connettiStampanteUSB()" style="background:rgba(247,207,69,0.15);border:1px solid rgba(247,207,69,0.35);color:var(--yellow);font-family:Outfit,sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;cursor:pointer;letter-spacing:0.3px;transition:all 0.2s" title="Connetti stampante Epson via USB">🖨️ Connetti USB</button>
+  </div>
   <nav class="header-nav" id="mainNav">
     <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
     <button class="nav-btn" onclick="showView('clienti')">Clienti</button>
@@ -264,20 +187,22 @@ onAuthStateChanged(_auth,user=>{
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px">
-        <div style="background:var(--cream);border-radius:10px;padding:14px;text-align:center">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:24px">
+        <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Punti spendibili</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--green)" id="foundPunti">0</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:var(--green)" id="foundPunti">0</div>
         </div>
-        <div style="background:var(--cream);border-radius:10px;padding:14px;text-align:center">
+        <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Punti storici</div>
-          <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--gold)" id="foundPuntiStorici">0</div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:var(--gold)" id="foundPuntiStorici">0</div>
         </div>
-        <div style="background:var(--cream);border-radius:10px;padding:14px;text-align:center">
+        <div style="background:var(--cream);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Livello</div>
-          <div style="font-size:15px;font-weight:600;color:var(--green);margin-top:6px" id="foundLevel">—</div>
+          <div style="font-size:14px;font-weight:600;color:var(--green);margin-top:4px" id="foundLevel">—</div>
         </div>
       </div>
+
+      <div id="cassaAmicoBox" style="display:none;background:#fff4dd;border:1.5px solid var(--yellow);border-radius:10px;padding:16px 20px;margin-bottom:16px"></div>
 
       <div style="background:var(--cream);border-radius:10px;padding:20px;margin-bottom:16px">
         <div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.8px">Aggiungi punti acquisto</div>
@@ -311,6 +236,30 @@ onAuthStateChanged(_auth,user=>{
           <button class="btn btn-ghost btn-sm" onclick="premiaSocial('tiktok',10)">🎵 Story TikTok +10</button>
         </div>
       </div>
+
+      <!-- ═══ RISCATTA PREMIO ═══ -->
+      <div style="background:var(--green);border-radius:12px;padding:20px;margin-top:12px;color:#fff">
+        <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--yellow);margin-bottom:14px">🎁 Riscatta Premio</div>
+
+        <!-- Doppio saldo punti -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+          <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:4px">Punti accumulati</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:var(--yellow)" id="premioStorici">0</div>
+            <div style="font-size:10px;opacity:0.6;margin-top:2px">non scendono mai</div>
+          </div>
+          <div style="background:rgba(255,255,255,0.08);border-radius:8px;padding:12px;text-align:center">
+            <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;opacity:0.7;margin-bottom:4px">Punti disponibili</div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;color:#fff" id="premioDisponibili">0</div>
+            <div style="font-size:10px;opacity:0.6;margin-top:2px">per riscattare premi</div>
+          </div>
+        </div>
+
+        <!-- Bottoni premi -->
+        <div style="display:flex;flex-direction:column;gap:8px" id="premioBtns">
+          <!-- generati da JS -->
+        </div>
+      </div>
       </div>
     </div>
   </div>
@@ -334,7 +283,7 @@ onAuthStateChanged(_auth,user=>{
       </div>
       <div class="checkin-points-badge">+5 punti presenza</div>
     </div>
-    <button class="btn btn-primary" onclick="window.print()" style="width:100%"> Stampa QR del giorno</button>
+    <button class="btn btn-primary" onclick="stampaQRGiorno()" style="width:100%"> Stampa QR del giorno</button>
 
     <div style="margin-top:32px">
       <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--green);margin-bottom:16px">Check-in di oggi</div>
@@ -345,6 +294,84 @@ onAuthStateChanged(_auth,user=>{
         </table>
       </div>
     </div>
+
+    <!-- ═══════ STATISTICHE ANNUALI CHECK-IN ═══════ -->
+    <div style="margin-top:48px;padding-top:32px;border-top:2px dashed rgba(0,0,0,0.08)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--green)">📊 Statistiche <span id="statsAnno">2026</span></div>
+          <div style="font-size:13px;color:var(--text-muted);margin-top:4px">Il cliente più fedele dell'anno riceve una vaschetta di gelato in regalo 🍦</div>
+        </div>
+        <select id="statsAnnoSelect" onchange="loadStatistichePresenze()" style="padding:8px 14px;border-radius:8px;border:1px solid rgba(0,0,0,0.15);font-family:inherit;font-size:14px;background:#fff;cursor:pointer">
+          <option value="2026">2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+        </select>
+      </div>
+
+      <!-- KPI grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:14px;margin-bottom:24px">
+        <div class="stat-card">
+          <div class="stat-label">Totale check-in</div>
+          <div class="stat-value" id="statsTotaleAnno">—</div>
+          <div class="stat-sub">nell'anno</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Clienti unici</div>
+          <div class="stat-value" id="statsClientiUnici">—</div>
+          <div class="stat-sub">hanno fatto check-in</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Media giornaliera</div>
+          <div class="stat-value" id="statsMediaGiorno">—</div>
+          <div class="stat-sub">check-in/giorno</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Miglior giorno</div>
+          <div class="stat-value" id="statsMigliorGiornoValue" style="font-size:20px">—</div>
+          <div class="stat-sub" id="statsMigliorGiornoData">—</div>
+        </div>
+      </div>
+
+      <!-- CARD CLIENTE PIÙ FEDELE (in evidenza) -->
+      <div id="campioneCard" style="background:linear-gradient(135deg, #1a2e1a 0%, #2d4a2d 100%);color:#fff;padding:28px;border-radius:16px;margin-bottom:24px;position:relative;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,0.18)">
+        <div style="position:absolute;top:-20px;right:-20px;font-size:160px;opacity:0.07">👑</div>
+        <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--yellow);font-weight:600;margin-bottom:8px">🏆 Cliente più fedele <span id="statsAnnoCampione">2026</span></div>
+        <div id="campioneNome" style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;margin-bottom:6px">Caricamento...</div>
+        <div id="campioneStats" style="font-size:14px;opacity:0.85;margin-bottom:14px">—</div>
+        <div style="background:rgba(247,207,69,0.18);border:1px solid rgba(247,207,69,0.4);padding:10px 16px;border-radius:8px;display:inline-block;font-size:13px;color:var(--yellow)">
+          🍦 Regalo di fine anno: vaschetta gelato in omaggio
+        </div>
+      </div>
+
+      <!-- Top 10 clienti fedeli -->
+      <div style="margin-bottom:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+          <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--green)">🏅 Top 10 clienti fedeli</div>
+          <button class="btn" onclick="stampaClassifica()" style="font-size:13px">🖨️ Stampa classifica per il negozio</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:50px">#</th><th>Cliente</th><th>Check-in</th><th>Primo</th><th>Ultimo</th></tr></thead>
+            <tbody id="topFedeliTable"><tr><td colspan="5"><div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Caricamento...</div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Grafico mensile -->
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--green);margin-bottom:12px">📈 Andamento mensile</div>
+        <div style="background:var(--white);border-radius:12px;padding:20px;border:1px solid rgba(0,0,0,0.06)">
+          <div id="graficoMensile" style="display:flex;align-items:flex-end;gap:6px;height:200px;padding:10px 0;border-bottom:2px solid rgba(0,0,0,0.08);position:relative"></div>
+          <div style="display:flex;gap:6px;margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center">
+            <div style="flex:1">Gen</div><div style="flex:1">Feb</div><div style="flex:1">Mar</div><div style="flex:1">Apr</div>
+            <div style="flex:1">Mag</div><div style="flex:1">Giu</div><div style="flex:1">Lug</div><div style="flex:1">Ago</div>
+            <div style="flex:1">Set</div><div style="flex:1">Ott</div><div style="flex:1">Nov</div><div style="flex:1">Dic</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ═══════ FINE STATISTICHE ANNUALI ═══════ -->
   </div>
 </div>
 
@@ -550,7 +577,435 @@ onAuthStateChanged(_auth,user=>{
     </div>
   </div>
 </div>
-<script type="module" src="app.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STAMPA EPSON TM-m30III
+// Cascata: 1) WebUSB diretto  2) Bridge HTTP  3) Finestra browser
+// ═══════════════════════════════════════════════════════════════
+
+// ── Stato USB ──────────────────────────────────────────────────
+let _usbDevice = null;
+let _usbEndpointOut = null;
+
+// Tenta riconnessione automatica a device già autorizzato
+async function _usbAutoConnect() {
+  if (!navigator.usb) return false;
+  try {
+    const devices = await navigator.usb.getDevices();
+    const epson = devices.find(d => d.vendorId === 0x04b8);
+    if (!epson) return false;
+    await epson.open();
+    if (epson.configuration === null) await epson.selectConfiguration(1);
+    await epson.claimInterface(0);
+    _usbDevice = epson;
+    _usbEndpointOut = epson.configuration.interfaces[0].alternate.endpoints
+      .find(e => e.direction === 'out');
+    console.log('[USB] Autoconnesso:', epson.productName);
+    return true;
+  } catch(e) {
+    console.log('[USB] Autoconnect fallito:', e.message);
+    return false;
+  }
+}
+
+// Chiamata manuale dal pulsante (richiede gesto utente)
+window.connettiStampanteUSB = async function() {
+  if (!navigator.usb) {
+    showToast('WebUSB non supportato su questo browser', 'error');
+    return;
+  }
+  try {
+    const device = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x04b8 }] });
+    await device.open();
+    if (device.configuration === null) await device.selectConfiguration(1);
+    await device.claimInterface(0);
+    _usbDevice = device;
+    _usbEndpointOut = device.configuration.interfaces[0].alternate.endpoints
+      .find(e => e.direction === 'out');
+    showToast('Stampante USB connessa ✓');
+    // Aggiorna icona pulsante
+    const btn = document.getElementById('btnConnettiUSB');
+    if (btn) { btn.textContent = '🖨️ USB connessa'; btn.style.background = 'var(--success)'; btn.style.color = '#fff'; }
+  } catch(e) {
+    showToast('Connessione USB annullata o fallita', 'error');
+    console.error(e);
+  }
+};
+
+// ── Builder ESC/POS ────────────────────────────────────────────
+function _buildEscPos(o) {
+  const enc = new TextEncoder();
+  const chunks = [];
+  const cmd = (...b) => chunks.push(new Uint8Array(b));
+  const txt = s => chunks.push(enc.encode(s));
+
+  // Init + centra
+  cmd(0x1B, 0x40);
+  cmd(0x1B, 0x61, 0x01);
+  // Logo testuale grande
+  cmd(0x1D, 0x21, 0x11);   // double width + height
+  txt('GREED\n');
+  cmd(0x1D, 0x21, 0x00);   // reset size
+  txt('Gelateria Naturale - Frascati\n');
+  txt('Piazza Roma 16\n');
+  txt('--------------------------------\n');
+
+  // Dati ordine — sinistra
+  cmd(0x1B, 0x61, 0x00);
+  cmd(0x1D, 0x21, 0x01);   // double height per ID ordine
+  txt('Ordine: ' + (o.ordineId || '-') + '\n');
+  cmd(0x1D, 0x21, 0x00);
+  txt('Cliente: ' + (o.nome||'') + ' ' + (o.cognome||'') + '\n');
+  txt('Tel: ' + (o.telefono||'-') + '\n');
+  txt('--------------------------------\n');
+
+  // Carrello
+  if (o.carrello && o.carrello.length) {
+    o.carrello.forEach(function(item) {
+      cmd(0x1B, 0x45, 0x01);  // bold ON
+      txt((item.vaschetta || '-') + '\n');
+      cmd(0x1B, 0x45, 0x00);  // bold OFF
+      if (item.gusti && item.gusti.length) txt('  ' + item.gusti.join(', ') + '\n');
+      if (item.scorta) txt('  * Scorta: ' + item.scorta + '\n');
+      if (item.panna) txt('  + Panna EUR ' + (item.pannaCosto||0).toFixed(2) + '\n');
+      if (item.miniconi) txt('  + Kit 9 miniconi EUR 1,50\n');
+      if (item.cono) txt('  + ' + item.cono + '\n');
+      if (item.note) txt('  Nota: ' + item.note + '\n');
+      txt('  EUR ' + (item.prezzoFinale||item.pFin||0).toFixed(2) + '\n');
+    });
+  }
+
+  // Totale
+  txt('--------------------------------\n');
+  cmd(0x1D, 0x21, 0x01);   // double height
+  cmd(0x1B, 0x45, 0x01);
+  txt('TOTALE: EUR ' + (o.totale||0).toFixed(2) + '\n');
+  cmd(0x1B, 0x45, 0x00);
+  cmd(0x1D, 0x21, 0x00);
+  txt('\n');
+  cmd(0x1B, 0x61, 0x01);   // centra
+  txt('Grazie e a presto!\n');
+  txt('gelateriagreed.it\n');
+  txt('\n\n\n');
+  cmd(0x1D, 0x56, 0x41, 0x03);  // partial cut
+
+  // Unisci chunk
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  return out;
+}
+
+// ── Encoding CP858 per accentate (Epson default codepage) ──────
+function _cp858(s) {
+  const map = {
+    'à':0x85,'è':0x8A,'é':0x82,'ì':0x8D,'ò':0x95,'ù':0x97,
+    'À':0xB7,'È':0xD4,'É':0x90,'Ì':0xDE,'Ò':0xE3,'Ù':0xEB,
+    'ä':0x84,'ë':0x89,'ï':0x8B,'ö':0x94,'ü':0x81,
+    'Ä':0x8E,'Ë':0xD3,'Ï':0xD8,'Ö':0x99,'Ü':0x9A,
+    'ñ':0xA4,'Ñ':0xA5,'ç':0x87,'Ç':0x80,'·':0xF9,'€':0xD5
+  };
+  const out = [];
+  for (const ch of s) {
+    if (map[ch] !== undefined) out.push(map[ch]);
+    else if (ch.charCodeAt(0) < 128) out.push(ch.charCodeAt(0));
+    else out.push(0x3F); // '?' per caratteri sconosciuti
+  }
+  return new Uint8Array(out);
+}
+
+// ── Builder ESC/POS per QR check-in ────────────────────────────
+function _buildEscPosQR(payload) {
+  const chunks = [];
+  const cmd = (...b) => chunks.push(new Uint8Array(b));
+  const txt = s => chunks.push(_cp858(s));
+
+  cmd(0x1B, 0x40);              // init
+  cmd(0x1B, 0x61, 0x01);        // centra
+
+  // ── CLUB GREED grande ──
+  cmd(0x1D, 0x21, 0x11);        // double width+height
+  txt('CLUB GREED\n');
+  cmd(0x1D, 0x21, 0x00);        // reset
+  txt('Gelateria Naturale \xF9 Frascati\n'); // · in CP858 = 0xF9
+
+  if (payload.tipo === 'qr_checkin') {
+    // Data con accentate corrette
+    const oggi = new Date();
+    const giorni = ['domenica','lunedi','martedi','mercoledi','giovedi','venerdi','sabato'];
+    const mesi = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    const dataStr = giorni[oggi.getDay()] + ' ' + oggi.getDate() + ' ' + mesi[oggi.getMonth()];
+    txt(dataStr + '\n');
+  } else {
+    txt((payload.nome || '') + '\n');
+  }
+
+  // Linea tratteggiata
+  cmd(0x1B, 0x61, 0x01);
+  txt('- - - - - - - - - - - - - - - -\n');
+  txt('Scansiona e guadagna punti!\n\n');
+
+  // ── QR Code ESC/POS nativo (GS ( k) ──
+  const enc = new TextEncoder();
+  const qrStr = payload.qrData || '';
+  const qrBytes = enc.encode(qrStr);
+  const len = qrBytes.length + 3;
+  const pL = len & 0xFF, pH = (len >> 8) & 0xFF;
+  cmd(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00); // modello 2
+  cmd(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x08);        // modulo size 8 (più grande)
+  cmd(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x31);        // correzione M
+  chunks.push(new Uint8Array([0x1D, 0x28, 0x6B, pL, pH, 0x31, 0x50, 0x30]));
+  chunks.push(qrBytes);
+  cmd(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x51, 0x30);        // stampa QR
+
+  // ── Testo sotto QR ──
+  txt('\n');
+  txt('- - - - - - - - - - - - - - - -\n');
+  if (payload.tipo === 'qr_checkin') {
+    txt('Ogni acquisto ti avvicina\n');
+    txt('a premi esclusivi.\n');
+    txt('Entra nella famiglia GREED!\n');
+    txt('Iscriviti gratis su\n');
+    txt('gelateriagreed.it\n');
+  } else {
+    txt((payload.nome || '') + '\n');
+    txt('Livello: ' + (payload.livello || '') + '\n');
+    txt('Punti: ' + (payload.punti || 0) + '\n');
+  }
+  txt('\n\n\n');
+  cmd(0x1D, 0x56, 0x41, 0x03); // partial cut
+
+  const total = chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  return out;
+}
+
+// ── Stampa via WebUSB ──────────────────────────────────────────
+async function _stampaUSB(escPosBytes) {
+  if (!_usbDevice || !_usbEndpointOut) {
+    const ok = await _usbAutoConnect();
+    if (!ok) return false;
+  }
+  try {
+    await _usbDevice.transferOut(_usbEndpointOut.endpointNumber, escPosBytes);
+    return true;
+  } catch(e) {
+    console.error('[USB] Errore transferOut:', e);
+    _usbDevice = null; _usbEndpointOut = null;
+    return false;
+  }
+}
+
+// ── Stampa via Firestore → printerJobHandler (no PC, no cavo) ──
+async function _stampaFirestore(payload) {
+  try {
+    await addDoc(collection(db, 'print_jobs'), {
+      ...payload,
+      stampato: false,
+      createdAt: serverTimestamp()
+    });
+    return true;
+  } catch(e) {
+    console.error('[STAMPA] Errore Firestore:', e);
+    return false;
+  }
+}
+
+// ── Fallback: finestra browser ─────────────────────────────────
+function _stampaFinestraBrowser(o) {
+  var riga = '--------------------------------';
+  var gusti = '';
+  if (o.carrello && o.carrello.length) {
+    o.carrello.forEach(function(item) {
+      gusti += '<div style="margin:6px 0"><b>' + (item.vaschetta||'-') + '</b><br>';
+      if (item.gusti && item.gusti.length) gusti += item.gusti.join(', ') + '<br>';
+      if (item.panna) gusti += '+ Panna EUR ' + (item.pannaCosto||0).toFixed(2) + '<br>';
+      if (item.cono) gusti += '+ ' + item.cono + '<br>';
+      if (item.note) gusti += 'Nota: ' + item.note + '<br>';
+      gusti += 'EUR ' + (item.prezzoFinale||item.pFin||0).toFixed(2) + '</div>';
+    });
+  }
+  var w = window.open('', '_blank', 'width=300,height=600');
+  if (!w) { showToast('Popup bloccato — abilita popup per stampa', 'error'); return; }
+  w.document.write('<html><body style="font-family:monospace;font-size:13px;width:280px;margin:0 auto">' +
+    '<div style="text-align:center"><b style="font-size:18px">GREED</b><br>Gelateria Naturale<br>Piazza Roma 16 - Frascati<br>' + riga + '</div>' +
+    '<div><b>Ordine:</b> ' + (o.ordineId||'-') + '<br>' +
+    '<b>Cliente:</b> ' + (o.nome||'') + ' ' + (o.cognome||'') + '<br>' +
+    '<b>Tel:</b> ' + (o.telefono||'-') + '<br>' + riga + '</div>' +
+    gusti +
+    '<div>' + riga + '<br><b style="font-size:15px">TOTALE: EUR ' + (o.totale||0).toFixed(2) + '</b></div>' +
+    '<div style="text-align:center;margin-top:10px">Grazie e a presto!<br>gelateriagreed.it</div>' +
+    '</body></html>');
+  w.document.close();
+  w.print();
+}
+
+// ── Funzione principale stampa ordine (cascata) ────────────────
+window.stampaOrdine = async function() {
+  const o = window._ordineCorrente?.ordine;
+  if (!o) return;
+
+  // 1) USB diretto (se connesso via hub)
+  const escPos = _buildEscPos(o);
+  const okUsb = await _stampaUSB(escPos);
+  if (okUsb) { showToast('🖨️ Stampa inviata ✓'); return; }
+
+  // 2) Firestore → printerJobHandler (fallback)
+  const fsPayload = {
+    tipo: 'ordine',
+    ordineId: o.ordineId,
+    nome: o.nome||'',
+    cognome: o.cognome||'',
+    telefono: o.telefono||'-',
+    metodoPagamento: o.metodoPagamento||'-',
+    carrello: o.carrello||[],
+    totale: o.totale||0
+  };
+  const okFs = await _stampaFirestore(fsPayload);
+  if (okFs) { showToast('🖨️ Stampa inviata ✓'); return; }
+
+  // 3) Fallback finestra browser
+  showToast('Stampa non disponibile — apertura finestra browser', 'error');
+  _stampaFinestraBrowser(o);
+};
+
+// ── CLASSIFICA CHECK-IN DA ESPORRE ── solo numeri socio, niente nomi (privacy)
+const PREMI_GARA = ['Vaschetta di gelato da 1 kg', 'Vaschetta di gelato da 500 g', 'Cono 3 gusti'];
+window.stampaClassifica = async function() {
+  try {
+    showToast('⏳ Preparo la classifica…');
+    const r = await fetch('https://europe-west3-club-greed.cloudfunctions.net/classificaCheckin?n=10');
+    const j = await r.json();
+    if (!r.ok || !j.ok) throw new Error(j.error || ('errore ' + r.status));
+    // Stessa cascata del QR del giorno: prima la stampante USB collegata al Tablet, poi il server
+    let ok = await _stampaUSB(_escPosClassifica(j));
+    if (!ok) ok = await _stampaFirestore({ tipo: 'classifica', _rawXml: _xmlClassifica(j) });
+    // Messaggio in finestra: il riquadro in basso può essere coperto dal pulsante delle notifiche vocali
+    alert(ok ? '🖨️ Classifica inviata alla stampante (' + j.top.length + ' posti, ' + j.partecipanti + ' partecipanti).' : '❌ Stampa non riuscita: la richiesta non è arrivata alla stampante.');
+  } catch (e) { alert('❌ Classifica non disponibile: ' + e.message); }
+};
+// Classifica in comandi ESC/POS per la stampante USB (stesso formato dello scontrino del QR)
+function _escPosClassifica(j) {
+  const chunks = [];
+  const cmd = (...b) => chunks.push(new Uint8Array(b));
+  const txt = s => chunks.push(_cp858(s));
+  const fine = new Date(j.fineGara + 'T23:59:59');
+  const giorni = Math.max(0, Math.ceil((fine - new Date()) / 86400000));
+  cmd(0x1B, 0x40); cmd(0x1B, 0x61, 0x01);
+  cmd(0x1D, 0x21, 0x11); txt('GREED\n'); cmd(0x1D, 0x21, 0x00);
+  txt('Gelateria Naturale \xF9 Frascati\n');
+  txt('- - - - - - - - - - - - - - - -\n\n');
+  cmd(0x1B, 0x45, 0x01); cmd(0x1D, 0x21, 0x01); txt('CLASSIFICA CLUB GREED\n'); cmd(0x1D, 0x21, 0x00); cmd(0x1B, 0x45, 0x00);
+  txt('Check-in ' + j.anno + ' - aggiornata al ' + new Date().toLocaleDateString('it-IT') + '\n\n');
+  cmd(0x1B, 0x61, 0x00); cmd(0x1B, 0x45, 0x01);
+  if (j.top.length) {
+    j.top.forEach(x => {
+      const sx = String(x.posizione).padStart(2, ' ') + '.  Socio N. ' + x.numeroSocio;
+      const dx = x.checkin + ' check-in';
+      txt(sx + ' '.repeat(Math.max(1, 42 - sx.length - dx.length)) + dx + '\n');
+    });
+  } else txt('Nessun check-in ancora: inizia tu!\n');
+  cmd(0x1B, 0x45, 0x00); cmd(0x1B, 0x61, 0x01);
+  txt('\n- - - - - - - - - - - - - - - -\n');
+  cmd(0x1B, 0x45, 0x01); txt('IL 15 DICEMBRE SI PREMIA!\n'); cmd(0x1B, 0x45, 0x00);
+  txt('1. ' + PREMI_GARA[0] + '\n2. ' + PREMI_GARA[1] + '\n3. ' + PREMI_GARA[2] + '\n\n');
+  cmd(0x1B, 0x45, 0x01); txt(giorni > 0 ? 'Mancano ' + giorni + ' giorni\n\n' : 'Gara conclusa\n\n'); cmd(0x1B, 0x45, 0x00);
+  txt('Il tuo numero socio compare quando\nfai il check-in con il QR del giorno.\nA parita di check-in vince chi ci e\narrivato prima.\n\n');
+  txt('Partecipanti: ' + j.partecipanti + '\n\n\n\n');
+  cmd(0x1D, 0x56, 0x41, 0x03);
+  const out = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0)); let off = 0;
+  chunks.forEach(c => { out.set(c, off); off += c.length; });
+  return out;
+}
+function _xmlClassifica(j) {
+  const e = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const oggi = new Date();
+  const fine = new Date(j.fineGara + 'T23:59:59');
+  const giorni = Math.max(0, Math.ceil((fine - oggi) / 86400000));
+  const riga = x => {
+    const sx = (String(x.posizione).padStart(2, ' ') + '.  Socio N. ' + x.numeroSocio);
+    const dx = x.checkin + ' check-in';
+    return sx + ' '.repeat(Math.max(1, 42 - sx.length - dx.length)) + dx;
+  };
+  const righe = j.top.length ? j.top.map(riga).join('\n') : 'Nessun check-in ancora: inizia tu!';
+  return `<?xml version="1.0" encoding="utf-8"?>
+<PrintRequestInfo Version="2.00">
+  <ePOSPrint>
+    <Parameter><devid>local_printer</devid><timeout>10000</timeout><printjobid>CL${Date.now()}</printjobid></Parameter>
+    <PrintData>
+      <epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">
+        <text align="center" em="true" dh="true" dw="true">GREED\n</text>
+        <text align="center" em="false" dh="false" dw="false">Gelateria Naturale - Frascati\n</text>
+        <text align="center">- - - - - - - - - - - - - - - -\n</text>
+        <feed line="1"/>
+        <text align="center" em="true" dh="true" dw="false">CLASSIFICA CLUB GREED\n</text>
+        <text align="center" em="false" dh="false">Check-in ${e(j.anno)} - aggiornata al ${e(oggi.toLocaleDateString('it-IT'))}\n</text>
+        <feed line="1"/>
+        <text align="left" em="true">${e(righe)}\n</text>
+        <feed line="1"/>
+        <text align="center">- - - - - - - - - - - - - - - -\n</text>
+        <text align="center" em="true">IL 15 DICEMBRE SI PREMIA!\n</text>
+        <text align="center" em="false">1. ${e(PREMI_GARA[0])}\n2. ${e(PREMI_GARA[1])}\n3. ${e(PREMI_GARA[2])}\n</text>
+        <feed line="1"/>
+        <text align="center" em="true">${giorni > 0 ? 'Mancano ' + giorni + ' giorni' : 'Gara conclusa'}\n</text>
+        <feed line="1"/>
+        <text align="center" em="false">Il tuo numero socio compare quando\nfai il check-in con il QR del giorno.\nA parita di check-in vince chi ci e\narrivato prima.\n</text>
+        <feed line="1"/>
+        <text align="center">Partecipanti: ${e(j.partecipanti)}\n</text>
+        <feed line="3"/>
+        <cut type="feed"/>
+      </epos-print>
+    </PrintData>
+  </ePOSPrint>
+</PrintRequestInfo>`;
+}
+
+// ── stampaQRGiorno e stampaQRCliente aggiornati (cascata) ──────
+window.stampaQRGiorno = async function() {
+  const _oggi = new Date(); const _p2 = n => String(n).padStart(2,'0'); const dayCode = _oggi.getFullYear() + _p2(_oggi.getMonth()+1) + _p2(_oggi.getDate());
+  const qrData = 'https://greedgelateria.github.io/checkin/?code=GREED-CHECKIN-' + dayCode;
+  const oggi = new Date().toLocaleDateString('it-IT', { weekday:'long', day:'numeric', month:'long' });
+  const payload = { tipo: 'qr_checkin', qrData, titolo: 'QR Check-in Giornaliero', sottotitolo: oggi };
+
+  // 1) USB diretto (se connesso)
+  const escPos = _buildEscPosQR(payload);
+  const okUsb = await _stampaUSB(escPos);
+  if (okUsb) { showToast('🖨️ QR giorno stampato ✓'); return; }
+
+  // 2) Firestore → printerJobHandler (fallback)
+  const okFs = await _stampaFirestore(payload);
+  if (okFs) { showToast('🖨️ QR giorno inviato ✓'); return; }
+
+  showToast('Stampa QR non disponibile', 'error');
+};
+
+window.stampaQRCliente = async function() {
+  const c = window.allClienti && window.allClienti.find(x => x.id === window.currentQRClienteId);
+  if (!c) { showToast('Nessun cliente selezionato', 'error'); return; }
+  const qrData = 'https://greedgelateria.github.io/checkin/?qr=' + (c.qrCode || c.id);
+  const payload = { tipo: 'qr_cliente', qrData, nome: c.nome + ' ' + (c.cognome||''), punti: c.punti||0, livello: (window.getLivello ? window.getLivelloCliente(c).nome : '') };
+
+  // 1) USB diretto (se connesso)
+  const escPos = _buildEscPosQR(payload);
+  const okUsb = await _stampaUSB(escPos);
+  if (okUsb) { showToast('🖨️ QR cliente stampato ✓'); return; }
+
+  // 2) Firestore → printerJobHandler (fallback)
+  const okFs = await _stampaFirestore(payload);
+  if (okFs) { showToast('🖨️ QR cliente inviato ✓'); return; }
+
+  showToast('Stampa QR non disponibile', 'error');
+};
+
+// Auto-connect al caricamento pagina (silenzioso)
+if (navigator.usb) {
+  window.addEventListener('load', () => _usbAutoConnect());
+}
+</script>
+<script type="module" src="app_unica.js"></script>
 
 
 <!-- MODAL DETTAGLIO ORDINE -->
