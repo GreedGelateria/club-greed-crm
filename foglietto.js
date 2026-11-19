@@ -32,6 +32,7 @@
     { re: /bombe|bomba/i, componenti: 'zucchero, tuorlo d\'uovo, acqua', tracce: '' },
     { re: /proteine.*patata/i, componenti: 'proteine di patata', tracce: 'latte' },
     { re: /pan di spagna/i, fonte: 'scheda tecnica Nocciolcono, Pan di Spagna senza glutine cod. 145', componenti: 'uova, fecola di patate, zucchero, sciroppo di glucosio, umidificante: glicerolo; emulsionante: mono e digliceridi degli acidi grassi (E471); fibra di barbabietola, addensante: gomma di guar; sale, conservante: E202; aroma', tracce: 'latte, lupini' },
+    { re: /savoiard.*(senza glutine|\bgf\b)/i, fonte: 'confezione Savoiardi senza glutine Selex (prodotti da Farmo S.p.A.)', componenti: 'zucchero, uova da allevamento a terra 28,8%, fecola di patate, farina di riso, agente lievitante: carbonati di ammonio; succo di limone (contiene anidride solforosa e solfiti), addensanti: gomma di xanthan, gomma di guar; aroma, sale', tracce: 'latte, frutta a guscio, semi di sesamo' },
     { re: /con[oi]\b.*(senza glutine|gf)|mini ?con|conett/i, fonte: 'scheda tecnica Nocciolcono, mini coni senza glutine cod. 047', componenti: 'farina di riso, amido di mais, fecola di patate, farina di soia, zucchero, olio di semi di girasole alto oleico, emulsionante: lecitina di soia; sale, zucchero caramellizzato, agente lievitante: bicarbonato di sodio; addensanti: gomma guar, gomma xantano; aroma naturale', tracce: '' },
   ];
   const RE_COMPOSTO = /pasta|crema|cioccolat|copertura|neutro|stabilizz|addensant|meringa|bombe|biscott|cialda|\bcon[oi]\b|pan di spagna|savoiard|granella|pralinat|variegat|marmellat|confettura|salsa|sciroppo(?! di glucosio)|amarett|caramell|gianduia|frollin|wafer|topping|aroma|liquore|\brum\b|vino|marsala|solubile|preparato|\bmix\b|base\b|fondente|gocce|scaglie|praline|crumble|cookie|brownie|torrone|sorbetto/i;
@@ -95,11 +96,13 @@
     (t.componenti || []).forEach(c => {
       if (c.tipo === 'ricetta') { const r = per[c.k]; if (!r) return; const p = prodotto(r, c.k);
         parti.push(`${minuscolo(p.nome)} (${p.testo})`); p.allergeni.forEach(a => set.add(a)); p.tracce.forEach(x => tracce.add(x)); p.mancanti.forEach(x => mancanti.add(x)); }
-      else if (c.nome) { const sc = !pulito(c.ingredienti) && daScheda(c.nome); const ing = pulito(c.ingredienti) || (sc ? sc.ingredienti : ''); if (sc && sc.tracce) tracce.add(sc.tracce); parti.push(ing ? `${minuscolo(c.nome)} (${ing})` : minuscolo(c.nome)); if (!ing) mancanti.add(c.nome);
+      else if (c.nome) { const sc = !pulito(c.ingredienti) && daScheda(c.nome); const ing = pulito(c.ingredienti) || (sc ? sc.ingredienti : ''); const tr = sc ? sc.tracce : (c.tracce || (c.fonte && (daScheda(c.nome) || {}).tracce)); if (tr) tracce.add(tr); parti.push(ing ? `${minuscolo(c.nome)} (${ing})` : minuscolo(c.nome)); if (!ing) mancanti.add(c.nome);
         ALLERGENI_REGOLE.forEach(a => { if (a.re.test(c.nome + ' ' + ing)) set.add(a.k); }); }
     });
     const allergeni = [...set].sort((a, b) => ORDINE_ALG.indexOf(a) - ORDINE_ALG.indexOf(b));
-    return { k: 'V:' + t.id, nome: t.nome, testo: parti.join(', '), allergeni, tracce: [...tracce], semifreddo: true, mancanti: [...mancanti], torta: true, inVetrina: !!t.inVetrina };
+    const giaDentro = x => ALLERGENI_REGOLE.some(a => set.has(a.k) && a.re.test(x)) || (/latte/i.test(x) && set.has('LATTE'));   // niente "può contenere latte" se il latte c'è già
+    const tr = [...new Set([...tracce].join(', ').split(/,\s*(?![^()]*\))/).map(x => x.replace(/^(pu[oò]'? contenere )?(tracce di|tracce:?)\s*/i, '').trim()).filter(x => x && !giaDentro(x)))];
+    return { k: 'V:' + t.id, nome: t.nome, testo: parti.join(', '), allergeni, tracce: tr, semifreddo: true, mancanti: [...mancanti], torta: true, inVetrina: !!t.inVetrina };
   }
   // Gusti che si possono scegliere: ricette (anche semifreddi) + copie create nelle etichette; niente basi e niente doppioni tolti
   function catalogo() {
@@ -292,7 +295,7 @@
   window.vetrinaModifica = id => { const t = TORTE.find(x => x.id === id); if (t) { MODIFICA = JSON.parse(JSON.stringify(t)); disegna(); } };
   window.MODIFICA_set = (c, v) => { MODIFICA[c] = v; };
   window.MODIFICA_comp = (i, c, v) => { MODIFICA.componenti[i][c] = v; if (c === 'k') disegna(); };
-  const precompila = c => { if (c.tipo !== 'ricetta' && !pulito(c.ingredienti)) { const sc = daScheda(c.nome || ''); if (sc) { c.ingredienti = sc.ingredienti; c.fonte = sc.fonte; } } };
+  const precompila = c => { if (c.tipo !== 'ricetta' && !pulito(c.ingredienti)) { const sc = daScheda(c.nome || ''); if (sc) { c.ingredienti = sc.ingredienti; c.fonte = sc.fonte; c.tracce = sc.tracce || ''; } } };
   window.MODIFICA_aggiungi = (tipo, nome) => { const c = tipo === 'ricetta' ? { tipo, k: '' } : { tipo, nome: nome || '', ingredienti: '' }; precompila(c); MODIFICA.componenti.push(c); disegna(); };
   window.MODIFICA_nome = i => { const c = MODIFICA.componenti[i]; if (!pulito(c.ingredienti)) { precompila(c); if (c.ingredienti) disegna(); } };
   window.MODIFICA_togli = i => { MODIFICA.componenti.splice(i, 1); disegna(); };
