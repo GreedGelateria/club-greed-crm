@@ -266,7 +266,13 @@
   }
   function editorTorta(tutti) {
     const t = MODIFICA, ricette = tutti.filter(p => !p.torta);
-    const opz = sel => '<option value="">— scegli una ricetta —</option>' + ricette.map(p => `<option value="${esc(p.k)}" ${p.k === sel ? 'selected' : ''}>${esc(p.nome)}${p.semifreddo ? ' 🍰' : ''}</option>`).join('');
+    // Semifreddi in cima, tutti con "Semifreddo …" davanti, così si trovano subito
+    const etichetta = p => p.semifreddo ? 'Semifreddo ' + p.nome.replace(/\s*semifredd[oi]\s*/gi, ' ').replace(/\s+/g, ' ').trim() : p.nome;
+    const ordina = l => l.map(p => ({ p, n: etichetta(p) })).sort((a, b) => a.n.localeCompare(b.n, 'it'));
+    const voce = sel => ({ p, n }) => `<option value="${esc(p.k)}" ${p.k === sel ? 'selected' : ''}>${esc(n)}</option>`;
+    const opz = sel => '<option value="">— scegli una ricetta —</option>'
+      + `<optgroup label="🍰 Semifreddi">${ordina(ricette.filter(p => p.semifreddo)).map(voce(sel)).join('')}</optgroup>`
+      + `<optgroup label="🍨 Gelati">${ordina(ricette.filter(p => !p.semifreddo)).map(voce(sel)).join('')}</optgroup>`;
     return `<div style="margin-top:12px;padding:12px;background:var(--cream);border-radius:10px">
       <b>${t.id ? 'Modifica torta' : 'Nuova torta'}</b>
       <input id="vtNome" value="${esc(t.nome || '')}" placeholder="Nome (es. Semifreddo cioccolato e nocciola)" oninput="MODIFICA_set('nome',this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;margin:8px 0;box-sizing:border-box;font-size:15px">
@@ -281,7 +287,7 @@
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_togli(${i})" title="Togli">✕</button></div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('ricetta')">+ Ricetta del gestionale</button>
-        ${['Pan di spagna', 'Savoiardi senza glutine', 'Bagna caffè e marsala', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
+        ${['Pan di spagna', 'Savoiardi senza glutine', 'Bagna caffè e marsala', 'Base frolla e burro', 'Gelée di frutta', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="vetrinaSalva()">💾 Salva torta</button>
