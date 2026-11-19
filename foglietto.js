@@ -76,7 +76,7 @@
     Object.entries(MAN_ALG).forEach(([x, y]) => { if (man.includes(x)) set.add(y); });
     (v.al_extra || []).forEach(a => set.add(a));
     const allergeni = [...set].sort((a, b) => ORDINE_ALG.indexOf(a) - ORDINE_ALG.indexOf(b));
-    const tracce = [...new Set(parti.flatMap(p => p.tracce).join(', ').split(/,\s*(?![^()]*\))/).map(s => s.trim()).filter(Boolean))];
+    const tracce = [...new Set(parti.flatMap(p => p.tracce).join(', ').split(/,\s*(?![^()]*\))/).map(s => s.replace(/^(pu[oò]'? contenere )?(tracce di|tracce:?)\s*/i, '').trim()).filter(Boolean))];
     const nome = String(v.it || '').trim() || bello(r.nome);
     const semifreddo = r.tipo === 'semifreddo' || /semifredd/i.test(r.nome);
     const mancanti = [...new Set(parti.flatMap(p => p.mancanti))];
