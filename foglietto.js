@@ -47,7 +47,7 @@
   const minuscolo = n => String(n || '').toLowerCase().replace(/\b(dop|igp|bio|gf)\b/g, m => m.toUpperCase());
   const eBase = r => r && (r.tipo === 'base' || /^base\b|\bbase\s+(bianca|gialla|latte|frutta|neutra|vegan)/i.test(r.nome));
 
-  let RIC = [], COMP = {}, VOCI = {}, VETRINA = [], SCELTI = [], CERCA = '', CARICATO = false;
+  let RIC = [], COMP = {}, VOCI = {}, VETRINA = [], SCELTI = [], CERCA = '', CARICATO = false, TORTE = [], GESTIONE = false, MODIFICA = null;
 
   const trovaBase = nome => { const n = norm(nome); return RIC.find(r => eBase(r) && norm(r.nome) === n); };
   function dicitura(nome, prof = 0) {
@@ -82,13 +82,26 @@
     const mancanti = [...new Set(parti.flatMap(p => p.mancanti))];
     return { k, nome: v.sub ? `${nome} - ${v.sub}` : nome, testo, allergeni, tracce, semifreddo, mancanti };
   }
+  // Torte e semifreddi composti della vetrina: unione delle ricette scelte + componenti scritti a mano (pan di spagna, glassa…)
+  function prodottoTorta(t, per) {
+    const parti = [], set = new Set(), tracce = new Set(), mancanti = new Set();
+    (t.componenti || []).forEach(c => {
+      if (c.tipo === 'ricetta') { const r = per[c.k]; if (!r) return; const p = prodotto(r, c.k);
+        parti.push(`${minuscolo(p.nome)} (${p.testo})`); p.allergeni.forEach(a => set.add(a)); p.tracce.forEach(x => tracce.add(x)); p.mancanti.forEach(x => mancanti.add(x)); }
+      else if (c.nome) { const ing = pulito(c.ingredienti); parti.push(ing ? `${minuscolo(c.nome)} (${ing})` : minuscolo(c.nome)); if (!ing) mancanti.add(c.nome);
+        ALLERGENI_REGOLE.forEach(a => { if (a.re.test(c.nome + ' ' + ing)) set.add(a.k); }); }
+    });
+    const allergeni = [...set].sort((a, b) => ORDINE_ALG.indexOf(a) - ORDINE_ALG.indexOf(b));
+    return { k: 'V:' + t.id, nome: t.nome, testo: parti.join(', '), allergeni, tracce: [...tracce], semifreddo: true, mancanti: [...mancanti], torta: true, inVetrina: !!t.inVetrina };
+  }
   // Gusti che si possono scegliere: ricette (anche semifreddi) + copie create nelle etichette; niente basi e niente doppioni tolti
   function catalogo() {
     const per = {}; RIC.forEach(r => { if (!eBase(r)) per[String(r.nome).toUpperCase()] = r; });
     const out = [];
     Object.entries(per).forEach(([k, r]) => { if (!(VOCI[k] || {}).nascosta && ((r.ingredienti || []).length || r.lista_ing)) out.push(prodotto(r, k)); });
     Object.entries(VOCI).forEach(([k, v]) => { if (v && v.copiaDi && per[v.copiaDi]) out.push(prodotto(per[v.copiaDi], k)); });
-    const inV = p => VETRINA.some(n => { const a = norm(n), b = norm(p.nome); return a === b || (a.length > 4 && (b.includes(a) || a.includes(b))); });
+    TORTE.forEach(t => out.push(prodottoTorta(t, per)));
+    const inV = p => p.torta ? p.inVetrina : VETRINA.some(n => { const a = norm(n), b = norm(p.nome); return a === b || (a.length > 4 && (b.includes(a) || a.includes(b))); });
     return out.map(p => ({ ...p, vetrina: inV(p) })).sort((a, b) => (b.vetrina - a.vetrina) || a.nome.localeCompare(b.nome, 'it'));
   }
 
@@ -96,12 +109,14 @@
     const box = document.getElementById('fogliettoLista');
     box.innerHTML = '<div style="padding:20px;color:var(--text-muted)">⏳ Carico le ricette…</div>';
     try {
-      const [ric, comp, voci, gusti] = await Promise.all([
+      const [ric, comp, voci, gusti, torte] = await Promise.all([
         getDocs(collection(db, 'ricette_lab')),
         getDocs(collection(db, 'ingredienti_composti')).catch(() => null),
         getDoc(doc(db, 'config', 'etichette')).catch(() => null),
         getDoc(doc(db, 'config', 'gusti')).catch(() => null),
+        getDocs(collection(db, 'vetrina_semifreddi')).catch(() => null),
       ]);
+      TORTE = torte ? torte.docs.map(d => ({ id: d.id, ...d.data() })) : [];
       RIC = ric.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => r.nome && !r.eliminata);
       COMP = {}; if (comp) comp.forEach(d => COMP[d.id] = d.data());
       VOCI = (voci && voci.exists() && voci.data().voci) || {};
@@ -112,7 +127,8 @@
 
   function disegna() {
     const tutti = catalogo(), q = norm(CERCA);
-    const lista = tutti.filter(p => !q || norm(p.nome).includes(q));
+    const lista = tutti.filter(p => !q || norm(p.nome).includes(q)).filter(p => !p.torta || p.inVetrina || q);
+    disegnaVetrina(tutti);
     const scelti = SCELTI.map(k => tutti.find(p => p.k === k)).filter(Boolean);
     document.getElementById('fogliettoScelti').innerHTML = scelti.length
       ? scelti.map((p, i) => `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--green);color:#fff;border-radius:20px;padding:6px 12px;margin:3px;font-size:14px">${esc(p.nome)}${p.semifreddo ? ' 🍰' : ''}<a href="#" onclick="fogliettoTogli(${i});return false" style="color:var(--yellow);text-decoration:none;font-weight:700">✕</a></span>`).join('')
@@ -120,7 +136,7 @@
     document.getElementById('fogliettoStampa').disabled = !scelti.length;
     document.getElementById('fogliettoLista').innerHTML = lista.length ? lista.map(p => `<button type="button" onclick="fogliettoAggiungi('${esc(p.k).replace(/'/g, "\\'")}')"
       style="text-align:left;background:${SCELTI.includes(p.k) ? 'var(--cream-dark)' : 'var(--white)'};border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;font-family:inherit;font-size:14px;min-height:48px">
-      <b>${esc(p.nome)}</b>${p.semifreddo ? ' 🍰' : ''}${p.vetrina ? ' <span style="font-size:11px;color:var(--success)">● oggi</span>' : ''}
+      ${p.torta ? '<span style="font-size:10px;background:var(--yellow);color:var(--green);border-radius:4px;padding:1px 5px;font-weight:700">VETRINA SEMIFREDDI</span><br>' : ''}<b>${esc(p.nome)}</b>${p.semifreddo ? ' 🍰' : ''}${p.vetrina && !p.torta ? ' <span style="font-size:11px;color:var(--success)">● oggi</span>' : ''}
       <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessun allergene'}</div>${p.mancanti.length ? '<div style="font-size:11px;color:#a33;margin-top:2px">⚠️ elenco da completare</div>' : ''}</button>`).join('')
       : '<div style="padding:20px;color:var(--text-muted)">Nessun gusto trovato.</div>';
     const manc = [...new Set(scelti.flatMap(p => p.mancanti))];
@@ -149,7 +165,7 @@
     const parola = w => w.b ? `<b>${esc(w.t)}</b>` : esc(w.t);
     return `<div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.45;background:#fff;border:1px dashed var(--border);border-radius:8px;padding:14px;max-width:380px">
       <div style="text-align:center"><b style="font-size:18px">GREED</b><br>Gelateria Naturale · Frascati<br>- - - - - - - - - - - - - - - -</div>
-      ${scelti.map(p => `<div style="margin:10px 0"><b style="font-size:14px">${esc(p.nome.toUpperCase())}</b>${p.semifreddo ? ' (semifreddo)' : ''}<br>
+      ${scelti.map(p => `<div style="margin:10px 0"><b style="font-size:14px">${esc(p.nome.toUpperCase())}</b>${p.semifreddo && !/semifredd/i.test(p.nome) ? ' (semifreddo)' : ''}<br>
         Ingredienti: ${paroleConAllergeni(p.testo).map(parola).join(' ')}<br>
         <b>Allergeni: ${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessuno'}</b>${p.tracce.length ? `<br>Può contenere tracce di: ${esc(p.tracce.join(', '))}` : ''}</div>`).join('<div>- - - - - - - - - - - - - - - -</div>')}
       <div style="text-align:center">- - - - - - - - - - - - - - - -</div>
@@ -183,7 +199,7 @@
     cmd(0x1B, 0x61, 0);
     scelti.forEach((p, i) => {
       if (i) txt('- - - - - - - - - - - - - - - - - - - - - - - -\n');
-      txt('\n'); bold(true); cmd(0x1D, 0x21, 0x01); semplice(p.nome.toUpperCase() + (p.semifreddo ? ' (semifreddo)' : ''), true); cmd(0x1D, 0x21, 0x00); bold(false);
+      txt('\n'); bold(true); cmd(0x1D, 0x21, 0x01); semplice(p.nome.toUpperCase() + (p.semifreddo && !/semifredd/i.test(p.nome) ? ' (semifreddo)' : ''), true); cmd(0x1D, 0x21, 0x00); bold(false);
       paragrafo([{ t: 'Ingredienti:', b: false }, ...paroleConAllergeni(p.testo)]);
       semplice('Allergeni: ' + (p.allergeni.length ? p.allergeni.join(', ') : 'nessuno'), true);
       if (p.tracce.length) semplice('Può contenere tracce di: ' + p.tracce.join(', '));
@@ -202,7 +218,7 @@
     let x = t('GREED\n', { al: 'center', b: true, dh: true, dw: true }) + t('Gelateria Naturale - Frascati\n', { al: 'center' }) + t('- - - - - - - - - - - - - - - -\n', { al: 'center' });
     scelti.forEach((p, i) => {
       if (i) x += t('- - - - - - - - - - - - - - - -\n', { al: 'center' });
-      x += t('\n' + p.nome.toUpperCase() + (p.semifreddo ? ' (semifreddo)' : '') + '\n', { al: 'left', b: true, dh: true });
+      x += t('\n' + p.nome.toUpperCase() + (p.semifreddo && !/semifredd/i.test(p.nome) ? ' (semifreddo)' : '') + '\n', { al: 'left', b: true, dh: true });
       x += t('Ingredienti: ', { al: 'left' }) + paroleConAllergeni(p.testo).map(w => t(w.t + ' ', { b: w.b })).join('') + t('\n');
       x += t('Allergeni: ' + (p.allergeni.length ? p.allergeni.join(', ') : 'nessuno') + '\n', { b: true });
       if (p.tracce.length) x += t('Può contenere tracce di: ' + p.tracce.join(', ') + '\n');
@@ -215,6 +231,78 @@
 <PrintData><epos-print xmlns="http://www.epson-pos.com/schemas/2011/03/epos-print">${x}<feed line="3"/><cut type="feed"/></epos-print></PrintData></ePOSPrint></PrintRequestInfo>`;
   }
 
+  // ── Vetrina semifreddi: Dario crea le torte, tutti possono metterle o toglierle dalla vetrina ──
+  const admin = () => window.RUOLO !== 'staff';
+  function disegnaVetrina(tutti) {
+    const box = document.getElementById('vetrinaGestione'); if (!box) return;
+    if (!GESTIONE) { box.innerHTML = ''; return; }
+    const torte = tutti.filter(p => p.torta).sort((a, b) => a.nome.localeCompare(b.nome, 'it'));
+    let h = `<div style="background:var(--white);border:1.5px solid var(--yellow-dark);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px"><b style="font-size:16px">🍰 Vetrina semifreddi</b>
+      <span>${admin() ? '<button class="btn btn-primary btn-sm" onclick="vetrinaNuova()">+ Nuova torta</button> ' : ''}<button class="btn btn-ghost btn-sm" onclick="vetrinaChiudi()">Chiudi</button></span></div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Accendi le torte che sono in vetrina: compaiono tra i gusti da scegliere per il foglietto.</div>`;
+    h += torte.length ? torte.map(p => { const id = p.k.slice(2);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;cursor:pointer;font-size:15px"><input type="checkbox" ${p.inVetrina ? 'checked' : ''} onchange="vetrinaAccendi('${id}',this.checked)" style="width:22px;height:22px"> <b>${esc(p.nome)}</b></label>
+        <span style="font-size:11px;color:var(--text-muted)">${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessun allergene'}${p.mancanti.length ? ' · <span style="color:#a33">⚠️ elenco da completare</span>' : ''}</span>
+        ${admin() ? `<button class="btn btn-ghost btn-sm" onclick="vetrinaModifica('${id}')">✏️ Modifica</button>` : ''}</div>`; }).join('')
+      : '<div style="color:var(--text-muted);padding:8px 0">Nessuna torta ancora.' + (admin() ? ' Premi "+ Nuova torta".' : ' Le crea Dario.') + '</div>';
+    if (MODIFICA && admin()) h += editorTorta(tutti);
+    box.innerHTML = h + '</div>';
+  }
+  function editorTorta(tutti) {
+    const t = MODIFICA, ricette = tutti.filter(p => !p.torta);
+    const opz = sel => '<option value="">— scegli una ricetta —</option>' + ricette.map(p => `<option value="${esc(p.k)}" ${p.k === sel ? 'selected' : ''}>${esc(p.nome)}${p.semifreddo ? ' 🍰' : ''}</option>`).join('');
+    return `<div style="margin-top:12px;padding:12px;background:var(--cream);border-radius:10px">
+      <b>${t.id ? 'Modifica torta' : 'Nuova torta'}</b>
+      <input id="vtNome" value="${esc(t.nome || '')}" placeholder="Nome (es. Semifreddo cioccolato e nocciola)" oninput="MODIFICA_set('nome',this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;margin:8px 0;box-sizing:border-box;font-size:15px">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Di cosa è fatta, dallo strato più abbondante al meno abbondante. Le ricette prendono ingredienti e allergeni dal gestionale; per pan di spagna, glassa, biscotto o crumble scrivi tu gli ingredienti.</div>
+      ${(t.componenti || []).map((c, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:flex-start">
+        ${c.tipo === 'ricetta'
+          ? `<select onchange="MODIFICA_comp(${i},'k',this.value)" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--border);border-radius:8px">${opz(c.k)}</select>`
+          : `<input value="${esc(c.nome || '')}" placeholder="es. Pan di spagna" oninput="MODIFICA_comp(${i},'nome',this.value)" style="width:160px;padding:8px;border:1px solid var(--border);border-radius:8px">
+             <textarea placeholder="ingredienti come sulla scheda tecnica, es. uova, fecola di patate, zucchero…" oninput="MODIFICA_comp(${i},'ingredienti',this.value)" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:40px">${esc(c.ingredienti || '')}</textarea>`}
+        <button class="btn btn-ghost btn-sm" onclick="MODIFICA_sposta(${i},-1)" title="Su">▲</button><button class="btn btn-ghost btn-sm" onclick="MODIFICA_sposta(${i},1)" title="Giù">▼</button>
+        <button class="btn btn-ghost btn-sm" onclick="MODIFICA_togli(${i})" title="Togli">✕</button></div>`).join('')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
+        <button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('ricetta')">+ Ricetta del gestionale</button>
+        ${['Pan di spagna', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="vetrinaSalva()">💾 Salva torta</button>
+        <button class="btn btn-ghost" onclick="MODIFICA=null;fogliettoDisegna()">Annulla</button>
+        ${t.id ? `<button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="vetrinaElimina('${t.id}')">🗑️ Elimina torta</button>` : ''}
+      </div></div>`;
+  }
+  window.fogliettoDisegna = () => disegna();
+  window.vetrinaApri = () => { GESTIONE = true; disegna(); document.getElementById('vetrinaGestione').scrollIntoView({ block: 'start', behavior: 'smooth' }); };
+  window.vetrinaChiudi = () => { GESTIONE = false; MODIFICA = null; disegna(); };
+  window.vetrinaNuova = () => { MODIFICA = { nome: '', componenti: [{ tipo: 'ricetta', k: '' }], inVetrina: true }; disegna(); };
+  window.vetrinaModifica = id => { const t = TORTE.find(x => x.id === id); if (t) { MODIFICA = JSON.parse(JSON.stringify(t)); disegna(); } };
+  window.MODIFICA_set = (c, v) => { MODIFICA[c] = v; };
+  window.MODIFICA_comp = (i, c, v) => { MODIFICA.componenti[i][c] = v; if (c === 'k') disegna(); };
+  window.MODIFICA_aggiungi = (tipo, nome) => { MODIFICA.componenti.push(tipo === 'ricetta' ? { tipo, k: '' } : { tipo, nome: nome || '', ingredienti: '' }); disegna(); };
+  window.MODIFICA_togli = i => { MODIFICA.componenti.splice(i, 1); disegna(); };
+  window.MODIFICA_sposta = (i, d) => { const c = MODIFICA.componenti, j = i + d; if (j < 0 || j >= c.length) return; [c[i], c[j]] = [c[j], c[i]]; disegna(); };
+  window.vetrinaSalva = async () => {
+    const t = MODIFICA; t.nome = pulito(t.nome);
+    t.componenti = (t.componenti || []).filter(c => c.tipo === 'ricetta' ? c.k : pulito(c.nome));
+    if (!t.nome) { showToast('Scrivi il nome della torta', 'error'); return; }
+    if (!t.componenti.length) { showToast('Aggiungi almeno una ricetta o un componente', 'error'); return; }
+    const id = t.id || slug(t.nome) + '-' + Date.now().toString(36);
+    const dati = { nome: t.nome, componenti: t.componenti, inVetrina: t.inVetrina !== false, _ts: Date.now() };
+    try { await setDoc(doc(db, 'vetrina_semifreddi', id), dati); TORTE = TORTE.filter(x => x.id !== id).concat({ id, ...dati }); MODIFICA = null; disegna(); showToast('✓ Torta salvata'); }
+    catch (e) { showToast('Non salvata: ' + e.message, 'error'); }
+  };
+  window.vetrinaElimina = async id => {
+    const b = event && event.target; if (b && b.dataset.conferma !== '1') { b.dataset.conferma = '1'; b.textContent = 'Premi ancora per eliminare'; return; }
+    try { await deleteDoc(doc(db, 'vetrina_semifreddi', id)); TORTE = TORTE.filter(x => x.id !== id); MODIFICA = null; SCELTI = SCELTI.filter(k => k !== 'V:' + id); disegna(); showToast('Torta eliminata'); }
+    catch (e) { showToast('Non eliminata: ' + e.message, 'error'); }
+  };
+  window.vetrinaAccendi = async (id, on) => {
+    const t = TORTE.find(x => x.id === id); if (!t) return; t.inVetrina = on; disegna();
+    try { await updateDoc(doc(db, 'vetrina_semifreddi', id), { inVetrina: on }); } catch (e) { t.inVetrina = !on; disegna(); showToast('Non salvato: ' + e.message, 'error'); }
+  };
   window.fogliettoAggiungi = k => { if (!SCELTI.includes(k)) SCELTI.push(k); CERCA = ''; const c = document.getElementById('fogliettoCerca'); if (c) c.value = ''; disegna(); };
   window.fogliettoTogli = i => { SCELTI.splice(i, 1); disegna(); };
   window.fogliettoSvuota = () => { SCELTI = []; disegna(); };
@@ -232,5 +320,5 @@
   window.fogliettoApri = () => { if (!CARICATO) carica(); else disegna(); };
   window.fogliettoRicarica = () => { CARICATO = false; carica(); };
   // per le prove
-  window.__foglietto = { escPos, xmlEpos, catalogo, set: (d) => { RIC = d.RIC || RIC; COMP = d.COMP || COMP; VOCI = d.VOCI || VOCI; VETRINA = d.VETRINA || VETRINA; CARICATO = true; } };
+  window.__foglietto = { escPos, xmlEpos, catalogo, set: (d) => { RIC = d.RIC || RIC; COMP = d.COMP || COMP; VOCI = d.VOCI || VOCI; VETRINA = d.VETRINA || VETRINA; TORTE = d.TORTE || TORTE; CARICATO = true; } };
 })();
