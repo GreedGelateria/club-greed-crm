@@ -3184,13 +3184,27 @@ async function mostraCodiceAmicoCassa(c) {
       } else {
         box.innerHTML = `<div style="font-weight:700;font-size:15px;margin-bottom:6px">🎁 Sconto primo acquisto: −${sconto}%${scad ? ` <span style="font-weight:400;font-size:12px">(valido fino al ${new Date(scad).toLocaleDateString('it-IT')})</span>` : ''}</div>
           <div style="font-size:13px;margin-bottom:10px">Scrivi sotto l'importo pieno, poi premi il pulsante: il tablet ti dice quanto far pagare.</div>
-          <button class="btn btn-primary" onclick="applicaCodiceAmicoCassa('${codice}', ${sconto})">Applica sconto primo acquisto −${sconto}%</button>`;
+          <button class="btn btn-primary" onclick="applicaCodiceAmicoCassa('${codice}', ${sconto})">Applica sconto primo acquisto −${sconto}%</button>
+          <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="codiceGiaUsato('${codice}')">✓ Sconto già fatto in passato: segnalo come usato</button>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Solo il segno "usato": niente acquisto registrato, niente punti, nessun messaggio al cliente.</div>`;
       }
       box.style.display = 'block';
       return;
     } catch(e) { console.error('Codice sconto:', e); }
   }
 }
+
+// Sconto primo acquisto già fatto a mano (es. prima di registrarlo): lo segna usato e basta, senza messaggi
+window.codiceGiaUsato = async function(codice) {
+  if (!confirm('Segno lo sconto primo acquisto come GIÀ USATO?\n\nNon viene registrato nessun acquisto e al cliente non arriva nessun messaggio.')) return;
+  try {
+    await updateDoc(doc(db, 'codiciPromo', codice), { usato: true, usatoAt: serverTimestamp(), usatoCanale: 'banco', usatoNota: 'segnato a mano: sconto già fatto' });
+    window._scontoCassa = null;
+    const box = document.getElementById('cassaAmicoBox');
+    box.innerHTML = '<b>✓ Sconto primo acquisto segnato come usato.</b> Nessun messaggio inviato.';
+    showToast('Sconto segnato come usato ✓');
+  } catch (e) { showToast('Non riuscito: ' + e.message, 'error'); }
+};
 
 window.applicaCodiceAmicoCassa = async function(codice, sconto, ambito) {
   const inp = document.getElementById('cassaImporto');
