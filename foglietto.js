@@ -31,8 +31,8 @@
     { re: /meringa/i, componenti: 'zucchero, albume d\'uovo, acqua', tracce: '' },
     { re: /bombe|bomba/i, componenti: 'zucchero, tuorlo d\'uovo, acqua', tracce: '' },
     { re: /proteine.*patata/i, componenti: 'proteine di patata', tracce: 'latte' },
-    { re: /pan di spagna/i, componenti: 'uova, fecola di patate, zucchero, sciroppo di glucosio, umidificante: glicerolo; emulsionante: mono e digliceridi degli acidi grassi (E471); fibra di barbabietola, addensante: gomma di guar; sale, conservante: E202; aroma', tracce: 'latte, lupini' },
-    { re: /con[oi]\b.*(senza glutine|gf)|mini ?con|conett/i, componenti: 'farina di riso, amido di mais, fecola di patate, farina di soia, zucchero, olio di semi di girasole alto oleico, emulsionante: lecitina di soia; sale, zucchero caramellizzato, agente lievitante: bicarbonato di sodio; addensanti: gomma guar, gomma xantano; aroma naturale', tracce: '' },
+    { re: /pan di spagna/i, fonte: 'scheda tecnica Nocciolcono, Pan di Spagna senza glutine cod. 145', componenti: 'uova, fecola di patate, zucchero, sciroppo di glucosio, umidificante: glicerolo; emulsionante: mono e digliceridi degli acidi grassi (E471); fibra di barbabietola, addensante: gomma di guar; sale, conservante: E202; aroma', tracce: 'latte, lupini' },
+    { re: /con[oi]\b.*(senza glutine|gf)|mini ?con|conett/i, fonte: 'scheda tecnica Nocciolcono, mini coni senza glutine cod. 047', componenti: 'farina di riso, amido di mais, fecola di patate, farina di soia, zucchero, olio di semi di girasole alto oleico, emulsionante: lecitina di soia; sale, zucchero caramellizzato, agente lievitante: bicarbonato di sodio; addensanti: gomma guar, gomma xantano; aroma naturale', tracce: '' },
   ];
   const RE_COMPOSTO = /pasta|crema|cioccolat|copertura|neutro|stabilizz|addensant|meringa|bombe|biscott|cialda|\bcon[oi]\b|pan di spagna|savoiard|granella|pralinat|variegat|marmellat|confettura|salsa|sciroppo(?! di glucosio)|amarett|caramell|gianduia|frollin|wafer|topping|aroma|liquore|\brum\b|vino|marsala|solubile|preparato|\bmix\b|base\b|fondente|gocce|scaglie|praline|crumble|cookie|brownie|torrone|sorbetto/i;
   const pulito = n => String(n || '').replace(/\s+/g, ' ').trim();
@@ -82,13 +82,20 @@
     const mancanti = [...new Set(parti.flatMap(p => p.mancanti))];
     return { k, nome: v.sub ? `${nome} - ${v.sub}` : nome, testo, allergeni, tracce, semifreddo, mancanti };
   }
+  // Componenti già noti di un ingrediente: Libro ingredienti (ingredienti_composti) o schede tecniche dei fornitori
+  function daScheda(nome) {
+    const c = COMP[slug(pulito(nome))];
+    if (c && c.componenti) return { ingredienti: c.componenti, tracce: c.tracce || '', fonte: c.fonte || 'Libro ingredienti' };
+    const p = PRECOMPILATI.find(x => x.re.test(nome));
+    return p ? { ingredienti: p.componenti, tracce: p.tracce || '', fonte: p.fonte || 'scheda tecnica del fornitore' } : null;
+  }
   // Torte e semifreddi composti della vetrina: unione delle ricette scelte + componenti scritti a mano (pan di spagna, glassa…)
   function prodottoTorta(t, per) {
     const parti = [], set = new Set(), tracce = new Set(), mancanti = new Set();
     (t.componenti || []).forEach(c => {
       if (c.tipo === 'ricetta') { const r = per[c.k]; if (!r) return; const p = prodotto(r, c.k);
         parti.push(`${minuscolo(p.nome)} (${p.testo})`); p.allergeni.forEach(a => set.add(a)); p.tracce.forEach(x => tracce.add(x)); p.mancanti.forEach(x => mancanti.add(x)); }
-      else if (c.nome) { const ing = pulito(c.ingredienti); parti.push(ing ? `${minuscolo(c.nome)} (${ing})` : minuscolo(c.nome)); if (!ing) mancanti.add(c.nome);
+      else if (c.nome) { const sc = !pulito(c.ingredienti) && daScheda(c.nome); const ing = pulito(c.ingredienti) || (sc ? sc.ingredienti : ''); if (sc && sc.tracce) tracce.add(sc.tracce); parti.push(ing ? `${minuscolo(c.nome)} (${ing})` : minuscolo(c.nome)); if (!ing) mancanti.add(c.nome);
         ALLERGENI_REGOLE.forEach(a => { if (a.re.test(c.nome + ' ' + ing)) set.add(a.k); }); }
     });
     const allergeni = [...set].sort((a, b) => ORDINE_ALG.indexOf(a) - ORDINE_ALG.indexOf(b));
@@ -260,8 +267,9 @@
       ${(t.componenti || []).map((c, i) => `<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:flex-start">
         ${c.tipo === 'ricetta'
           ? `<select onchange="MODIFICA_comp(${i},'k',this.value)" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--border);border-radius:8px">${opz(c.k)}</select>`
-          : `<input value="${esc(c.nome || '')}" placeholder="es. Pan di spagna" oninput="MODIFICA_comp(${i},'nome',this.value)" style="width:160px;padding:8px;border:1px solid var(--border);border-radius:8px">
-             <textarea placeholder="ingredienti come sulla scheda tecnica, es. uova, fecola di patate, zucchero…" oninput="MODIFICA_comp(${i},'ingredienti',this.value)" style="flex:1;min-width:220px;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:40px">${esc(c.ingredienti || '')}</textarea>`}
+          : `<input value="${esc(c.nome || '')}" placeholder="es. Pan di spagna" oninput="MODIFICA_comp(${i},'nome',this.value)" onchange="MODIFICA_nome(${i})" style="width:160px;padding:8px;border:1px solid var(--border);border-radius:8px">
+             <div style="flex:1;min-width:220px"><textarea placeholder="ingredienti come sulla scheda tecnica, es. uova, fecola di patate, zucchero…" oninput="MODIFICA_comp(${i},'ingredienti',this.value)" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid var(--border);border-radius:8px;min-height:40px">${esc(c.ingredienti || '')}</textarea>
+             ${c.fonte ? `<div style="font-size:11px;color:var(--success)">✓ preso da: ${esc(c.fonte)} — controlla</div>` : (c.nome && !pulito(c.ingredienti) ? '<div style="font-size:11px;color:#a33">Scheda tecnica non trovata: scrivi gli ingredienti</div>' : '')}</div>`}
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_sposta(${i},-1)" title="Su">▲</button><button class="btn btn-ghost btn-sm" onclick="MODIFICA_sposta(${i},1)" title="Giù">▼</button>
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_togli(${i})" title="Togli">✕</button></div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
@@ -270,18 +278,22 @@
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="vetrinaSalva()">💾 Salva torta</button>
-        <button class="btn btn-ghost" onclick="MODIFICA=null;fogliettoDisegna()">Annulla</button>
+        <button class="btn btn-ghost" onclick="vetrinaAnnulla()">Annulla</button>
         ${t.id ? `<button class="btn btn-danger btn-sm" style="margin-left:auto" onclick="vetrinaElimina('${t.id}')">🗑️ Elimina torta</button>` : ''}
       </div></div>`;
   }
   window.fogliettoDisegna = () => disegna();
+  window.vetrinaAnnulla = () => { MODIFICA = null; disegna(); };
+  window.__vetrinaModifica = () => MODIFICA;
   window.vetrinaApri = () => { GESTIONE = true; disegna(); document.getElementById('vetrinaGestione').scrollIntoView({ block: 'start', behavior: 'smooth' }); };
   window.vetrinaChiudi = () => { GESTIONE = false; MODIFICA = null; disegna(); };
   window.vetrinaNuova = () => { MODIFICA = { nome: '', componenti: [{ tipo: 'ricetta', k: '' }], inVetrina: true }; disegna(); };
   window.vetrinaModifica = id => { const t = TORTE.find(x => x.id === id); if (t) { MODIFICA = JSON.parse(JSON.stringify(t)); disegna(); } };
   window.MODIFICA_set = (c, v) => { MODIFICA[c] = v; };
   window.MODIFICA_comp = (i, c, v) => { MODIFICA.componenti[i][c] = v; if (c === 'k') disegna(); };
-  window.MODIFICA_aggiungi = (tipo, nome) => { MODIFICA.componenti.push(tipo === 'ricetta' ? { tipo, k: '' } : { tipo, nome: nome || '', ingredienti: '' }); disegna(); };
+  const precompila = c => { if (c.tipo !== 'ricetta' && !pulito(c.ingredienti)) { const sc = daScheda(c.nome || ''); if (sc) { c.ingredienti = sc.ingredienti; c.fonte = sc.fonte; } } };
+  window.MODIFICA_aggiungi = (tipo, nome) => { const c = tipo === 'ricetta' ? { tipo, k: '' } : { tipo, nome: nome || '', ingredienti: '' }; precompila(c); MODIFICA.componenti.push(c); disegna(); };
+  window.MODIFICA_nome = i => { const c = MODIFICA.componenti[i]; if (!pulito(c.ingredienti)) { precompila(c); if (c.ingredienti) disegna(); } };
   window.MODIFICA_togli = i => { MODIFICA.componenti.splice(i, 1); disegna(); };
   window.MODIFICA_sposta = (i, d) => { const c = MODIFICA.componenti, j = i + d; if (j < 0 || j >= c.length) return; [c[i], c[j]] = [c[j], c[i]]; disegna(); };
   window.vetrinaSalva = async () => {
