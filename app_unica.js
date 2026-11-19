@@ -32,7 +32,7 @@ window.fetch = async (url, opt = {}) => {
 // Cassa, Clienti, QR check-in, Ordini, Gift card. Le regole di Firebase fanno il resto lato server.
 const EMAIL_DARIO = 'gelateriagreed@gmail.com';
 const EMAIL_STAFF_BANCO = 'team.greedfrascati@gmail.com';
-const VISTE_STAFF = ['cassa', 'clienti', 'checkin', 'ordini', 'giftcard'];
+const VISTE_STAFF = ['cassa', 'clienti', 'checkin', 'ordini', 'giftcard', 'foglietto'];
 window.RUOLO = null;   // 'admin' | 'staff'
 
 window.loginGoogle = async function() {
@@ -259,6 +259,7 @@ window.showToast = function(msg, type='') {
 window.showView = function(name) {
   if (window.RUOLO === 'staff' && !VISTE_STAFF.includes(name)) { showToast('Sezione riservata a Dario', 'error'); return; }
   if (name === 'giftcard') { setTimeout(function(){ if(typeof loadGiftCards==='function') loadGiftCards(); }, 200); }
+  if (name === 'foglietto') { setTimeout(function(){ if(typeof fogliettoApri==='function') fogliettoApri(); }, 50); }
   if (name === 'ordini') { setTimeout(function(){ if(typeof loadOrdini==='function') loadOrdini(); }, 200); }
   if (name === 'calendario') { setTimeout(function(){ if(typeof loadCalendario==='function') loadCalendario(); }, 50); }
   if (name === 'campagne') { setTimeout(function(){ if(typeof aggiornaCampCount==='function') aggiornaCampCount(); if(typeof loadOraFurba==='function') loadOraFurba(); }, 200); }
