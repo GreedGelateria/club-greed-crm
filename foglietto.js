@@ -199,7 +199,7 @@
         while (riga > COLONNE) riga -= COLONNE; });
       txt('\n'); };
     const semplice = (s, b) => paragrafo(String(s).split(/\s+/).filter(Boolean).map(t => ({ t, b: !!b })));
-    cmd(0x1B, 0x40); cmd(0x1B, 0x74, 19);             // init + tabella caratteri CP858
+    cmd(0x1B, 0x40);                                  // init, stessa codifica della classifica (che stampa)
     cmd(0x1B, 0x61, 1); cmd(0x1D, 0x21, 0x11); txt('GREED\n'); cmd(0x1D, 0x21, 0x00);
     txt('Gelateria Naturale \xB7 Frascati\n'.replace('\xB7', '-'));
     txt('- - - - - - - - - - - - - - - - - - - - - - - -\n');
@@ -333,9 +333,10 @@
       if (!ok) { ok = await _stampaFirestore({ tipo: 'foglietto', _rawXml: xmlEpos(scelti) }); if (ok) reg.canale = 'server'; }
     } catch (e) { reg.errore = e.message; }
     reg.ok = ok;
-    try { await addDoc(collection(db, 'log_stampe_foglietto'), reg); } catch (e) {}
+    let registro = 'ok';
+    try { await addDoc(collection(db, 'log_stampe_foglietto'), reg); } catch (e) { registro = e.message; }
     b.textContent = '🖨️ Stampa foglietto'; b.disabled = false;
-    if (ok && reg.canale === 'usb') { showToast('🖨️ Foglietto inviato alla stampante USB ✓'); SCELTI = []; disegna(); }
+    if (ok && reg.canale === 'usb') { alert('🖨️ Foglietto inviato alla stampante USB (' + reg.bytes + ' byte).' + (registro === 'ok' ? '' : '\n[registro non salvato: ' + registro + ']')); SCELTI = []; disegna(); }
     else if (ok) alert('La stampante USB non è collegata a questo dispositivo: il foglietto è stato mandato al server, ma potrebbe non uscire.\nSul tablet del banco premi "🖨️ Connetti USB" in alto e riprova.');
     else alert('❌ Stampa non riuscita' + (reg.errore ? ': ' + reg.errore : '') + '.\nControlla che la stampante sia accesa e collegata, poi premi "🖨️ Connetti USB" e riprova.');
   };
