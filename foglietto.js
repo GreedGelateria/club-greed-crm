@@ -109,7 +109,7 @@
     Object.entries(VOCI).forEach(([k, v]) => { if (v && v.copiaDi && per[v.copiaDi]) out.push(prodotto(per[v.copiaDi], k)); });
     TORTE.forEach(t => out.push(prodottoTorta(t, per)));
     const inV = p => p.torta ? p.inVetrina : VETRINA.some(n => { const a = norm(n), b = norm(p.nome); return a === b || (a.length > 4 && (b.includes(a) || a.includes(b))); });
-    return out.map(p => ({ ...p, vetrina: inV(p) })).sort((a, b) => (b.vetrina - a.vetrina) || a.nome.localeCompare(b.nome, 'it'));
+    return out.map(p => ({ ...p, vetrina: inV(p) })).sort((a, b) => ((b.torta && b.inVetrina ? 1 : 0) - (a.torta && a.inVetrina ? 1 : 0)) || (b.vetrina - a.vetrina) || a.nome.localeCompare(b.nome, 'it'));   // prima le torte in vetrina
   }
 
   async function carica() {
@@ -252,6 +252,7 @@
       return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;cursor:pointer;font-size:15px"><input type="checkbox" ${p.inVetrina ? 'checked' : ''} onchange="vetrinaAccendi('${id}',this.checked)" style="width:22px;height:22px"> <b>${esc(p.nome)}</b></label>
         <span style="font-size:11px;color:var(--text-muted)">${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessun allergene'}${p.mancanti.length ? ' · <span style="color:#a33">⚠️ elenco da completare</span>' : ''}</span>
+        ${p.inVetrina ? `<button class="btn btn-primary btn-sm" onclick="fogliettoAggiungi('${p.k}')">➕ Nella vaschetta</button>` : ''}
         ${admin() ? `<button class="btn btn-ghost btn-sm" onclick="vetrinaModifica('${id}')">✏️ Modifica</button>` : ''}</div>`; }).join('')
       : '<div style="color:var(--text-muted);padding:8px 0">Nessuna torta ancora.' + (admin() ? ' Premi "+ Nuova torta".' : ' Le crea Dario.') + '</div>';
     if (MODIFICA && admin()) h += editorTorta(tutti);
