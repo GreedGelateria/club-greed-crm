@@ -34,6 +34,8 @@
     { re: /pan di spagna/i, componenti: 'uova, fecola di patate, zucchero, sciroppo di glucosio, umidificante: glicerolo; emulsionante: mono e digliceridi degli acidi grassi (E471); fibra di barbabietola, addensante: gomma di guar; sale, conservante: E202; aroma', tracce: 'latte, lupini' },
     { re: /con[oi]\b.*(senza glutine|gf)|mini ?con|conett/i, componenti: 'farina di riso, amido di mais, fecola di patate, farina di soia, zucchero, olio di semi di girasole alto oleico, emulsionante: lecitina di soia; sale, zucchero caramellizzato, agente lievitante: bicarbonato di sodio; addensanti: gomma guar, gomma xantano; aroma naturale', tracce: '' },
   ];
+  const RE_COMPOSTO = /pasta|crema|cioccolat|copertura|neutro|stabilizz|addensant|meringa|bombe|biscott|cialda|\bcon[oi]\b|pan di spagna|savoiard|granella|pralinat|variegat|marmellat|confettura|salsa|sciroppo(?! di glucosio)|amarett|caramell|gianduia|frollin|wafer|topping|aroma|liquore|\brum\b|vino|marsala|solubile|preparato|\bmix\b|base\b|fondente|gocce|scaglie|praline|crumble|cookie|brownie|torrone|sorbetto/i;
+  const pulito = n => String(n || '').replace(/\s+/g, ' ').trim();
   const norm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   const slug = s => norm(s).replace(/ /g, '-').slice(0, 120) || 'x';
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -49,16 +51,18 @@
 
   const trovaBase = nome => { const n = norm(nome); return RIC.find(r => eBase(r) && norm(r.nome) === n); };
   function dicitura(nome, prof = 0) {
+    nome = pulito(nome);
     const base = prof < 2 && trovaBase(nome);
     if (base && (base.ingredienti || []).length) {
       const dentro = [...base.ingredienti].filter(i => +i.d > 0).sort((a, b) => b.d - a.d).map(i => dicitura(i.nome, prof + 1));
-      return { testo: `${minuscolo(nome)} (${dentro.map(x => x.testo).join(', ')})`, tracce: dentro.flatMap(x => x.tracce) };
+      return { testo: `${minuscolo(nome)} (${dentro.map(x => x.testo).join(', ')})`, tracce: dentro.flatMap(x => x.tracce), mancanti: dentro.flatMap(x => x.mancanti) };
     }
     const c = COMP[slug(nome)];
-    if (c && !c.semplice && c.componenti) return { testo: `${minuscolo(nome)} (${c.componenti})`, tracce: c.tracce ? [c.tracce] : [] };
+    if (c && c.semplice) return { testo: minuscolo(nome), tracce: [], mancanti: [] };
+    if (c && c.componenti) return { testo: `${minuscolo(nome)} (${c.componenti})`, tracce: c.tracce ? [c.tracce] : [], mancanti: [] };
     const p = !c && PRECOMPILATI.find(x => x.re.test(nome));
-    if (p) return { testo: `${minuscolo(nome)} (${p.componenti})`, tracce: p.tracce ? [p.tracce] : [] };
-    return { testo: minuscolo(nome), tracce: [] };
+    if (p) return { testo: `${minuscolo(nome)} (${p.componenti})`, tracce: p.tracce ? [p.tracce] : [], mancanti: [] };
+    return { testo: minuscolo(nome), tracce: [], mancanti: RE_COMPOSTO.test(nome) ? [nome] : [] };
   }
   // Un gusto pronto per il foglietto: nome (quello delle etichette, se c'è), ingredienti, allergeni, tracce
   function prodotto(r, k) {
@@ -75,7 +79,8 @@
     const tracce = [...new Set(parti.flatMap(p => p.tracce).join(', ').split(/,\s*/).map(s => s.trim()).filter(Boolean))];
     const nome = String(v.it || '').trim() || bello(r.nome);
     const semifreddo = r.tipo === 'semifreddo' || /semifredd/i.test(r.nome);
-    return { k, nome: v.sub ? `${nome} - ${v.sub}` : nome, testo, allergeni, tracce, semifreddo };
+    const mancanti = [...new Set(parti.flatMap(p => p.mancanti))];
+    return { k, nome: v.sub ? `${nome} - ${v.sub}` : nome, testo, allergeni, tracce, semifreddo, mancanti };
   }
   // Gusti che si possono scegliere: ricette (anche semifreddi) + copie create nelle etichette; niente basi e niente doppioni tolti
   function catalogo() {
@@ -116,9 +121,10 @@
     document.getElementById('fogliettoLista').innerHTML = lista.length ? lista.map(p => `<button type="button" onclick="fogliettoAggiungi('${esc(p.k).replace(/'/g, "\\'")}')"
       style="text-align:left;background:${SCELTI.includes(p.k) ? 'var(--cream-dark)' : 'var(--white)'};border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;font-family:inherit;font-size:14px;min-height:48px">
       <b>${esc(p.nome)}</b>${p.semifreddo ? ' 🍰' : ''}${p.vetrina ? ' <span style="font-size:11px;color:var(--success)">● oggi</span>' : ''}
-      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessun allergene'}</div></button>`).join('')
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessun allergene'}</div>${p.mancanti.length ? '<div style="font-size:11px;color:#a33;margin-top:2px">⚠️ elenco da completare</div>' : ''}</button>`).join('')
       : '<div style="padding:20px;color:var(--text-muted)">Nessun gusto trovato.</div>';
-    document.getElementById('fogliettoAnteprima').innerHTML = scelti.length ? anteprimaHtml(scelti) : '';
+    const manc = [...new Set(scelti.flatMap(p => p.mancanti))];
+    document.getElementById('fogliettoAnteprima').innerHTML = (manc.length ? `<div style="background:#fdecea;color:#a33;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px">⚠️ Di questi ingredienti composti mancano i componenti: <b>${esc(manc.map(minuscolo).join(', '))}</b>. Sul foglietto escono senza l'elenco tra parentesi: completali nel <a href="https://greedgelateria.github.io/greed-brain/libro.html#ingredienti" target="_blank">Libro ingredienti</a>.</div>` : '') + (scelti.length ? anteprimaHtml(scelti) : '');
   }
 
   // ── Testo del foglietto (uguale per stampa e anteprima) ──
