@@ -158,6 +158,8 @@
   function conservazione(scelti) {
     const r = ['Conservare in freezer a -18 °C.'];
     const g = scelti.some(p => !p.semifreddo), s = scelti.some(p => p.semifreddo);
+    if (g) r.push('Vaschetta: dalla gelateria al freezer di casa entro 40 minuti.');
+    if (s) r.push('Semifreddo: dalla gelateria al freezer di casa entro 15 minuti.');
     if (g) r.push('Gelato: toglierlo dal freezer 30-40 minuti prima di servirlo.');
     if (s) r.push('Semifreddo: toglierlo dal freezer 15 minuti prima di servirlo.');
     r.push('Da gustare il prima possibile. Una volta scongelato non ricongelare.');
