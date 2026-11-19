@@ -8,7 +8,7 @@
   const ALLERGENI_REGOLE = [
     { k: 'LATTE', re: /\blatte\b(?!\s+di\s+(cocco|soia|mandorl|riso|avena))|panna(?!\s+(soia|vegetale|da cucina alpro))|\bburro\b(?!\s+di\s+(cacao|arachid))|yogurt(?!\s+soia)|ricotta|mascarpone|philadelphia|stracchino|pecorino|parmigiano|caseina|siero di latte|lattosio|formaggi/i },
     { k: 'UOVA', re: /tuorl|\buov[oa]|albume|maionese|savoiard/i },
-    { k: 'GLUTINE', re: /frumento|\bgrano\b|farina\s+(di\s+)?(grano|frumento|00|0\b|farro|orzo|segale)|\borzo\b|segale|\bavena\b(?!.*senza glutine)|farro|kamut|biscott(?!.*senza glutine)|\bpane\b|pangrattato|briciole|birra|\bmalto\b/i },
+    { k: 'GLUTINE', re: /frumento|\bgrano\b|farina\s+(di\s+)?(grano|frumento|00|0\b|farro|orzo|segale)|\borzo\b|segale|\bavena\b(?!.*senza glutine)|farro|kamut|biscott(?!.*senza glutine)|savoiard(?!.*senza glutine)|\bpane\b|pangrattato|briciole|birra|\bmalto\b/i },
     { k: 'FRUTTA A GUSCIO', re: /pistacch|mandorl|nocciol|\bnoc[ei]\b(?!\s+moscata)|anacard|\bpecan|macadamia|noci del brasile|gianduia|pralinat|torrone/i },
     { k: 'ARACHIDI', re: /arachid|peanut/i },
     { k: 'SOIA', re: /\bsoia\b|tofu|edamame/i },
@@ -275,7 +275,7 @@
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_togli(${i})" title="Togli">✕</button></div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('ricetta')">+ Ricetta del gestionale</button>
-        ${['Pan di spagna', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
+        ${['Pan di spagna', 'Savoiardi senza glutine', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="vetrinaSalva()">💾 Salva torta</button>
@@ -305,7 +305,14 @@
     const id = t.id || slug(t.nome) + '-' + Date.now().toString(36);
     const dati = { nome: t.nome, componenti: t.componenti, inVetrina: t.inVetrina !== false, _ts: Date.now() };
     try { await setDoc(doc(db, 'vetrina_semifreddi', id), dati); TORTE = TORTE.filter(x => x.id !== id).concat({ id, ...dati }); MODIFICA = null; disegna(); showToast('✓ Torta salvata'); }
-    catch (e) { showToast('Non salvata: ' + e.message, 'error'); }
+    catch (e) { showToast('Non salvata: ' + e.message, 'error'); return; }
+    // Ingredienti scritti a mano (es. savoiardi dalla confezione): li ricordo nel Libro ingredienti, così la prossima volta si compilano da soli
+    for (const c of t.componenti) {
+      if (c.tipo !== 'extra' || !pulito(c.ingredienti) || c.fonte) continue;
+      const k = slug(pulito(c.nome)); if (COMP[k] && COMP[k].componenti) continue;
+      const v = { nome: pulito(c.nome), semplice: false, componenti: pulito(c.ingredienti), tracce: '', fonte: 'scritto in vetrina (' + t.nome + ')' };
+      try { await setDoc(doc(db, 'ingredienti_composti', k), v); COMP[k] = v; } catch (e) { /* non blocca la torta */ }
+    }
   };
   window.vetrinaElimina = async id => {
     const b = event && event.target; if (b && b.dataset.conferma !== '1') { b.dataset.conferma = '1'; b.textContent = 'Premi ancora per eliminare'; return; }
