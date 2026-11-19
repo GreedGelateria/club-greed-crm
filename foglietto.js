@@ -323,11 +323,21 @@
     const tutti = catalogo(), scelti = SCELTI.map(k => tutti.find(p => p.k === k)).filter(Boolean);
     if (!scelti.length) return;
     const b = document.getElementById('fogliettoStampa'); b.disabled = true; b.textContent = '⏳ Stampo…';
-    let ok = await _stampaUSB(escPos(scelti));
-    if (!ok) ok = await _stampaFirestore({ tipo: 'foglietto', _rawXml: xmlEpos(scelti) });
+    // Registro di ogni tentativo (per capire cosa succede se non esce niente)
+    const reg = { quando: Date.now(), gusti: scelti.map(p => p.nome), utente: (window.RUOLO || '?'), dispositivo: navigator.userAgent.slice(0, 120), usbApi: !!navigator.usb, usbCollegata: false, canale: '', ok: false, errore: '' };
+    let ok = false;
+    try {
+      const dati = escPos(scelti); reg.bytes = dati.length;
+      reg.usbCollegata = !!(window._usbDevice || (navigator.usb && (await navigator.usb.getDevices()).some(d => d.vendorId === 0x04b8)));
+      ok = await _stampaUSB(dati); if (ok) reg.canale = 'usb';
+      if (!ok) { ok = await _stampaFirestore({ tipo: 'foglietto', _rawXml: xmlEpos(scelti) }); if (ok) reg.canale = 'server'; }
+    } catch (e) { reg.errore = e.message; }
+    reg.ok = ok;
+    try { await addDoc(collection(db, 'log_stampe_foglietto'), reg); } catch (e) {}
     b.textContent = '🖨️ Stampa foglietto'; b.disabled = false;
-    if (ok) { showToast('🖨️ Foglietto stampato ✓'); SCELTI = []; disegna(); }
-    else showToast('❌ Stampa non riuscita: controlla la stampante', 'error');
+    if (ok && reg.canale === 'usb') { showToast('🖨️ Foglietto inviato alla stampante USB ✓'); SCELTI = []; disegna(); }
+    else if (ok) alert('La stampante USB non è collegata a questo dispositivo: il foglietto è stato mandato al server, ma potrebbe non uscire.\nSul tablet del banco premi "🖨️ Connetti USB" in alto e riprova.');
+    else alert('❌ Stampa non riuscita' + (reg.errore ? ': ' + reg.errore : '') + '.\nControlla che la stampante sia accesa e collegata, poi premi "🖨️ Connetti USB" e riprova.');
   };
   window.fogliettoApri = () => { if (!CARICATO) carica(); else disegna(); };
   window.fogliettoRicarica = () => { CARICATO = false; carica(); };
