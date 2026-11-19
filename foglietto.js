@@ -32,6 +32,7 @@
     { re: /bombe|bomba/i, componenti: 'zucchero, tuorlo d\'uovo, acqua', tracce: '' },
     { re: /proteine.*patata/i, componenti: 'proteine di patata', tracce: 'latte' },
     { re: /pan di spagna/i, fonte: 'scheda tecnica Nocciolcono, Pan di Spagna senza glutine cod. 145', componenti: 'uova, fecola di patate, zucchero, sciroppo di glucosio, umidificante: glicerolo; emulsionante: mono e digliceridi degli acidi grassi (E471); fibra di barbabietola, addensante: gomma di guar; sale, conservante: E202; aroma', tracce: 'latte, lupini' },
+    { re: /bagna.*(caff|marsala)/i, fonte: 'ricetta GREED (bagna dei savoiardi)', componenti: 'caffè, zucchero, vino Marsala', tracce: '' },
     { re: /savoiard.*(senza glutine|\bgf\b)/i, fonte: 'confezione Savoiardi senza glutine Selex (prodotti da Farmo S.p.A.)', componenti: 'zucchero, uova da allevamento a terra 28,8%, fecola di patate, farina di riso, agente lievitante: carbonati di ammonio; succo di limone (contiene anidride solforosa e solfiti), addensanti: gomma di xanthan, gomma di guar; aroma, sale', tracce: 'latte, frutta a guscio, semi di sesamo' },
     { re: /con[oi]\b.*(senza glutine|gf)|mini ?con|conett/i, fonte: 'scheda tecnica Nocciolcono, mini coni senza glutine cod. 047', componenti: 'farina di riso, amido di mais, fecola di patate, farina di soia, zucchero, olio di semi di girasole alto oleico, emulsionante: lecitina di soia; sale, zucchero caramellizzato, agente lievitante: bicarbonato di sodio; addensanti: gomma guar, gomma xantano; aroma naturale', tracce: '' },
   ];
@@ -278,7 +279,7 @@
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_togli(${i})" title="Togli">✕</button></div>`).join('')}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px">
         <button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('ricetta')">+ Ricetta del gestionale</button>
-        ${['Pan di spagna', 'Savoiardi senza glutine', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
+        ${['Pan di spagna', 'Savoiardi senza glutine', 'Bagna caffè e marsala', 'Glassa', 'Biscotto', 'Crumble', 'Altro'].map(n => `<button class="btn btn-ghost btn-sm" onclick="MODIFICA_aggiungi('extra','${n === 'Altro' ? '' : n}')">+ ${n}</button>`).join('')}
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="vetrinaSalva()">💾 Salva torta</button>
