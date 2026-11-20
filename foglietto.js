@@ -104,7 +104,7 @@
     const allergeni = [...set].sort((a, b) => ORDINE_ALG.indexOf(a) - ORDINE_ALG.indexOf(b));
     const giaDentro = x => ALLERGENI_REGOLE.some(a => set.has(a.k) && a.re.test(x)) || (/latte/i.test(x) && set.has('LATTE'));   // niente "può contenere latte" se il latte c'è già
     const tr = [...new Set([...tracce].join(', ').split(/,\s*(?![^()]*\))/).map(x => x.replace(/^(pu[oò]'? contenere )?(tracce di|tracce:?)\s*/i, '').trim()).filter(x => x && !giaDentro(x)))];
-    return { k: 'V:' + t.id, nome: t.nome, testo: parti.join(', '), allergeni, tracce: tr, semifreddo: true, mancanti: [...mancanti], torta: true, inVetrina: !!t.inVetrina };
+    return { k: 'V:' + t.id, nome: t.nome, testo: parti.join(', '), allergeni, tracce: tr, semifreddo: true, mancanti: [...mancanti], torta: true, inVetrina: !!t.inVetrina, dataVetrina: t.dataVetrina || '' };
   }
   // Gusti che si possono scegliere: ricette (anche semifreddi) + copie create nelle etichette; niente basi e niente doppioni tolti
   function catalogo() {
@@ -247,6 +247,20 @@
 
   // ── Vetrina semifreddi: Dario crea le torte, tutti possono metterle o toglierle dalla vetrina ──
   const admin = () => window.RUOLO !== 'staff';
+  // ── Giorni in vetrina: dopo GIORNI_MAX il semifreddo va tolto ──
+  const GIORNI_MAX = 15;
+  const oggiISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const giorniDa = iso => { if (!iso) return null; const [y, m, d] = iso.split('-').map(Number); const a = new Date(y, m - 1, d), b = new Date(); b.setHours(0, 0, 0, 0); return Math.round((b - a) / 86400000); };
+  const dataIt = iso => iso ? iso.split('-').reverse().slice(0, 2).join('/') : '';
+  function statoGiorni(p, id) {
+    const g = giorniDa(p.dataVetrina);
+    const stato = g === null ? '<span style="color:#a33;font-weight:700">⚠️ data non segnata</span>'
+      : g >= GIORNI_MAX ? `<span style="color:#fff;background:#c0392b;padding:2px 8px;border-radius:6px;font-weight:700">⛔ ${g} giorni: da togliere</span>`
+      : g >= GIORNI_MAX - 2 ? `<span style="color:#a35a00;font-weight:700">⏳ ${g} giorni: togliere entro ${dataIt(scadenzaISO(p.dataVetrina))}</span>`
+      : `<span style="color:var(--text-muted)">${g === 0 ? 'messo oggi' : g === 1 ? 'da 1 giorno' : 'da ' + g + ' giorni'} · togliere il ${dataIt(scadenzaISO(p.dataVetrina))}</span>`;
+    return `<span style="display:flex;align-items:center;gap:6px;font-size:12px;flex-wrap:wrap">in vetrina dal <input type="date" value="${esc(p.dataVetrina)}" max="${oggiISO()}" onchange="vetrinaData('${id}',this.value)" style="padding:4px;border:1px solid var(--border);border-radius:6px;font-size:13px"> ${stato}</span>`;
+  }
+  const scadenzaISO = iso => { const [y, m, d] = iso.split('-').map(Number); const x = new Date(y, m - 1, d + GIORNI_MAX); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
   function disegnaVetrina(tutti) {
     const box = document.getElementById('vetrinaGestione'); if (!box) return;
     if (!GESTIONE) { box.innerHTML = ''; return; }
@@ -258,6 +272,7 @@
     h += torte.length ? torte.map(p => { const id = p.k.slice(2);
       return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;cursor:pointer;font-size:15px"><input type="checkbox" ${p.inVetrina ? 'checked' : ''} onchange="vetrinaAccendi('${id}',this.checked)" style="width:22px;height:22px"> <b>${esc(p.nome)}</b></label>
+        ${p.inVetrina ? statoGiorni(p, id) : ''}
         <span style="font-size:11px;color:var(--text-muted)">${p.allergeni.length ? esc(p.allergeni.join(', ')) : 'nessun allergene'}${p.mancanti.length ? ' · <span style="color:#a33">⚠️ elenco da completare</span>' : ''}</span>
         ${p.inVetrina ? `<button class="btn btn-primary btn-sm" onclick="fogliettoAggiungi('${p.k}')">➕ Nella vaschetta</button>` : ''}
         ${admin() ? `<button class="btn btn-ghost btn-sm" onclick="vetrinaModifica('${id}')">✏️ Modifica</button>` : ''}</div>`; }).join('')
@@ -317,6 +332,7 @@
     if (!t.componenti.length) { showToast('Aggiungi almeno una ricetta o un componente', 'error'); return; }
     const id = t.id || slug(t.nome) + '-' + Date.now().toString(36);
     const dati = { nome: t.nome, componenti: t.componenti, inVetrina: t.inVetrina !== false, _ts: Date.now() };
+    dati.dataVetrina = dati.inVetrina ? (t.dataVetrina || oggiISO()) : '';
     try { await setDoc(doc(db, 'vetrina_semifreddi', id), dati); TORTE = TORTE.filter(x => x.id !== id).concat({ id, ...dati }); MODIFICA = null; disegna(); showToast('✓ Torta salvata'); }
     catch (e) { showToast('Non salvata: ' + e.message, 'error'); return; }
     // Ingredienti scritti a mano (es. savoiardi dalla confezione): li ricordo nel Libro ingredienti, così la prossima volta si compilano da soli
@@ -333,9 +349,37 @@
     catch (e) { showToast('Non eliminata: ' + e.message, 'error'); }
   };
   window.vetrinaAccendi = async (id, on) => {
-    const t = TORTE.find(x => x.id === id); if (!t) return; t.inVetrina = on; disegna();
-    try { await updateDoc(doc(db, 'vetrina_semifreddi', id), { inVetrina: on }); } catch (e) { t.inVetrina = !on; disegna(); showToast('Non salvato: ' + e.message, 'error'); }
+    const t = TORTE.find(x => x.id === id); if (!t) return; const prima = t.dataVetrina || '';
+    t.inVetrina = on; t.dataVetrina = on ? oggiISO() : ''; disegna();
+    try { await updateDoc(doc(db, 'vetrina_semifreddi', id), { inVetrina: on, dataVetrina: t.dataVetrina }); controllaScadenze(true); }
+    catch (e) { t.inVetrina = !on; t.dataVetrina = prima; disegna(); showToast('Non salvato: ' + e.message, 'error'); }
   };
+  // Data in cui il semifreddo è stato messo in vetrina (modificabile se è stato messo un altro giorno o se arriva un pezzo nuovo)
+  window.vetrinaData = async (id, iso) => {
+    const t = TORTE.find(x => x.id === id); if (!t || !iso) return; const prima = t.dataVetrina || '';
+    t.dataVetrina = iso; disegna();
+    try { await updateDoc(doc(db, 'vetrina_semifreddi', id), { dataVetrina: iso }); controllaScadenze(true); }
+    catch (e) { t.dataVetrina = prima; disegna(); showToast('Non salvato: ' + e.message, 'error'); }
+  };
+  // Avviso in tutto il CRM: semifreddi in vetrina da 15 giorni o più (controllo all'avvio e ogni ora)
+  let ULTIMO_CONTROLLO = 0;
+  async function controllaScadenze(subito) {
+    if (!window.RUOLO || !window.db || !window.getDocs) return;
+    if (!subito && Date.now() - ULTIMO_CONTROLLO < 3600000) return;
+    ULTIMO_CONTROLLO = Date.now();
+    let lista = [];
+    try { const snap = await getDocs(collection(db, 'vetrina_semifreddi')); snap.forEach(d => { const t = d.data(); if (t.inVetrina) lista.push({ nome: t.nome, g: giorniDa(t.dataVetrina || '') }); }); } catch (e) { return; }
+    const scaduti = lista.filter(x => x.g !== null && x.g >= GIORNI_MAX), senza = lista.filter(x => x.g === null);
+    let bar = document.getElementById('avvisoSemifreddi');
+    if (!scaduti.length && !senza.length) { if (bar) bar.remove(); return; }
+    if (!bar) { bar = document.createElement('div'); bar.id = 'avvisoSemifreddi'; document.body.appendChild(bar); }
+    bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:9999;background:' + (scaduti.length ? '#c0392b' : '#a35a00') + ';color:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.25);font-size:15px;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    const testo = scaduti.length ? '⛔ Da togliere dalla vetrina (' + GIORNI_MAX + ' giorni passati): <b>' + scaduti.map(x => esc(x.nome) + ' (' + x.g + ' gg)').join(', ') + '</b>'
+      : '⚠️ Manca la data di messa in vetrina: <b>' + senza.map(x => esc(x.nome)).join(', ') + '</b>';
+    bar.innerHTML = `<span style="flex:1;min-width:200px">${testo}</span><button onclick="showView('foglietto');setTimeout(()=>window.vetrinaApri&&vetrinaApri(),400)" style="background:#fff;color:#333;border:0;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer">Apri vetrina</button><button onclick="this.parentNode.remove()" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:8px;padding:8px 10px;cursor:pointer">✕</button>`;
+  }
+  setInterval(() => controllaScadenze(false), 60000);
+  setTimeout(() => controllaScadenze(false), 5000);
   window.fogliettoAggiungi = k => { if (!SCELTI.includes(k)) SCELTI.push(k); CERCA = ''; const c = document.getElementById('fogliettoCerca'); if (c) c.value = ''; disegna(); };
   window.fogliettoTogli = i => { SCELTI.splice(i, 1); disegna(); };
   window.fogliettoSvuota = () => { SCELTI = []; disegna(); };
